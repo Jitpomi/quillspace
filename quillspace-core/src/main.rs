@@ -103,9 +103,9 @@ async fn main() -> anyhow::Result<()> {
     // Build the enhanced router with comprehensive middleware
     let app = create_app(state).await?;
 
-    // Define the address to listen on
+    // Define the address to listen on (0.0.0.0 for Docker compatibility)
     let addr = SocketAddr::from(([
-        127, 0, 0, 1
+        0, 0, 0, 0
     ], config.server.port));
     
     info!("🚀 QuillSpace server listening on http://{}", addr);
@@ -132,6 +132,9 @@ async fn create_app(state: AppState) -> anyhow::Result<Router> {
         .route("/", get(root))
         .route("/ping", get(ping))
         
+        // API routes
+        .nest("/api", create_api_routes())
+        
         // Middleware stack (applied in reverse order)
         .layer(
             ServiceBuilder::new()
@@ -147,11 +150,11 @@ async fn create_app(state: AppState) -> anyhow::Result<Router> {
 /// Create API routes with proper organization
 fn create_api_routes() -> Router<AppState> {
     Router::new()
-        // Temporarily disable problematic routes for compilation
-        // .nest("/tenants", routes::tenants::create_routes())
-        // .nest("/content", routes::content::create_routes())
-        // .nest("/analytics", routes::analytics::create_routes())
-        // .nest("/users", routes::users::create_routes())
+        // Enable API routes
+        .nest("/tenants", routes::tenants::create_routes())
+        .nest("/content", routes::content::create_routes())
+        .nest("/analytics", routes::analytics::create_routes())
+        .nest("/users", routes::users::create_routes())
         // Health and monitoring endpoints
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))

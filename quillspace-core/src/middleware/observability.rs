@@ -48,32 +48,43 @@ pub async fn tracing_middleware(request: Request, next: Next) -> Result<Response
 
 /// CORS middleware for cross-origin requests
 pub async fn cors_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
+    use axum::http::{Method, HeaderValue};
+    
+    // Handle preflight requests
+    if request.method() == Method::OPTIONS {
+        let mut response = Response::builder()
+            .status(StatusCode::OK)
+            .body("".into())
+            .unwrap();
+            
+        let headers = response.headers_mut();
+        
+        // Set CORS headers for preflight
+        headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+        headers.insert("access-control-allow-methods", HeaderValue::from_static("GET, POST, PUT, DELETE, OPTIONS"));
+        headers.insert("access-control-allow-headers", HeaderValue::from_static("content-type, authorization, x-tenant-id, x-request-id"));
+        headers.insert("access-control-max-age", HeaderValue::from_static("86400"));
+        headers.insert("access-control-allow-credentials", HeaderValue::from_static("true"));
+        
+        return Ok(response);
+    }
+    
     let origin = request.headers().get("origin").cloned();
     
     let mut response = next.run(request).await;
     
     let headers = response.headers_mut();
     
-    // Set CORS headers
+    // Set CORS headers for actual requests
     if let Some(origin) = origin {
         headers.insert("access-control-allow-origin", origin);
     } else {
-        if let Ok(header_value) = "*".parse() {
-            headers.insert("access-control-allow-origin", header_value);
-        }
+        headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
     }
     
-    if let Ok(methods) = "GET, POST, PUT, DELETE, OPTIONS".parse() {
-        headers.insert("access-control-allow-methods", methods);
-    }
-    
-    if let Ok(headers_value) = "content-type, authorization, x-tenant-id, x-request-id".parse() {
-        headers.insert("access-control-allow-headers", headers_value);
-    }
-    
-    if let Ok(max_age) = "86400".parse() {
-        headers.insert("access-control-max-age", max_age);
-    }
+    headers.insert("access-control-allow-methods", HeaderValue::from_static("GET, POST, PUT, DELETE, OPTIONS"));
+    headers.insert("access-control-allow-headers", HeaderValue::from_static("content-type, authorization, x-tenant-id, x-request-id"));
+    headers.insert("access-control-allow-credentials", HeaderValue::from_static("true"));
     
     Ok(response)
 }
