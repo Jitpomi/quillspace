@@ -96,9 +96,9 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(config.clone()).await?;
     info!("Database connections established");
 
-    // Setup row-level security (temporarily disabled for debugging)
+    // Setup row-level security (temporarily disabled to debug connection issue)
     // database::postgres::setup_rls(state.db.postgres()).await?;
-    info!("Row-level security policies skipped for now");
+    info!("Row-level security policies skipped for debugging");
 
     // Build the enhanced router with comprehensive middleware
     let app = create_app(state).await?;
@@ -123,8 +123,10 @@ async fn main() -> anyhow::Result<()> {
 async fn create_app(state: AppState) -> anyhow::Result<Router> {
     let _jwt_secret = state.jwt_secret.clone();
     
+    // Create routes first - completely minimal test with debug logging
+    info!("🔧 Registering routes...");
     let app = Router::new()
-        // Health check routes (no middleware)
+        // Health check routes
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
         
@@ -151,6 +153,7 @@ async fn create_app(state: AppState) -> anyhow::Result<Router> {
 fn create_api_routes() -> Router<AppState> {
     Router::new()
         // Enable API routes
+        .nest("/auth", routes::auth::create_routes())
         .nest("/tenants", routes::tenants::create_routes())
         .nest("/content", routes::content::create_routes())
         .nest("/analytics", routes::analytics::create_routes())
@@ -158,7 +161,7 @@ fn create_api_routes() -> Router<AppState> {
         // Health and monitoring endpoints
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
-        
+
         // Add a simple test route
         .route("/test", get(|| async { "API is working!" }))
 }

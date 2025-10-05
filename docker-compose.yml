@@ -61,7 +61,7 @@ services:
       - QUILLSPACE__SERVER__HOST=0.0.0.0
       - QUILLSPACE__AUTH__JWT_SECRET=your-super-secure-jwt-secret-key-change-in-production
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy

@@ -49,6 +49,7 @@ async fn login(
     Json(login_request): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let request_id = Uuid::new_v4(); // Generate request ID
+    info!("Login attempt for email: {}", login_request.email);
 
     // In a real implementation, you would:
     // 1. Validate password hash
@@ -65,28 +66,29 @@ async fn login(
         }
     };
 
-    let query = "SELECT id, tenant_id, email, name, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true";
+    let query = "SELECT id, tenant_id, email, name, role::text as role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true";
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {
             // Construct User from database row
-            let role_str: String = row.get("role");
+            let role_str: String = row.try_get("role").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let role = parse_user_role(&role_str);
 
             let user = User {
-                id: row.get("id"),
-                tenant_id: row.get("tenant_id"),
-                email: row.get("email"),
-                name: row.get("name"),
+                id: row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                tenant_id: row.try_get("tenant_id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                email: row.try_get("email").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                name: row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
                 role,
-                is_active: row.get("is_active"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
+                is_active: row.try_get("is_active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                created_at: row.try_get("created_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
             };
 
             // TODO: Verify password hash here
             // For demo, we'll assume password is correct
 
+            info!("Creating JWT token for user: {}", user.id);
             let now = Utc::now();
             let exp_time = now + Duration::seconds(state.config.auth.jwt_expiration);
 
