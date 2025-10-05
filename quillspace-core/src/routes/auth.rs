@@ -6,11 +6,11 @@ use axum::{
     extract::{Request, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{encode, EncodingKey, Header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -41,6 +41,7 @@ pub fn create_routes() -> Router<AppState> {
         .route("/login", post(login))
         .route("/refresh", post(refresh_token))
         .route("/logout", post(logout))
+        .route("/me", get(get_current_user))
 }
 
 /// User login
@@ -282,6 +283,75 @@ async fn logout(
 
     let response = ApiResponse::success(response_data, request_id);
     Ok(Json(response))
+}
+
+/// Get current user information from JWT token
+async fn get_current_user(
+    State(state): State<AppState>,
+    request: Request,
+) -> Result<impl IntoResponse, StatusCode> {
+    let request_id = Uuid::new_v4();
+    
+    // Extract Authorization header
+    let auth_header = request
+        .headers()
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    // Extract token from "Bearer <token>"
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    // Decode and validate JWT token
+    let claims = match jsonwebtoken::decode::<Claims>(
+        token,
+        &jsonwebtoken::DecodingKey::from_secret(state.jwt_secret.as_bytes()),
+        &jsonwebtoken::Validation::default(),
+    ) {
+        Ok(token_data) => token_data.claims,
+        Err(_) => return Err(StatusCode::UNAUTHORIZED),
+    };
+    
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+    
+    // Fetch user from database using the user ID from JWT claims
+    let user_id: Uuid = claims.sub.parse().map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let query = "SELECT id, tenant_id, email, name, role::text as role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true";
+    
+    match client.query_opt(query, &[&user_id]).await {
+        Ok(Some(row)) => {
+            let role_str: String = row.try_get("role").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let role = parse_user_role(&role_str);
+            
+            let user = User {
+                id: row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                tenant_id: row.try_get("tenant_id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                email: row.try_get("email").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                name: row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                role,
+                is_active: row.try_get("is_active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                created_at: row.try_get("created_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+            };
+            
+            let response = ApiResponse::success(user, request_id);
+            Ok(Json(response))
+        }
+        Ok(None) => Err(StatusCode::UNAUTHORIZED),
+        Err(e) => {
+            error!("Database error during user lookup: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 // Request/Response types
