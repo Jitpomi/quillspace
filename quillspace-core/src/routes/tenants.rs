@@ -10,9 +10,24 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};
 use uuid::Uuid;
+
+/// Helper function to convert a tokio-postgres Row to Tenant
+fn row_to_tenant(row: &Row) -> Result<Tenant, PgError> {
+    Ok(Tenant {
+        id: row.try_get("id")?,
+        name: row.try_get("name")?,
+        slug: row.try_get("slug")?,
+        settings: row.try_get("settings")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+        is_active: row.try_get("is_active")?,
+    })
+}
 
 /// Create tenant management routes
 pub fn create_routes() -> Router<AppState> {
@@ -33,17 +48,34 @@ async fn list_tenants(
     // For now, skip admin check (implement proper auth later)
     // In real implementation: check if user has Admin role
 
-    let limit = params.limit.unwrap_or(20).min(100);
-    let offset = params.offset.unwrap_or(0);
+    let limit: u32 = params.limit.unwrap_or(20).min(100);
+    let offset: u32 = params.offset.unwrap_or(0);
 
-    let query = sqlx::query_as::<_, Tenant>(
-        "SELECT * FROM tenants ORDER BY created_at DESC LIMIT $1 OFFSET $2"
-    )
-    .bind(limit as i64)
-    .bind(offset as i64);
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_all(state.db.postgres()).await {
-        Ok(tenants) => {
+    let query = "SELECT * FROM tenants ORDER BY created_at DESC LIMIT $1 OFFSET $2";
+    let limit_i64 = limit as i64;
+    let offset_i64 = offset as i64;
+    let params_vec: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&limit_i64, &offset_i64];
+
+    match client.query(query, &params_vec).await {
+        Ok(rows) => {
+            let tenants: Result<Vec<Tenant>, _> = rows.iter().map(row_to_tenant).collect();
+            let tenants = match tenants {
+                Ok(tenants) => tenants,
+                Err(e) => {
+                    error!("Failed to parse tenant rows: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(tenants, request_id);
             Ok(Json(response))
         }
@@ -68,23 +100,42 @@ async fn create_tenant(
     let tenant_id = Uuid::new_v4();
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Tenant>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         INSERT INTO tenants (id, name, slug, settings, created_at, updated_at, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
-        "#
-    )
-    .bind(tenant_id)
-    .bind(&tenant_request.name)
-    .bind(&tenant_request.slug)
-    .bind(serde_json::json!({}))
-    .bind(now)
-    .bind(now)
-    .bind(true);
+        "#;
 
-    match query.fetch_one(state.db.postgres()).await {
-        Ok(tenant) => {
+    let settings = serde_json::json!({});
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &tenant_id,
+        &tenant_request.name,
+        &tenant_request.slug,
+        &settings,
+        &now,
+        &now,
+        &true,
+    ];
+
+    match client.query_one(query, &params).await {
+        Ok(row) => {
+            let tenant = match row_to_tenant(&row) {
+                Ok(tenant) => tenant,
+                Err(e) => {
+                    error!("Failed to parse tenant row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             info!(
                 tenant_id = %tenant_id,
                 tenant_name = %tenant_request.name,
@@ -112,11 +163,28 @@ async fn get_tenant(
     // For now, skip tenant access check (implement proper auth later)
     // In real implementation: check if user can access this tenant
 
-    let query = sqlx::query_as::<_, Tenant>("SELECT * FROM tenants WHERE id = $1")
-        .bind(tenant_id);
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(tenant)) => {
+    let query = "SELECT * FROM tenants WHERE id = $1";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&tenant_id];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let tenant = match row_to_tenant(&row) {
+                Ok(tenant) => tenant,
+                Err(e) => {
+                    error!("Failed to parse tenant row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(tenant, request_id);
             Ok(Json(response))
         }
@@ -142,23 +210,44 @@ async fn update_tenant(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Tenant>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE tenants 
         SET name = COALESCE($2, name),
             slug = COALESCE($3, slug),
             updated_at = $4
         WHERE id = $1
         RETURNING *
-        "#
-    )
-    .bind(tenant_id)
-    .bind(update_request.name.as_deref())
-    .bind(update_request.slug.as_deref())
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(tenant)) => {
+    let name_ref = update_request.name.as_deref();
+    let slug_ref = update_request.slug.as_deref();
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &tenant_id,
+        &name_ref,
+        &slug_ref,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let tenant = match row_to_tenant(&row) {
+                Ok(tenant) => tenant,
+                Err(e) => {
+                    error!("Failed to parse tenant row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             info!(tenant_id = %tenant_id, "Tenant updated");
             let response = ApiResponse::success(tenant, request_id);
             Ok(Json(response))
@@ -182,11 +271,22 @@ async fn get_tenant_settings(
     // For now, skip tenant access check (implement proper auth later)
     // In real implementation: check if user can access this tenant's settings
 
-    let query = sqlx::query!("SELECT settings FROM tenants WHERE id = $1", tenant_id);
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
+    let query = "SELECT settings FROM tenants WHERE id = $1";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&tenant_id];
+
+    match client.query_opt(query, &params).await {
         Ok(Some(row)) => {
-            let response = ApiResponse::success(row.settings, request_id);
+            let settings: serde_json::Value = row.get("settings");
+            let response = ApiResponse::success(settings, request_id);
             Ok(Json(response))
         }
         Ok(None) => Err(StatusCode::NOT_FOUND),
@@ -211,18 +311,27 @@ async fn update_tenant_settings(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query!(
-        "UPDATE tenants SET settings = $2, updated_at = $3 WHERE id = $1",
-        tenant_id,
-        settings,
-        now
-    );
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.execute(state.db.postgres()).await {
-        Ok(_) => {
-            info!(tenant_id = %tenant_id, "Tenant settings updated");
-            let response = ApiResponse::success(settings, request_id);
-            Ok(Json(response))
+    let query = "UPDATE tenants SET settings = $2, updated_at = $3 WHERE id = $1";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&tenant_id, &settings, &now];
+
+    match client.execute(query, &params).await {
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                info!(tenant_id = %tenant_id, "Tenant settings updated");
+                let response = ApiResponse::success(settings, request_id);
+                Ok(Json(response))
+            } else {
+                Err(StatusCode::NOT_FOUND)
+            }
         }
         Err(e) => {
             error!("Failed to update tenant settings: {}", e);

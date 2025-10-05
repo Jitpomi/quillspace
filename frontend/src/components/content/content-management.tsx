@@ -1,23 +1,14 @@
-import { component$, useSignal } from '@builder.io/qwik';
+import { component$, useSignal, $ } from '@builder.io/qwik';
 import { LuFileText, LuPlus, LuPenTool, LuTrash2, LuEye, LuCalendar, LuUser } from '@qwikest/icons/lucide';
-
-interface ContentItem {
-  id: string;
-  title: string;
-  slug: string;
-  status: 'draft' | 'published' | 'archived';
-  author: string;
-  created_at: string;
-  updated_at: string;
-  published_at?: string;
-}
+import { api, type Content } from '../../services/api';
 
 interface ContentManagementProps {
-  content: ContentItem[];
+  content: Content[];
   onCreateContent$: () => void;
   onEditContent$: (id: string) => void;
   onDeleteContent$: (id: string) => void;
   onPublishContent$: (id: string) => void;
+  onRefresh$: () => void;
 }
 
 export default component$<ContentManagementProps>(({ 
@@ -25,9 +16,85 @@ export default component$<ContentManagementProps>(({
   onCreateContent$, 
   onEditContent$, 
   onDeleteContent$, 
-  onPublishContent$ 
+  onPublishContent$,
+  onRefresh$
 }) => {
   const selectedStatus = useSignal<string>('all');
+  const isCreating = useSignal(false);
+  const showCreateModal = useSignal(false);
+  const newContentTitle = useSignal('');
+  const newContentSlug = useSignal('');
+  const newContentContent = useSignal('');
+  const error = useSignal<string | null>(null);
+
+  // Handle creating new content
+  const handleCreateContent = $(async () => {
+    if (!newContentTitle.value || !newContentSlug.value) {
+      error.value = 'Title and slug are required';
+      return;
+    }
+
+    try {
+      isCreating.value = true;
+      error.value = null;
+
+      await api.createContent({
+        title: newContentTitle.value,
+        slug: newContentSlug.value,
+        content: newContentContent.value || '',
+        status: 'draft',
+      });
+
+      // Reset form
+      newContentTitle.value = '';
+      newContentSlug.value = '';
+      newContentContent.value = '';
+      showCreateModal.value = false;
+
+      // Refresh content list
+      onRefresh$();
+      onCreateContent$();
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to create content';
+    } finally {
+      isCreating.value = false;
+    }
+  });
+
+  // Handle publishing content
+  const handlePublishContent = $(async (id: string) => {
+    try {
+      await api.publishContent(id);
+      onRefresh$();
+      onPublishContent$(id);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to publish content';
+    }
+  });
+
+  // Handle deleting content
+  const handleDeleteContent = $(async (id: string) => {
+    if (!confirm('Are you sure you want to delete this content?')) {
+      return;
+    }
+
+    try {
+      await api.deleteContent(id);
+      onRefresh$();
+      onDeleteContent$(id);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete content';
+    }
+  });
+
+  // Generate slug from title
+  const generateSlug = $(() => {
+    const slug = newContentTitle.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    newContentSlug.value = slug;
+  });
 
   const filteredContent = content.filter(item => 
     selectedStatus.value === 'all' || item.status === selectedStatus.value
@@ -51,7 +118,7 @@ export default component$<ContentManagementProps>(({
           <h2 class="text-3xl font-bold text-gray-900">Content Management</h2>
         </div>
         <button
-          onClick$={onCreateContent$}
+          onClick$={() => showCreateModal.value = true}
           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
         >
           <LuPlus class="w-4 h-4" />
@@ -93,7 +160,7 @@ export default component$<ContentManagementProps>(({
                   <div class="flex items-center gap-4 text-xs text-gray-500">
                     <div class="flex items-center gap-1">
                       <LuUser class="w-3 h-3" />
-                      {item.author}
+                      {item.author_id}
                     </div>
                     <div class="flex items-center gap-1">
                       <LuCalendar class="w-3 h-3" />
@@ -110,7 +177,7 @@ export default component$<ContentManagementProps>(({
                 <div class="flex items-center gap-2">
                   {item.status === 'draft' && (
                     <button
-                      onClick$={() => onPublishContent$(item.id)}
+                      onClick$={() => handlePublishContent(item.id)}
                       class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors"
                     >
                       Publish
@@ -123,7 +190,7 @@ export default component$<ContentManagementProps>(({
                     <LuPenTool class="w-4 h-4" />
                   </button>
                   <button
-                    onClick$={() => onDeleteContent$(item.id)}
+                    onClick$={() => handleDeleteContent(item.id)}
                     class="bg-red-600 hover:bg-red-700 text-white p-2 rounded transition-colors"
                   >
                     <LuTrash2 class="w-4 h-4" />
@@ -133,7 +200,6 @@ export default component$<ContentManagementProps>(({
             </div>
           ))}
         </div>
-
         {filteredContent.length === 0 && (
           <div class="text-center py-12">
             <LuFileText class="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -147,6 +213,81 @@ export default component$<ContentManagementProps>(({
           </div>
         )}
       </div>
+
+      {/* Create Content Modal */}
+      {showCreateModal.value && (
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Create New Content</h3>
+            
+            {error.value && (
+              <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p class="text-red-700 text-sm">{error.value}</p>
+              </div>
+            )}
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newContentTitle.value}
+                  onInput$={(e) => {
+                    newContentTitle.value = (e.target as HTMLInputElement).value;
+                    generateSlug();
+                  }}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter content title"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <input
+                  type="text"
+                  value={newContentSlug.value}
+                  onInput$={(e) => newContentSlug.value = (e.target as HTMLInputElement).value}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="content-slug"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Content (Optional)</label>
+                <textarea
+                  value={newContentContent.value}
+                  onInput$={(e) => newContentContent.value = (e.target as HTMLTextAreaElement).value}
+                  rows={4}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter content body..."
+                />
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button
+                onClick$={() => {
+                  showCreateModal.value = false;
+                  error.value = null;
+                  newContentTitle.value = '';
+                  newContentSlug.value = '';
+                  newContentContent.value = '';
+                }}
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick$={handleCreateContent}
+                disabled={isCreating.value}
+                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isCreating.value ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

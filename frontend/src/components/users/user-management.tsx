@@ -1,5 +1,5 @@
 import { component$, useSignal } from '@builder.io/qwik';
-import { LuUsers, LuPlus, LuEdit, LuTrash2, LuShield, LuMail, LuCalendar } from '@qwikest/icons/lucide';
+import { LuUsers, LuPlus, LuPencil, LuTrash2, LuShield, LuMail, LuCalendar } from '@qwikest/icons/lucide';
 
 interface User {
   id: string;
@@ -131,7 +131,7 @@ export const UserManagement = component$<UserManagementProps>(({
                       onClick$={() => onEditUser(user.id)}
                       class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition-colors"
                     >
-                      <LuEdit class="w-4 h-4" />
+                      <LuPencil class="w-4 h-4" />
                     </button>
                     <button
                       onClick$={() => onDeleteUser(user.id)}

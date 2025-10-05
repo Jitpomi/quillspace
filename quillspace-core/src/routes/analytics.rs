@@ -37,7 +37,7 @@ async fn record_event(
     let user_id = Some(uuid::Uuid::new_v4()); // Placeholder
     let request_id = Uuid::new_v4();
 
-    let analytics = AnalyticsService::new(state.db.clickhouse().clone());
+    let analytics = state.db.clickhouse();
     
     let event = AnalyticsEvent {
         event_id: Uuid::new_v4(),
@@ -87,7 +87,7 @@ async fn get_tenant_stats(
     // Placeholder tenant context
     let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
     
-    let analytics = AnalyticsService::new(state.db.clickhouse().clone());
+    let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365); // Cap at 1 year
     
     match analytics.get_tenant_stats(&tenant_id, days).await {
@@ -121,7 +121,7 @@ async fn get_top_content(
     // Placeholder tenant context
     let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
     
-    let analytics = AnalyticsService::new(state.db.clickhouse().clone());
+    let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365);
     let limit = params.limit.unwrap_or(10).min(100);
     
@@ -159,7 +159,7 @@ async fn get_user_activity(
     
     // For now, skip authorization check (implement proper JWT auth later)
     
-    let analytics = AnalyticsService::new(state.db.clickhouse().clone());
+    let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365);
     
     match analytics.get_user_activity(&tenant_id, &user_id, days).await {

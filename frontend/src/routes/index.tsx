@@ -1,61 +1,12 @@
-import { component$, useSignal, $ } from '@builder.io/qwik';
-import { routeLoader$, routeAction$ } from '@builder.io/qwik-city';
+import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
+import { routeAction$ } from '@builder.io/qwik-city';
 import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuBell, LuSearch, LuLogOut } from '@qwikest/icons/lucide';
 import AnalyticsDashboard from '../components/dashboard/analytics-dashboard';
 import ContentManagement from '../components/content/content-management';
+import Login from '../components/auth/login';
+import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from '../services/api';
 
-export const useQuillSpaceLoader = routeLoader$(async (requestEvent) => {
-  // In a real app, this would fetch from your QuillSpace API
-  // For demo purposes, we'll return comprehensive mock data
-  const mockData = {
-    analytics: {
-      totalEvents: 15420,
-      uniqueUsers: 1250,
-      pageViews: 8930,
-      contentPublished: 45,
-      growthRate: 12.5,
-      topContent: [
-        { title: 'Getting Started with QuillSpace', views: 2340 },
-        { title: 'Advanced Analytics Guide', views: 1890 },
-        { title: 'Multi-Tenant Architecture', views: 1560 },
-      ],
-      recentActivity: [
-        { type: 'content', description: 'New article published', timestamp: '2 minutes ago' },
-        { type: 'user', description: 'User invited to workspace', timestamp: '15 minutes ago' },
-        { type: 'analytics', description: 'Analytics report generated', timestamp: '1 hour ago' },
-      ]
-    },
-    content: [
-      {
-        id: '1',
-        title: 'Getting Started with QuillSpace',
-        slug: 'getting-started-quillspace',
-        status: 'published' as const,
-        author: 'John Doe',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
-        published_at: '2024-01-15T12:00:00Z'
-      },
-      {
-        id: '2',
-        title: 'Advanced Analytics Guide',
-        slug: 'advanced-analytics-guide',
-        status: 'draft' as const,
-        author: 'Jane Smith',
-        created_at: '2024-01-14T09:00:00Z',
-        updated_at: '2024-01-14T09:00:00Z'
-      }
-    ],
-    currentUser: {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@example.com',
-      role: 'admin'
-    }
-  };
-  
-  return mockData;
-});
+// This loader is now replaced by real-time data fetching in the component
 
 export const useRecordEventAction = routeAction$(async (data, requestEvent) => {
   // Record analytics event to QuillSpace backend
@@ -81,21 +32,147 @@ export const useRecordEventAction = routeAction$(async (data, requestEvent) => {
 });
 
 export default component$(() => {
-  const data = useQuillSpaceLoader();
   const recordEvent = useRecordEventAction();
+  
+  // Component state
   const activeTab = useSignal('dashboard');
   const sidebarOpen = useSignal(false);
+  
+  // Auth state
+  const isAuthenticated = useSignal(false);
+  const currentUser = useSignal<User | null>(null);
+  const authLoading = useSignal(true);
+  
+  // Data state
+  const analytics = useSignal<any>(null);
+  const content = useSignal<Content[]>([]);
+  const users = useSignal<User[]>([]);
+  const tenant = useSignal<Tenant | null>(null);
+  const isLoading = useSignal(true);
+  const error = useSignal<string | null>(null);
 
-  const handleInteraction = $((eventType: string) => {
-    recordEvent.submit({ event_type: eventType });
+  // Load data function
+  const loadData = $(async () => {
+    if (isAuthenticated.value && currentUser.value) {
+      try {
+        isLoading.value = true;
+        error.value = null;
+
+        // Fetch all data in parallel
+        const [analyticsData, contentData, usersData, tenantData, topContent, recentActivity] = await Promise.all([
+          api.getAnalyticsMetrics(),
+          api.getContent(),
+          api.getUsers(),
+          api.getCurrentTenant(),
+          api.getTopContent(),
+          api.getRecentActivity(),
+        ]);
+
+        analytics.value = {
+          totalEvents: analyticsData.total_events,
+          uniqueUsers: analyticsData.unique_users,
+          pageViews: analyticsData.page_views,
+          contentPublished: analyticsData.content_published,
+          growthRate: analyticsData.growth_rate,
+          topContent,
+          recentActivity,
+        };
+        
+        content.value = contentData;
+        users.value = usersData;
+        tenant.value = tenantData;
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : 'Failed to load data';
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        isLoading.value = false;
+      }
+    }
   });
 
-  const navigation = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'content', label: 'Content' },
-    { id: 'users', label: 'Users' },
-    { id: 'settings', label: 'Settings' },
-  ];
+  // Check authentication and load data (browser-only)
+  useVisibleTask$(async () => {
+    const token = getAuthToken();
+    
+    if (token) {
+      try {
+        // Verify token is still valid
+        const user = await api.getCurrentUser();
+        currentUser.value = user;
+        isAuthenticated.value = true;
+        
+        // Load dashboard data
+        await loadData();
+      } catch (err) {
+        // Token is invalid, clear auth
+        clearAuth();
+        isAuthenticated.value = false;
+        currentUser.value = null;
+      }
+    } else {
+      isAuthenticated.value = false;
+    }
+    
+    authLoading.value = false;
+  });
+
+  const handleInteraction = $((eventType: string) => {
+    // Record event both locally and to backend
+    recordEvent.submit({ event_type: eventType });
+    
+    // Also record to backend analytics
+    if (isAuthenticated.value) {
+      api.recordEvent({
+        event_type: eventType,
+        event_data: { timestamp: new Date().toISOString() },
+      }).catch(console.error);
+    }
+  });
+
+  const handleLogout = $(() => {
+    clearAuth();
+    isAuthenticated.value = false;
+    currentUser.value = null;
+    // Reload the page to reset state
+    window.location.reload();
+  });
+
+  // Show login if not authenticated
+  if (!isAuthenticated.value && !authLoading.value) {
+    return <Login />;
+  }
+
+  // Show loading state
+  if (authLoading.value || isLoading.value) {
+    return (
+      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p class="mt-4 text-gray-600">Loading QuillSpace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error.value) {
+    return (
+      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div class="text-center">
+          <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Dashboard</h3>
+            <p class="text-red-700">{error.value}</p>
+            <button
+              onClick$={() => window.location.reload()}
+              class="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div class="min-h-screen bg-gray-50">
@@ -183,7 +260,10 @@ export default component$(() => {
                 <LuMenu class="w-6 h-6" />
               </button>
               <h1 class="text-2xl font-semibold text-gray-900">
-                {navigation.find(nav => nav.id === activeTab.value)?.label || 'Dashboard'}
+                {activeTab.value === 'dashboard' && 'Dashboard'}
+                {activeTab.value === 'content' && 'Content Management'}
+                {activeTab.value === 'users' && 'User Management'}
+                {activeTab.value === 'settings' && 'Settings'}
               </h1>
             </div>
             
@@ -201,10 +281,13 @@ export default component$(() => {
               </button>
               <div class="flex items-center gap-3">
                 <div class="text-right">
-                  <p class="text-sm font-medium text-gray-900">{data.value.currentUser.name}</p>
-                  <p class="text-xs text-gray-500">{data.value.currentUser.role}</p>
+                  <p class="text-sm font-medium text-gray-900">{currentUser.value?.name}</p>
+                  <p class="text-xs text-gray-500">{currentUser.value?.role}</p>
                 </div>
-                <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+                <button 
+                  onClick$={handleLogout}
+                  class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                >
                   <LuLogOut class="w-5 h-5" />
                 </button>
               </div>
@@ -214,20 +297,21 @@ export default component$(() => {
 
         {/* Page Content */}
         <main class="p-6">
-          {activeTab.value === 'dashboard' && (
+          {activeTab.value === 'dashboard' && analytics.value && (
             <AnalyticsDashboard 
-              data={data.value.analytics} 
+              data={analytics.value} 
               onInteraction$={handleInteraction}
             />
           )}
           
           {activeTab.value === 'content' && (
             <ContentManagement
-              content={data.value.content}
-              onCreateContent$={() => handleInteraction('content_create')}
-              onEditContent$={(id) => handleInteraction(`content_edit_${id}`)}
-              onDeleteContent$={(id) => handleInteraction(`content_delete_${id}`)}
-              onPublishContent$={(id) => handleInteraction(`content_publish_${id}`)}
+              content={content.value}
+              onCreateContent$={$(() => handleInteraction('content_create'))}
+              onEditContent$={$((id: string) => handleInteraction(`content_edit_${id}`))}
+              onDeleteContent$={$((id: string) => handleInteraction(`content_delete_${id}`))}
+              onPublishContent$={$((id: string) => handleInteraction(`content_publish_${id}`))}
+              onRefresh$={loadData}
             />
           )}
           

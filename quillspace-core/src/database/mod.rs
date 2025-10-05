@@ -1,60 +1,42 @@
 pub mod postgres;
 pub mod clickhouse;
 
-use crate::config::{DatabaseConfig, ClickHouseConfig};
 use anyhow::Result;
-use sqlx::{PgPool, Pool, Postgres};
+use deadpool_postgres::{Config, Pool, Runtime};
 use std::sync::Arc;
+use tokio_postgres::NoTls;
 
 /// Database connections container
 #[derive(Clone)]
 pub struct DatabaseConnections {
-    pub postgres: Arc<PgPool>,
-    pub clickhouse: Arc<clickhouse::Client>,
+    postgres: Arc<Pool>,
+    clickhouse: Arc<clickhouse::AnalyticsService>,
 }
 
 impl DatabaseConnections {
-    pub async fn new(
-        postgres_config: &DatabaseConfig,
-        clickhouse_config: &ClickHouseConfig,
-    ) -> Result<Self> {
-        let postgres = postgres::create_pool(postgres_config).await?;
-        let clickhouse = clickhouse::create_client(clickhouse_config).await?;
-
+    /// Create new database connections
+    pub async fn new(postgres_url: &str, clickhouse_url: &str) -> Result<Self> {
+        let mut cfg = Config::new();
+        cfg.url = Some(postgres_url.to_string());
+        let postgres_pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
+        
+        // Create ClickHouse client and service
+        let clickhouse_client = clickhouse::Client::default().with_url(clickhouse_url);
+        let clickhouse_service = clickhouse::AnalyticsService::new(clickhouse_client);
+        
         Ok(Self {
-            postgres: Arc::new(postgres),
-            clickhouse: Arc::new(clickhouse),
+            postgres: Arc::new(postgres_pool),
+            clickhouse: Arc::new(clickhouse_service),
         })
     }
 
-    pub fn postgres(&self) -> &PgPool {
+    /// Get PostgreSQL pool
+    pub fn postgres(&self) -> &Pool {
         &self.postgres
     }
 
-    pub fn clickhouse(&self) -> &clickhouse::Client {
+    /// Get ClickHouse service
+    pub fn clickhouse(&self) -> &clickhouse::AnalyticsService {
         &self.clickhouse
-    }
-}
-
-/// Database transaction wrapper for multi-tenant operations
-pub struct TenantTransaction<'a> {
-    pub tx: sqlx::Transaction<'a, Postgres>,
-    pub tenant_id: uuid::Uuid,
-}
-
-impl<'a> TenantTransaction<'a> {
-    pub async fn begin(pool: &PgPool, tenant_id: uuid::Uuid) -> Result<Self> {
-        let tx = pool.begin().await?;
-        Ok(Self { tx, tenant_id })
-    }
-
-    pub async fn commit(self) -> Result<()> {
-        self.tx.commit().await?;
-        Ok(())
-    }
-
-    pub async fn rollback(self) -> Result<()> {
-        self.tx.rollback().await?;
-        Ok(())
     }
 }

@@ -1,13 +1,71 @@
 # QuillSpace
 
-**A High-Performance Multi-Tenant Publishing Platform**
+A high-performance, multi-tenant content management system built with Rust and modern web technologies.
 
-QuillSpace is a modern, scalable publishing platform built with Rust, designed for high-performance multi-tenant content management, analytics, and publishing workflows. The platform leverages cutting-edge technologies to deliver exceptional performance and developer experience.
+## 🚀 **One-Command Docker Deployment**
 
-## 🚀 Key Features
+Get QuillSpace running in seconds with full containerization:
 
-- **Multi-Tenant Architecture**: Secure tenant isolation with row-level policies
-- **High-Performance Backend**: Built with Rust and Axum for maximum throughput
+```bash
+./deploy-docker.sh
+```
+
+That's it! The script will:
+- ✅ Build Docker images for frontend and backend
+- ✅ Start PostgreSQL and ClickHouse containers
+- ✅ Run database migrations automatically
+- ✅ Deploy Rust backend in container
+- ✅ Deploy Qwik frontend with Nginx
+- ✅ Set up networking and health checks
+- ✅ Provide complete production-ready stack
+
+## 📱 **Access Your Application**
+
+After deployment:
+- **Frontend**: http://localhost (port 80)
+- **Backend API**: http://localhost:3000  
+- **Demo Login**: admin@demo.com / admin123
+
+## 🛠️ **Prerequisites**
+
+- Docker & Docker Compose
+- That's it! Everything else runs in containers.
+
+## 📋 **Docker Commands**
+
+Manage your containerized deployment:
+
+```bash
+# Deploy everything
+./deploy-docker.sh
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# View service status
+docker-compose ps
+
+# Rebuild and restart
+docker-compose up --build -d
+```
+
+## 🔧 **Development Setup** (Local)
+
+For local development without Docker:
+
+```bash
+# Use the local deployment script
+./deploy.sh
+```
+
+## ✨ **Features**
+
 - **Real-Time Analytics**: Powered by ClickHouse for lightning-fast analytical queries
 - **Modern Frontend**: Ultra-fast UI with Qwik's resumability architecture
 - **Scalable Design**: Horizontal scaling with microservices architecture

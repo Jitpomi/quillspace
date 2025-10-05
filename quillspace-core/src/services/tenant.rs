@@ -1,16 +1,31 @@
 use crate::types::{Tenant, TenantId};
 use anyhow::Result;
-use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use deadpool_postgres::Pool;
+use tokio_postgres::{Row, Error as PgError};
 use uuid::Uuid;
+
+/// Helper function to convert a tokio-postgres Row to Tenant
+fn row_to_tenant(row: &Row) -> Result<Tenant, PgError> {
+    Ok(Tenant {
+        id: row.try_get("id")?,
+        name: row.try_get("name")?,
+        slug: row.try_get("slug")?,
+        settings: row.try_get("settings")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+        is_active: row.try_get("is_active")?,
+    })
+}
 
 /// Tenant management service
 #[derive(Clone)]
 pub struct TenantService {
-    db: PgPool,
+    db: Pool,
 }
 
 impl TenantService {
-    pub fn new(db: PgPool) -> Self {
+    pub fn new(db: Pool) -> Self {
         Self { db }
     }
 
@@ -23,48 +38,62 @@ impl TenantService {
         let tenant_id = Uuid::new_v4();
         let now = chrono::Utc::now();
 
-        let tenant = sqlx::query_as::<_, Tenant>(
-            r#"
+        // Get database connection
+        let client = self.db.get().await?;
+
+        let query = r#"
             INSERT INTO tenants (id, name, slug, settings, created_at, updated_at, is_active)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
-            "#
-        )
-        .bind(tenant_id)
-        .bind(&name)
-        .bind(&slug)
-        .bind(serde_json::json!({}))
-        .bind(now)
-        .bind(now)
-        .bind(true)
-        .fetch_one(&self.db)
-        .await?;
+            "#;
+
+        let settings = serde_json::json!({});
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &tenant_id,
+            &name,
+            &slug,
+            &settings,
+            &now,
+            &now,
+            &true,
+        ];
+
+        let row = client.query_one(query, &params).await?;
+        let tenant = row_to_tenant(&row)?;
 
         Ok(tenant)
     }
 
     /// Get tenant by ID
     pub async fn get_tenant(&self, tenant_id: &TenantId) -> Result<Option<Tenant>> {
-        let tenant = sqlx::query_as::<_, Tenant>(
-            "SELECT * FROM tenants WHERE id = $1"
-        )
-        .bind(tenant_id.as_uuid())
-        .fetch_optional(&self.db)
-        .await?;
+        let client = self.db.get().await?;
 
-        Ok(tenant)
+        let query = "SELECT * FROM tenants WHERE id = $1";
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let tenant = row_to_tenant(&row)?;
+                Ok(Some(tenant))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Get tenant by slug
     pub async fn get_tenant_by_slug(&self, slug: &str) -> Result<Option<Tenant>> {
-        let tenant = sqlx::query_as::<_, Tenant>(
-            "SELECT * FROM tenants WHERE slug = $1 AND is_active = true"
-        )
-        .bind(slug)
-        .fetch_optional(&self.db)
-        .await?;
+        let client = self.db.get().await?;
 
-        Ok(tenant)
+        let query = "SELECT * FROM tenants WHERE slug = $1 AND is_active = true";
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&slug];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let tenant = row_to_tenant(&row)?;
+                Ok(Some(tenant))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Update tenant
@@ -75,25 +104,34 @@ impl TenantService {
         slug: Option<String>,
     ) -> Result<Option<Tenant>> {
         let now = chrono::Utc::now();
+        let client = self.db.get().await?;
 
-        let tenant = sqlx::query_as::<_, Tenant>(
-            r#"
+        let query = r#"
             UPDATE tenants 
             SET name = COALESCE($2, name),
                 slug = COALESCE($3, slug),
                 updated_at = $4
             WHERE id = $1
             RETURNING *
-            "#
-        )
-        .bind(tenant_id.as_uuid())
-        .bind(name)
-        .bind(slug)
-        .bind(now)
-        .fetch_optional(&self.db)
-        .await?;
+            "#;
 
-        Ok(tenant)
+        let name_ref = name.as_deref();
+        let slug_ref = slug.as_deref();
+        
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            tenant_id.as_uuid(),
+            &name_ref,
+            &slug_ref,
+            &now,
+        ];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let tenant = row_to_tenant(&row)?;
+                Ok(Some(tenant))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Update tenant settings
@@ -103,55 +141,66 @@ impl TenantService {
         settings: serde_json::Value,
     ) -> Result<Option<Tenant>> {
         let now = chrono::Utc::now();
+        let client = self.db.get().await?;
 
-        let tenant = sqlx::query_as::<_, Tenant>(
-            r#"
+        let query = r#"
             UPDATE tenants 
             SET settings = $2, updated_at = $3
             WHERE id = $1
             RETURNING *
-            "#
-        )
-        .bind(tenant_id.as_uuid())
-        .bind(settings)
-        .bind(now)
-        .fetch_optional(&self.db)
-        .await?;
+            "#;
 
-        Ok(tenant)
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            tenant_id.as_uuid(),
+            &settings,
+            &now,
+        ];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let tenant = row_to_tenant(&row)?;
+                Ok(Some(tenant))
+            }
+            None => Ok(None),
+        }
     }
 
     /// List all tenants (admin only)
     pub async fn list_tenants(&self, limit: i64, offset: i64) -> Result<Vec<Tenant>> {
-        let tenants = sqlx::query_as::<_, Tenant>(
-            r#"
+        let client = self.db.get().await?;
+
+        let query = r#"
             SELECT * FROM tenants 
             WHERE is_active = true 
             ORDER BY created_at DESC 
             LIMIT $1 OFFSET $2
-            "#
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.db)
-        .await?;
+            "#;
 
-        Ok(tenants)
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &limit,
+            &offset,
+        ];
+
+        let rows = client.query(query, &params).await?;
+        let tenants: Result<Vec<Tenant>, _> = rows.iter().map(row_to_tenant).collect();
+        
+        Ok(tenants?)
     }
 
     /// Deactivate tenant (soft delete)
     pub async fn deactivate_tenant(&self, tenant_id: &TenantId) -> Result<bool> {
         let now = chrono::Utc::now();
+        let client = self.db.get().await?;
 
-        let result = sqlx::query!(
-            "UPDATE tenants SET is_active = false, updated_at = $2 WHERE id = $1",
+        let query = "UPDATE tenants SET is_active = false, updated_at = $2 WHERE id = $1";
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
             tenant_id.as_uuid(),
-            now
-        )
-        .execute(&self.db)
-        .await?;
+            &now,
+        ];
 
-        Ok(result.rows_affected() > 0)
+        let rows_affected = client.execute(query, &params).await?;
+        
+        Ok(rows_affected > 0)
     }
 }
 

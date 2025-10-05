@@ -77,7 +77,7 @@ impl Default for AppConfig {
                 workers: None,
             },
             database: DatabaseConfig {
-                url: "postgresql://postgres:password@localhost:5432/quillspace".to_string(),
+                url: "postgresql://quillspace:dev_password@localhost:5432/quillspace_dev".to_string(),
                 max_connections: 10,
                 min_connections: 1,
                 connect_timeout: 30,

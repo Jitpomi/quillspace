@@ -1,4 +1,4 @@
-import { component$, useSignal } from '@builder.io/qwik';
+import { component$, useSignal, $ } from '@builder.io/qwik';
 import { LuSettings, LuSave, LuBuilding, LuGlobe, LuPalette, LuShield } from '@qwikest/icons/lucide';
 
 interface TenantSettings {

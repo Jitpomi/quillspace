@@ -1,16 +1,51 @@
 use crate::types::{Content, ContentStatus, TenantId, UserId};
 use anyhow::Result;
-use sqlx::PgPool;
+use chrono::{DateTime, Utc};
+use deadpool_postgres::Pool;
+use tokio_postgres::{Row, Error as PgError};
 use uuid::Uuid;
+
+/// Helper function to convert a tokio-postgres Row to Content
+fn row_to_content(row: &Row) -> Result<Content, PgError> {
+    let status_str: String = row.try_get("status")?;
+    let status = match status_str.as_str() {
+        "Draft" => ContentStatus::Draft,
+        "Published" => ContentStatus::Published,
+        "Archived" => ContentStatus::Archived,
+        _ => ContentStatus::Draft,
+    };
+
+    Ok(Content {
+        id: row.try_get("id")?,
+        tenant_id: row.try_get("tenant_id")?,
+        title: row.try_get("title")?,
+        slug: row.try_get("slug")?,
+        body: row.try_get("body")?,
+        status,
+        author_id: row.try_get("author_id")?,
+        published_at: row.try_get("published_at")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+/// Helper function to convert ContentStatus to string for database
+fn content_status_to_string(status: &ContentStatus) -> &'static str {
+    match status {
+        ContentStatus::Draft => "Draft",
+        ContentStatus::Published => "Published",
+        ContentStatus::Archived => "Archived",
+    }
+}
 
 /// Content management service
 #[derive(Clone)]
 pub struct ContentService {
-    db: PgPool,
+    db: Pool,
 }
 
 impl ContentService {
-    pub fn new(db: PgPool) -> Self {
+    pub fn new(db: Pool) -> Self {
         Self { db }
     }
 
@@ -26,24 +61,30 @@ impl ContentService {
         let content_id = Uuid::new_v4();
         let now = chrono::Utc::now();
 
-        let content = sqlx::query_as::<_, Content>(
-            r#"
+        // Get database connection
+        let client = self.db.get().await?;
+
+        let query = r#"
             INSERT INTO content (id, tenant_id, title, slug, body, status, author_id, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
-            "#
-        )
-        .bind(content_id)
-        .bind(tenant_id.as_uuid())
-        .bind(&title)
-        .bind(&slug)
-        .bind(&body)
-        .bind(ContentStatus::Draft)
-        .bind(author_id.as_uuid())
-        .bind(now)
-        .bind(now)
-        .fetch_one(&self.db)
-        .await?;
+            "#;
+
+        let status_str = content_status_to_string(&ContentStatus::Draft);
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &content_id,
+            tenant_id.as_uuid(),
+            &title,
+            &slug,
+            &body,
+            &status_str,
+            author_id.as_uuid(),
+            &now,
+            &now,
+        ];
+
+        let row = client.query_one(query, &params).await?;
+        let content = row_to_content(&row)?;
 
         Ok(content)
     }
@@ -54,15 +95,18 @@ impl ContentService {
         tenant_id: &TenantId,
         content_id: Uuid,
     ) -> Result<Option<Content>> {
-        let content = sqlx::query_as::<_, Content>(
-            "SELECT * FROM content WHERE id = $1 AND tenant_id = $2"
-        )
-        .bind(content_id)
-        .bind(tenant_id.as_uuid())
-        .fetch_optional(&self.db)
-        .await?;
+        let client = self.db.get().await?;
 
-        Ok(content)
+        let query = "SELECT * FROM content WHERE id = $1 AND tenant_id = $2";
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let content = row_to_content(&row)?;
+                Ok(Some(content))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Update content
@@ -75,9 +119,9 @@ impl ContentService {
         body: Option<String>,
     ) -> Result<Option<Content>> {
         let now = chrono::Utc::now();
+        let client = self.db.get().await?;
 
-        let content = sqlx::query_as::<_, Content>(
-            r#"
+        let query = r#"
             UPDATE content 
             SET title = COALESCE($3, title),
                 slug = COALESCE($4, slug),
@@ -85,18 +129,28 @@ impl ContentService {
                 updated_at = $6
             WHERE id = $1 AND tenant_id = $2
             RETURNING *
-            "#
-        )
-        .bind(content_id)
-        .bind(tenant_id.as_uuid())
-        .bind(title)
-        .bind(slug)
-        .bind(body)
-        .bind(now)
-        .fetch_optional(&self.db)
-        .await?;
+            "#;
 
-        Ok(content)
+        let title_ref = title.as_deref();
+        let slug_ref = slug.as_deref();
+        let body_ref = body.as_deref();
+        
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &content_id,
+            tenant_id.as_uuid(),
+            &title_ref,
+            &slug_ref,
+            &body_ref,
+            &now,
+        ];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let content = row_to_content(&row)?;
+                Ok(Some(content))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Publish content
@@ -106,24 +160,31 @@ impl ContentService {
         content_id: Uuid,
     ) -> Result<Option<Content>> {
         let now = chrono::Utc::now();
+        let client = self.db.get().await?;
 
-        let content = sqlx::query_as::<_, Content>(
-            r#"
+        let query = r#"
             UPDATE content 
             SET status = $3, published_at = $4, updated_at = $5
             WHERE id = $1 AND tenant_id = $2
             RETURNING *
-            "#
-        )
-        .bind(content_id)
-        .bind(tenant_id.as_uuid())
-        .bind(ContentStatus::Published)
-        .bind(now)
-        .bind(now)
-        .fetch_optional(&self.db)
-        .await?;
+            "#;
 
-        Ok(content)
+        let status_str = content_status_to_string(&ContentStatus::Published);
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &content_id,
+            tenant_id.as_uuid(),
+            &status_str,
+            &now,
+            &now,
+        ];
+
+        match client.query_opt(query, &params).await? {
+            Some(row) => {
+                let content = row_to_content(&row)?;
+                Ok(Some(content))
+            }
+            None => Ok(None),
+        }
     }
 
     /// List content for tenant
@@ -133,21 +194,25 @@ impl ContentService {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Content>> {
-        let content = sqlx::query_as::<_, Content>(
-            r#"
+        let client = self.db.get().await?;
+
+        let query = r#"
             SELECT * FROM content 
             WHERE tenant_id = $1 
             ORDER BY created_at DESC 
             LIMIT $2 OFFSET $3
-            "#
-        )
-        .bind(tenant_id.as_uuid())
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.db)
-        .await?;
+            "#;
 
-        Ok(content)
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            tenant_id.as_uuid(),
+            &limit,
+            &offset,
+        ];
+
+        let rows = client.query(query, &params).await?;
+        let content: Result<Vec<Content>, _> = rows.iter().map(row_to_content).collect();
+        
+        Ok(content?)
     }
 
     /// Delete content
@@ -156,14 +221,13 @@ impl ContentService {
         tenant_id: &TenantId,
         content_id: Uuid,
     ) -> Result<bool> {
-        let result = sqlx::query(
-            "DELETE FROM content WHERE id = $1 AND tenant_id = $2"
-        )
-        .bind(content_id)
-        .bind(tenant_id.as_uuid())
-        .execute(&self.db)
-        .await?;
+        let client = self.db.get().await?;
 
-        Ok(result.rows_affected() > 0)
+        let query = "DELETE FROM content WHERE id = $1 AND tenant_id = $2";
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
+
+        let rows_affected = client.execute(query, &params).await?;
+        
+        Ok(rows_affected > 0)
     }
 }

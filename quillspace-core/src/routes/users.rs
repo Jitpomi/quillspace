@@ -10,9 +10,42 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};
 use uuid::Uuid;
+
+/// Helper function to convert a tokio-postgres Row to User
+fn row_to_user(row: &Row) -> Result<User, PgError> {
+    let role_str: String = row.try_get("role")?;
+    let role = match role_str.as_str() {
+        "Admin" => UserRole::Admin,
+        "Editor" => UserRole::Editor,
+        "Viewer" => UserRole::Viewer,
+        _ => UserRole::Viewer, // Default fallback
+    };
+
+    Ok(User {
+        id: row.try_get("id")?,
+        tenant_id: row.try_get("tenant_id")?,
+        email: row.try_get("email")?,
+        name: row.try_get("name")?,
+        role,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+        is_active: row.try_get("is_active")?,
+    })
+}
+
+/// Helper function to convert UserRole to string for database
+fn user_role_to_string(role: &UserRole) -> &'static str {
+    match role {
+        UserRole::Admin => "Admin",
+        UserRole::Editor => "Editor",
+        UserRole::Viewer => "Viewer",
+    }
+}
 
 /// Create user management routes
 pub fn create_routes() -> Router<AppState> {
@@ -35,23 +68,44 @@ async fn list_users(
     // For now, skip admin check (implement proper auth later)
     // In real implementation: check if user has Admin role
 
-    let limit = params.limit.unwrap_or(20).min(100);
-    let offset = params.offset.unwrap_or(0);
+    let limit: u32 = params.limit.unwrap_or(20).min(100);
+    let offset: u32 = params.offset.unwrap_or(0);
 
-    let query = sqlx::query_as::<_, User>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         SELECT * FROM users 
         WHERE tenant_id = $1 
         ORDER BY created_at DESC 
         LIMIT $2 OFFSET $3
-        "#
-    )
-    .bind(*tenant_id.as_uuid())
-    .bind(limit as i64)
-    .bind(offset as i64);
+        "#;
 
-    match query.fetch_all(state.db.postgres()).await {
-        Ok(users) => {
+    let limit_i64 = limit as i64;
+    let offset_i64 = offset as i64;
+    let params_vec: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        tenant_id.as_uuid(),
+        &limit_i64,
+        &offset_i64,
+    ];
+
+    match client.query(query, &params_vec).await {
+        Ok(rows) => {
+            let users: Result<Vec<User>, _> = rows.iter().map(row_to_user).collect();
+            let users = match users {
+                Ok(users) => users,
+                Err(e) => {
+                    error!("Failed to parse user rows: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(users, request_id);
             Ok(Json(response))
         }
@@ -77,24 +131,43 @@ async fn create_user(
     let user_id = Uuid::new_v4();
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, User>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         INSERT INTO users (id, tenant_id, email, name, role, created_at, updated_at, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
-        "#
-    )
-    .bind(user_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(&user_request.email)
-    .bind(&user_request.name)
-    .bind(user_request.role.clone())
-    .bind(now)
-    .bind(now)
-    .bind(true);
+        "#;
 
-    match query.fetch_one(state.db.postgres()).await {
-        Ok(user) => {
+    let role_str = user_role_to_string(&user_request.role);
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &user_id,
+        tenant_id.as_uuid(),
+        &user_request.email,
+        &user_request.name,
+        &role_str,
+        &now,
+        &now,
+        &true,
+    ];
+
+    match client.query_one(query, &params).await {
+        Ok(row) => {
+            let user = match row_to_user(&row) {
+                Ok(user) => user,
+                Err(e) => {
+                    error!("Failed to parse user row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             info!(
                 user_id = %user_id,
                 tenant_id = %tenant_id,
@@ -128,14 +201,28 @@ async fn get_user(
     // For now, skip user access check (implement proper auth later)
     // In real implementation: check if user can view this user profile
 
-    let query = sqlx::query_as::<_, User>(
-        "SELECT * FROM users WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(user_id)
-    .bind(*tenant_id.as_uuid());
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(user)) => {
+    let query = "SELECT * FROM users WHERE id = $1 AND tenant_id = $2";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&user_id, tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let user = match row_to_user(&row) {
+                Ok(user) => user,
+                Err(e) => {
+                    error!("Failed to parse user row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(user, request_id);
             Ok(Json(response))
         }
@@ -162,24 +249,45 @@ async fn update_user(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, User>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE users 
         SET name = COALESCE($3, name),
             email = COALESCE($4, email),
             updated_at = $5
         WHERE id = $1 AND tenant_id = $2
         RETURNING *
-        "#
-    )
-    .bind(user_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(update_request.name.as_deref())
-    .bind(update_request.email.as_deref())
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(user)) => {
+    let name_ref = update_request.name.as_deref();
+    let email_ref = update_request.email.as_deref();
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &user_id,
+        tenant_id.as_uuid(),
+        &name_ref,
+        &email_ref,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let user = match row_to_user(&row) {
+                Ok(user) => user,
+                Err(e) => {
+                    error!("Failed to parse user row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(user, request_id);
             Ok(Json(response))
         }
@@ -206,21 +314,40 @@ async fn update_user_role(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, User>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE users 
         SET role = $3, updated_at = $4
         WHERE id = $1 AND tenant_id = $2
         RETURNING *
-        "#
-    )
-    .bind(user_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(role_request.role.clone())
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(user)) => {
+    let role_str = user_role_to_string(&role_request.role);
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &user_id,
+        tenant_id.as_uuid(),
+        &role_str,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let user = match row_to_user(&row) {
+                Ok(user) => user,
+                Err(e) => {
+                    error!("Failed to parse user row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(user, request_id);
             Ok(Json(response))
         }
@@ -245,14 +372,28 @@ async fn get_current_user(
 
     let placeholder_user_id = Uuid::new_v4();
 
-    let query = sqlx::query_as::<_, User>(
-        "SELECT * FROM users WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(placeholder_user_id)
-    .bind(*tenant_id.as_uuid());
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(user)) => {
+    let query = "SELECT * FROM users WHERE id = $1 AND tenant_id = $2";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&placeholder_user_id, tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let user = match row_to_user(&row) {
+                Ok(user) => user,
+                Err(e) => {
+                    error!("Failed to parse user row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(user, request_id);
             Ok(Json(response))
         }

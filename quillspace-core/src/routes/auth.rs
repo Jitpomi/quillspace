@@ -2,7 +2,6 @@ use crate::{
     types::{ApiResponse, User, UserRole},
     AppState,
 };
-use sqlx::FromRow;
 use axum::{
     extract::{Request, State},
     http::StatusCode,
@@ -24,6 +23,16 @@ struct Claims {
     role: String,       // User role
     exp: usize,         // Expiration time
     iat: usize,         // Issued at
+}
+
+/// Helper function to convert database role string to UserRole enum
+fn parse_user_role(role_str: &str) -> UserRole {
+    match role_str {
+        "admin" => UserRole::Admin,
+        "editor" => UserRole::Editor,
+        "viewer" => UserRole::Viewer,
+        _ => UserRole::Viewer, // Default fallback
+    }
 }
 
 /// Create authentication routes
@@ -48,13 +57,33 @@ async fn login(
     // 4. Log security events
 
     // For demo purposes, we'll do a simple email lookup
-    let query = sqlx::query_as::<_, User>(
-        "SELECT * FROM users WHERE email = $1 AND is_active = true"
-    )
-    .bind(&login_request.email);
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(user)) => {
+    let query = "SELECT id, tenant_id, email, name, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true";
+    
+    match client.query_opt(query, &[&login_request.email]).await {
+        Ok(Some(row)) => {
+            // Construct User from database row
+            let role_str: String = row.get("role");
+            let role = parse_user_role(&role_str);
+
+            let user = User {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                email: row.get("email"),
+                name: row.get("name"),
+                role,
+                is_active: row.get("is_active"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            };
+
             // TODO: Verify password hash here
             // For demo, we'll assume password is correct
 
@@ -145,13 +174,33 @@ async fn refresh_token(
             let user_id = Uuid::parse_str(&old_claims.sub)
                 .map_err(|_| StatusCode::BAD_REQUEST)?;
 
-            let query = sqlx::query_as::<_, User>(
-                "SELECT * FROM users WHERE id = $1 AND is_active = true"
-            )
-            .bind(user_id);
+            let client = match state.db.postgres().get().await {
+                Ok(client) => client,
+                Err(e) => {
+                    error!("Failed to get database connection: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
 
-            match query.fetch_optional(state.db.postgres()).await {
-                Ok(Some(user)) => {
+            let query = "SELECT id, tenant_id, email, name, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true";
+            
+            match client.query_opt(query, &[&user_id]).await {
+                Ok(Some(row)) => {
+                    // Construct User from database row
+                    let role_str: String = row.get("role");
+                    let role = parse_user_role(&role_str);
+
+                    let user = User {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        email: row.get("email"),
+                        name: row.get("name"),
+                        role,
+                        is_active: row.get("is_active"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                    };
+
                     let now = Utc::now();
                     let exp_time = now + Duration::seconds(state.config.auth.jwt_expiration);
 

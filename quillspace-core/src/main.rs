@@ -9,7 +9,6 @@ use axum::{
     extract::State,
     http::StatusCode,
     middleware::from_fn,
-    middleware::from_fn_with_state,
     response::IntoResponse,
     routing::{get, post},
     Json, Router, serve,
@@ -40,7 +39,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new(config: AppConfig) -> anyhow::Result<Self> {
-        let db = DatabaseConnections::new(&config.database, &config.clickhouse).await?;
+        let db = DatabaseConnections::new(&config.database.url, &config.clickhouse.url).await?;
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),
@@ -122,32 +121,20 @@ async fn main() -> anyhow::Result<()> {
 
 /// Create the application router with all middleware and routes
 async fn create_app(state: AppState) -> anyhow::Result<Router> {
-    let jwt_secret = state.jwt_secret.clone();
+    let _jwt_secret = state.jwt_secret.clone();
     
     let app = Router::new()
         // Health check routes (no middleware)
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
         
-        // API routes with full middleware stack
-        .nest("/api/v1", create_api_routes())
-        
         // Legacy routes for compatibility
         .route("/", get(root))
-        .route("/api/info", get(info))
-        .route("/api/items", post(create_item))
+        .route("/ping", get(ping))
         
-        // Add Axum-compliant middleware stack
+        // Middleware stack (applied in reverse order)
         .layer(
             ServiceBuilder::new()
-                // Tower-HTTP middleware (always works)
-                .layer(TraceLayer::new_for_http())
-                .layer(CompressionLayer::new())
-                .layer(TimeoutLayer::new(Duration::from_secs(30)))
-                
-                // Custom middleware with proper signatures
-                .layer(from_fn(middleware::request_id_middleware))
-                .layer(from_fn(middleware::timing_middleware))
                 .layer(from_fn(middleware::observability::metrics_middleware))
                 .layer(from_fn(middleware::observability::cors_middleware))
                 .layer(from_fn(middleware::observability::security_headers_middleware))
@@ -165,28 +152,29 @@ fn create_api_routes() -> Router<AppState> {
         // .nest("/content", routes::content::create_routes())
         // .nest("/analytics", routes::analytics::create_routes())
         // .nest("/users", routes::users::create_routes())
-        // .nest("/auth", routes::auth::create_routes())
+        // Health and monitoring endpoints
+        .route("/health", get(health_check))
+        .route("/ready", get(readiness_check))
         
         // Add a simple test route
         .route("/test", get(|| async { "API is working!" }))
 }
 
-// Health check handlers
 async fn health_check() -> &'static str {
     "OK"
 }
 
-async fn readiness_check(State(state): State<AppState>) -> Result<&'static str, StatusCode> {
-    // Check database connectivity
-    match sqlx::query("SELECT 1").execute(state.db.postgres()).await {
-        Ok(_) => Ok("Ready"),
-        Err(_) => Err(StatusCode::SERVICE_UNAVAILABLE),
-    }
+async fn readiness_check() -> &'static str {
+    "Ready"
 }
 
 // Legacy route handlers for compatibility
 async fn root() -> &'static str {
     "🚀 Welcome to QuillSpace - High-Performance Multi-Tenant Publishing Platform"
+}
+
+async fn ping() -> &'static str {
+    "pong"
 }
 
 async fn info(State(state): State<AppState>) -> impl IntoResponse {

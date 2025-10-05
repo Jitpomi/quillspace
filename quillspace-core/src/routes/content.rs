@@ -11,9 +11,41 @@ use axum::{
     routing::{delete, get, post, put},
     Json, Router,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};
 use uuid::Uuid;
+
+/// Helper function to convert a tokio-postgres Row to Content
+fn row_to_content(row: &Row) -> Result<Content, PgError> {
+    Ok(Content {
+        id: row.try_get("id")?,
+        tenant_id: row.try_get("tenant_id")?,
+        title: row.try_get("title")?,
+        slug: row.try_get("slug")?,
+        body: row.try_get("body")?,
+        status: match row.try_get::<_, String>("status")?.as_str() {
+            "Draft" => ContentStatus::Draft,
+            "Published" => ContentStatus::Published,
+            "Archived" => ContentStatus::Archived,
+            _ => ContentStatus::Draft,
+        },
+        author_id: row.try_get("author_id")?,
+        published_at: row.try_get("published_at")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+/// Helper function to convert ContentStatus to string for database
+fn content_status_to_string(status: &ContentStatus) -> &'static str {
+    match status {
+        ContentStatus::Draft => "Draft",
+        ContentStatus::Published => "Published",
+        ContentStatus::Archived => "Archived",
+    }
+}
 
 /// Create content management routes
 pub fn create_routes() -> Router<AppState> {
@@ -34,44 +66,62 @@ async fn list_content(
     let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
     let request_id = Uuid::new_v4();
 
-    let limit = params.pagination.limit.unwrap_or(20).min(100);
-    let offset = ((params.pagination.page.unwrap_or(1) - 1) * limit) as i64;
+    let limit: u32 = params.pagination.limit.unwrap_or(20).min(100);
+    let offset: i64 = ((params.pagination.page.unwrap_or(1) - 1) * limit) as i64;
+
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
     // Build query with filters
-    let mut query_builder = sqlx::QueryBuilder::new(
-        "SELECT * FROM content WHERE tenant_id = "
-    );
-    query_builder.push_bind(*tenant_id.as_uuid());
+    let mut query = "SELECT * FROM content WHERE tenant_id = $1".to_string();
+    let mut params_vec: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
+    let mut param_index = 2;
 
-    if let Some(status) = params.status {
-        query_builder.push(" AND status = ");
-        query_builder.push_bind(status);
+    // Declare status_str outside the conditional block so it lives long enough
+    let status_str;
+    if let Some(status) = &params.status {
+        query.push_str(&format!(" AND status = ${}", param_index));
+        status_str = content_status_to_string(status);
+        params_vec.push(&status_str);
+        param_index += 1;
     }
 
-    if let Some(author_id) = params.author_id {
-        query_builder.push(" AND author_id = ");
-        query_builder.push_bind(author_id);
+    if let Some(author_id) = &params.author_id {
+        query.push_str(&format!(" AND author_id = ${}", param_index));
+        params_vec.push(author_id);
+        param_index += 1;
     }
 
-    query_builder.push(" ORDER BY created_at DESC LIMIT ");
-    query_builder.push_bind(limit as i64);
-    query_builder.push(" OFFSET ");
-    query_builder.push_bind(offset);
-
-    let query = query_builder.build_query_as::<Content>();
+    query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${} OFFSET ${}", param_index, param_index + 1));
+    let limit_i64 = limit as i64;
+    params_vec.push(&limit_i64);
+    params_vec.push(&offset);
 
     // Get total count for pagination
-    let count_query = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM content WHERE tenant_id = $1",
-        *tenant_id.as_uuid()
-    );
+    let count_query = "SELECT COUNT(*) FROM content WHERE tenant_id = $1";
+    let count_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
 
-    match tokio::try_join!(
-        query.fetch_all(state.db.postgres()),
-        count_query.fetch_one(state.db.postgres())
-    ) {
-        Ok((content, total_count)) => {
-            let total = total_count.unwrap_or(0) as u64;
+    let content_result = client.query(&query, &params_vec);
+    let count_result = client.query_one(count_query, &count_params);
+    
+    match tokio::try_join!(content_result, count_result) {
+        Ok((content_rows, count_row)) => {
+            let content: Result<Vec<Content>, _> = content_rows.iter().map(row_to_content).collect();
+            let content = match content {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content rows: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+            let total: u64 = count_row.get::<_, i64>(0) as u64;
             let page = params.pagination.page.unwrap_or(1);
             let total_pages = ((total + limit as u64 - 1) / limit as u64) as u32;
 
@@ -110,28 +160,47 @@ async fn create_content(
     let author_id = user_id; // Use placeholder user ID
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Content>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         INSERT INTO content (id, tenant_id, title, slug, body, status, author_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
-        "#
-    )
-    .bind(content_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(&content_request.title)
-    .bind(&content_request.slug)
-    .bind(&content_request.body)
-    .bind(ContentStatus::Draft)
-    .bind(author_id)
-    .bind(now)
-    .bind(now);
+        "#;
 
-    match query.fetch_one(state.db.postgres()).await {
-        Ok(content) => {
+    let status_str = content_status_to_string(&ContentStatus::Draft);
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &content_id,
+        tenant_id.as_uuid(),
+        &content_request.title,
+        &content_request.slug,
+        &content_request.body,
+        &status_str,
+        &author_id,
+        &now,
+        &now,
+    ];
+
+    match client.query_one(query, &params).await {
+        Ok(row) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             // Record analytics event
-            let analytics = AnalyticsService::new(state.db.clickhouse().clone());
-            let _ = analytics.record_content_action(
+            let _ = state.db.clickhouse().record_content_action(
                 *tenant_id.as_uuid(),
                 content_id,
                 "create",
@@ -164,17 +233,30 @@ async fn get_content(
     let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
     let request_id = Uuid::new_v4();
 
-    let query = sqlx::query_as::<_, Content>(
-        "SELECT * FROM content WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(content_id)
-    .bind(*tenant_id.as_uuid());
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(content)) => {
+    let query = "SELECT * FROM content WHERE id = $1 AND tenant_id = $2";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             // Record view analytics
-            let analytics = AnalyticsService::new(state.db.clickhouse().clone());
-            let _ = analytics.record_content_action(
+            let _ = state.db.clickhouse().record_content_action(
                 *tenant_id.as_uuid(),
                 content_id,
                 "view",
@@ -208,8 +290,16 @@ async fn update_content(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Content>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE content 
         SET title = COALESCE($3, title),
             slug = COALESCE($4, slug),
@@ -217,20 +307,33 @@ async fn update_content(
             updated_at = $6
         WHERE id = $1 AND tenant_id = $2
         RETURNING *
-        "#
-    )
-    .bind(content_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(update_request.title.as_deref())
-    .bind(update_request.slug.as_deref())
-    .bind(update_request.body.as_deref())
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(content)) => {
+    let title_ref = update_request.title.as_deref();
+    let slug_ref = update_request.slug.as_deref();
+    let body_ref = update_request.body.as_deref();
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &content_id,
+        tenant_id.as_uuid(),
+        &title_ref,
+        &slug_ref,
+        &body_ref,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             // Record analytics event
-            let analytics = AnalyticsService::new(state.db.clickhouse().clone());
-            let _ = analytics.record_content_action(
+            let _ = state.db.clickhouse().record_content_action(
                 *tenant_id.as_uuid(),
                 content_id,
                 "update",
@@ -264,25 +367,44 @@ async fn publish_content(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Content>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE content 
         SET status = $3, published_at = $4, updated_at = $5
         WHERE id = $1 AND tenant_id = $2
         RETURNING *
-        "#
-    )
-    .bind(content_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(ContentStatus::Published)
-    .bind(now)
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(content)) => {
+    let status_str = content_status_to_string(&ContentStatus::Published);
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &content_id,
+        tenant_id.as_uuid(),
+        &status_str,
+        &now,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             // Record analytics event
-            let analytics = AnalyticsService::new(state.db.clickhouse().clone());
-            let _ = analytics.record_content_action(
+            let _ = state.db.clickhouse().record_content_action(
                 *tenant_id.as_uuid(),
                 content_id,
                 "publish",
@@ -316,21 +438,41 @@ async fn archive_content(
 
     let now = chrono::Utc::now();
 
-    let query = sqlx::query_as::<_, Content>(
-        r#"
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = r#"
         UPDATE content 
         SET status = $3, updated_at = $4
         WHERE id = $1 AND tenant_id = $2
         RETURNING *
-        "#
-    )
-    .bind(content_id)
-    .bind(*tenant_id.as_uuid())
-    .bind(ContentStatus::Archived)
-    .bind(now);
+        "#;
 
-    match query.fetch_optional(state.db.postgres()).await {
-        Ok(Some(content)) => {
+    let status_str = content_status_to_string(&ContentStatus::Archived);
+    
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+        &content_id,
+        tenant_id.as_uuid(),
+        &status_str,
+        &now,
+    ];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             let response = ApiResponse::success(content, request_id);
             Ok(Json(response))
         }
@@ -353,15 +495,21 @@ async fn delete_content(
     // For now, skip admin check (implement proper auth later)
     // In real implementation: check if user has Admin role
 
-    let query = sqlx::query!(
-        "DELETE FROM content WHERE id = $1 AND tenant_id = $2",
-        content_id,
-        *tenant_id.as_uuid()
-    );
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    match query.execute(state.db.postgres()).await {
-        Ok(result) => {
-            if result.rows_affected() > 0 {
+    let query = "DELETE FROM content WHERE id = $1 AND tenant_id = $2";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
+
+    match client.execute(query, &params).await {
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
                 info!(content_id = %content_id, "Content deleted");
                 Ok(StatusCode::NO_CONTENT)
             } else {
@@ -385,7 +533,6 @@ async fn get_content_analytics(
     let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
     let request_id = Uuid::new_v4();
 
-    let analytics = AnalyticsService::new(state.db.clickhouse().clone());
     let days = params.days.unwrap_or(30);
 
     // Get content performance data from ClickHouse
@@ -401,6 +548,7 @@ async fn get_content_analytics(
     "#;
 
     match state.db.clickhouse()
+        .client()
         .query(query)
         .bind(*tenant_id.as_uuid())
         .bind(content_id)

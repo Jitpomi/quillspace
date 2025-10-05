@@ -4,7 +4,7 @@ port = 3000
 workers = 4
 
 [database]
-url = "postgresql://postgres:password@localhost:5432/quillspace"
+url = "postgresql://quillspace:dev_password@localhost:5432/quillspace_dev"
 max_connections = 10
 min_connections = 1
 connect_timeout = 30

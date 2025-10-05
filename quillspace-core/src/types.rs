@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Type, Encode, Decode};
+// Removed SQLx dependencies - using tokio-postgres instead
 use uuid::Uuid;
 
 /// Tenant identifier for multi-tenant isolation
@@ -76,7 +76,7 @@ impl From<UserId> for Uuid {
 }
 
 /// Tenant information
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tenant {
     pub id: Uuid,
     pub name: String,
@@ -88,7 +88,7 @@ pub struct Tenant {
 }
 
 /// User information with tenant association
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -101,8 +101,7 @@ pub struct User {
 }
 
 /// User roles for RBAC
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserRole {
     Admin,
     Editor,
@@ -110,7 +109,7 @@ pub enum UserRole {
 }
 
 /// Publishing content model
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Content {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -124,8 +123,7 @@ pub struct Content {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "content_status", rename_all = "lowercase")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ContentStatus {
     Draft,
     Published,
