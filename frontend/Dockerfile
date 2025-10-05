@@ -1,10 +1,9 @@
-# Multi-stage build for Qwik frontend
-FROM node:20-alpine as builder
+# Build stage
+FROM node:20-alpine as build
 
 # Install pnpm
 RUN npm install -g pnpm
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
@@ -16,29 +15,27 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the static site
 RUN pnpm build
 
-# Production stage with Nginx
+# Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy the built static files
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy built application
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy startup script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Expose port
 EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
+    CMD curl -f http://localhost/health || exit 1
 
-# Start nginx
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

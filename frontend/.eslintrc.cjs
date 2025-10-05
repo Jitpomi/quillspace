@@ -7,7 +7,6 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
     'plugin:qwik/recommended',
   ],
   parser: '@typescript-eslint/parser',

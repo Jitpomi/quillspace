@@ -12,10 +12,10 @@
   "trustedDependencies-annotation": "Needed for bun to allow running install scripts",
   "type": "module",
   "scripts": {
-    "build": "pnpm run build.types && pnpm run build.client",
+    "build": "qwik build",
     "build.client": "vite build",
     "build.preview": "vite build --ssr src/entry.preview.tsx",
-    "build.server": "vite build -c adapters/static/vite.config.ts",
+    "build.server": "qwik check-client src dist && vite build -c adapters/static/vite.config.ts",
     "build.types": "tsc --incremental --noEmit",
     "deploy": "echo 'Run \"npm run qwik add\" to install a server adapter'",
     "dev": "vite --mode ssr",
@@ -24,11 +24,11 @@
     "fmt.check": "prettier --check .",
     "lint": "eslint \"src/**/*.ts*\"",
     "preview": "qwik build preview && vite preview --open",
+    "qwik.add": "qwik add",
+    "qwik.add.integration": "qwik add integration",
     "start": "vite --open --mode ssr",
     "test": "vitest components",
     "test.ui": "vitest --ui components",
-    "qwik.add": "qwik add",
-    "qwik.add.integration": "qwik add integration",
     "qwik": "qwik"
   },
   "devDependencies": {
