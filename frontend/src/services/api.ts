@@ -156,7 +156,15 @@ class ApiClient {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    // Handle wrapped API response format
+    if (result.success && result.data !== undefined) {
+      return result.data;
+    }
+    
+    // Handle direct response format (fallback)
+    return result;
   }
 
   // Authentication endpoints
