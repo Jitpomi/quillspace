@@ -88,6 +88,22 @@ async fn login(
             // TODO: Verify password hash here
             // For demo, we'll assume password is correct
 
+            // Fetch tenant information
+            let tenant_query = "SELECT id, name, slug FROM tenants WHERE id = $1";
+            let tenant_row = match client.query_one(tenant_query, &[&user.tenant_id]).await {
+                Ok(row) => row,
+                Err(e) => {
+                    error!("Failed to fetch tenant: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+            let tenant = TenantInfo {
+                id: tenant_row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                name: tenant_row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                slug: tenant_row.try_get("slug").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+            };
+
             info!("Creating JWT token for user: {}", user.id);
             let now = Utc::now();
             let exp_time = now + Duration::seconds(state.config.auth.jwt_expiration);
@@ -117,9 +133,7 @@ async fn login(
                     );
 
                     let response_data = LoginResponse {
-                        access_token: token,
-                        token_type: "Bearer".to_string(),
-                        expires_in: state.config.auth.jwt_expiration,
+                        token,
                         user: UserInfo {
                             id: user.id,
                             email: user.email,
@@ -127,6 +141,7 @@ async fn login(
                             role: user.role,
                             tenant_id: user.tenant_id,
                         },
+                        tenant,
                     };
 
                     let response = ApiResponse::success(response_data, request_id);
@@ -278,10 +293,9 @@ struct LoginRequest {
 
 #[derive(Debug, Serialize)]
 struct LoginResponse {
-    access_token: String,
-    token_type: String,
-    expires_in: i64,
+    token: String,
     user: UserInfo,
+    tenant: TenantInfo,
 }
 
 #[derive(Debug, Serialize)]
@@ -291,6 +305,13 @@ struct UserInfo {
     name: String,
     role: UserRole,
     tenant_id: Uuid,
+}
+
+#[derive(Debug, Serialize)]
+struct TenantInfo {
+    id: Uuid,
+    name: String,
+    slug: String,
 }
 
 #[derive(Debug, Deserialize)]
