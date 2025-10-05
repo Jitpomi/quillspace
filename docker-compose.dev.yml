@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Development Database
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: quillspace-postgres-dev
+    environment:
+      POSTGRES_DB: quillspace_dev
+      POSTGRES_USER: quillspace
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-dev.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./scripts/seed-dev.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quillspace -d quillspace_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # ClickHouse - Development Analytics Database
+  clickhouse-dev:
+    image: clickhouse/clickhouse-server:23-alpine
+    container_name: quillspace-clickhouse-dev
+    environment:
+      CLICKHOUSE_DB: analytics_dev
+      CLICKHOUSE_USER: quillspace
+      CLICKHOUSE_PASSWORD: dev_password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native interface
+    volumes:
+      - clickhouse_dev_data:/var/lib/clickhouse
+      - ./scripts/clickhouse-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./config/clickhouse-dev.xml:/etc/clickhouse-server/config.d/dev-config.xml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # Redis - Development Cache and Sessions
+  redis-dev:
+    image: redis:7-alpine
+    container_name: quillspace-redis-dev
+    command: redis-server --requirepass dev_password --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # Mailhog - Development Email Testing
+  mailhog-dev:
+    image: mailhog/mailhog:latest
+    container_name: quillspace-mailhog-dev
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # MinIO - Development S3-compatible Storage
+  minio-dev:
+    image: minio/minio:latest
+    container_name: quillspace-minio-dev
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_dev_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # Prometheus - Development Metrics
+  prometheus-dev:
+    image: prom/prometheus:latest
+    container_name: quillspace-prometheus-dev
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus-dev.yml:/etc/prometheus/prometheus.yml
+      - prometheus_dev_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # Grafana - Development Dashboards
+  grafana-dev:
+    image: grafana/grafana:latest
+    container_name: quillspace-grafana-dev
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_dev_data:/var/lib/grafana
+      - ./config/grafana-dev.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - prometheus-dev
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+  # Jaeger - Development Distributed Tracing
+  jaeger-dev:
+    image: jaegertracing/all-in-one:latest
+    container_name: quillspace-jaeger-dev
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+    restart: unless-stopped
+    networks:
+      - quillspace-dev
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  clickhouse_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  minio_dev_data:
+    driver: local
+  prometheus_dev_data:
+    driver: local
+  grafana_dev_data:
+    driver: local
+
+networks:
+  quillspace-dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
