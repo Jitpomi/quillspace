@@ -1,0 +1,27 @@
+[server]
+host = "127.0.0.1"
+port = 3000
+workers = 4
+
+[database]
+url = "postgresql://postgres:password@localhost:5432/quillspace"
+max_connections = 10
+min_connections = 1
+connect_timeout = 30
+
+[clickhouse]
+url = "http://localhost:8123"
+database = "quillspace_analytics"
+username = "default"
+password = ""
+compression = "lz4"
+
+[auth]
+jwt_secret = "your-secret-key-change-in-production"
+jwt_expiration = 3600  # 1 hour in seconds
+refresh_token_expiration = 604800  # 7 days in seconds
+
+[observability]
+metrics_enabled = true
+tracing_enabled = true
+prometheus_port = 9090

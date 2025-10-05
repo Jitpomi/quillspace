@@ -1,0 +1,73 @@
+# Multi-stage Dockerfile for QuillSpace Rust API
+FROM rust:1.75-slim as builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy dependency files
+COPY quillspace-core/Cargo.toml quillspace-core/Cargo.toml
+COPY quilspace-lib/Cargo.toml quilspace-lib/Cargo.toml
+COPY Cargo.toml Cargo.lock ./
+
+# Create dummy source files to cache dependencies
+RUN mkdir -p quillspace-core/src quilspace-lib/src
+RUN echo "fn main() {}" > quillspace-core/src/main.rs
+RUN echo "" > quilspace-lib/src/lib.rs
+
+# Build dependencies (this layer will be cached)
+RUN cargo build --release --bin quillspace-core
+RUN rm -rf quillspace-core/src quilspace-lib/src
+
+# Copy actual source code
+COPY quillspace-core/src quillspace-core/src
+COPY quilspace-lib/src quilspace-lib/src
+COPY quillspace-core/migrations quillspace-core/migrations
+
+# Build the application
+RUN touch quillspace-core/src/main.rs quilspace-lib/src/lib.rs
+RUN cargo build --release --bin quillspace-core
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd -r -s /bin/false quillspace
+
+# Create app directory
+WORKDIR /app
+
+# Copy the binary from builder stage
+COPY --from=builder /app/target/release/quillspace-core /app/quillspace-core
+
+# Copy configuration files
+COPY config /app/config
+
+# Change ownership
+RUN chown -R quillspace:quillspace /app
+
+# Switch to app user
+USER quillspace
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Run the application
+CMD ["./quillspace-core"]

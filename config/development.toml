@@ -1,0 +1,21 @@
+[server]
+host = "127.0.0.1"
+port = 3000
+
+[database]
+url = "postgresql://localhost/quillspace_dev"
+max_connections = 5
+min_connections = 1
+
+[clickhouse]
+url = "http://localhost:8123"
+database = "quillspace_analytics_dev"
+
+[auth]
+jwt_secret = "dev-secret-key-not-for-production"
+jwt_expiration = 7200  # 2 hours for development
+
+[observability]
+metrics_enabled = true
+tracing_enabled = true
+prometheus_port = 9091

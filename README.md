@@ -168,13 +168,31 @@ QuillSpace is designed from the ground up for multi-tenancy:
 
 ## 📊 Performance Characteristics
 
-Based on our technical evaluation:
+Based on the stack evaluation and implementation:
 
-- **API Throughput**: 50,000+ requests/second with Axum
-- **Database**: Sub-millisecond queries with proper indexing
-- **Analytics**: Query latency reduced from minutes to milliseconds
-- **Frontend**: Time-to-Interactive ~90ms with Qwik resumability
-- **Memory Usage**: ~10MB base memory footprint per service
+- **API Throughput**: 50,000+ requests/second with Axum (recommended over Poem/Salvo)
+- **Database**: PostgreSQL with row-level security for multi-tenant isolation
+- **Analytics**: ClickHouse delivers millisecond analytical queries vs minutes with traditional RDBMS
+- **Frontend**: Qwik's resumability achieves ~90ms Time-to-Interactive vs 350ms for Next.js
+- **Memory Usage**: ~10MB base memory footprint per Rust service
+- **Multi-Tenancy**: Shared tables with tenant_id isolation supporting millions of tenants
+
+## 🏗️ Implementation Highlights
+
+This implementation follows the **recommended architecture** from the 2025 stack evaluation:
+
+### ✅ **Adopted Recommendations**
+- **Axum over Poem/Salvo**: Superior performance (6s vs slower alternatives for 1M requests)
+- **PostgreSQL over TypeDB**: Proven multi-tenant isolation with RLS policies
+- **ClickHouse for Analytics**: Shared-table strategy with row-level policies
+- **Comprehensive Middleware**: Observability, security, and multi-tenancy built-in
+
+### 🚀 **Key Features Implemented**
+- **Multi-Tenant Row-Level Security**: PostgreSQL RLS with `tenant_id` isolation
+- **Real-Time Analytics**: ClickHouse with materialized views and TTL policies
+- **Comprehensive Observability**: Prometheus metrics, distributed tracing, structured logging
+- **Type-Safe API**: End-to-end type safety with Rust and proper error handling
+- **Qwik Integration**: Ultra-fast frontend with O(1) JavaScript payload sizes
 
 ## 🔐 Security
 

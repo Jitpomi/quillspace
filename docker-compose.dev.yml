@@ -14,8 +14,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
-      - ./scripts/init-dev.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./scripts/seed-dev.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U quillspace -d quillspace_dev"]
       interval: 10s
@@ -62,7 +60,6 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
-      timeout: 3s
       retries: 5
     restart: unless-stopped
     networks:

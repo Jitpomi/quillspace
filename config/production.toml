@@ -1,0 +1,28 @@
+[server]
+host = "0.0.0.0"
+port = 3000
+workers = 8
+
+[database]
+# Use environment variables in production
+url = "${DATABASE_URL}"
+max_connections = 20
+min_connections = 5
+connect_timeout = 10
+
+[clickhouse]
+url = "${CLICKHOUSE_URL}"
+database = "${CLICKHOUSE_DATABASE}"
+username = "${CLICKHOUSE_USERNAME}"
+password = "${CLICKHOUSE_PASSWORD}"
+compression = "lz4"
+
+[auth]
+jwt_secret = "${JWT_SECRET}"
+jwt_expiration = 3600
+refresh_token_expiration = 604800
+
+[observability]
+metrics_enabled = true
+tracing_enabled = true
+prometheus_port = 9090
