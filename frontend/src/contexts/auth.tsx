@@ -3,7 +3,7 @@
  * Manages user authentication state and JWT tokens
  */
 
-import { component$, createContextId, useContextProvider, useContext, useSignal, useTask$, useVisibleTask$, Slot, $ } from '@builder.io/qwik';
+import { component$, createContextId, useContextProvider, useContext, useSignal, useVisibleTask$, Slot, $ } from '@builder.io/qwik';
 import { api, setAuthToken, setTenantId, clearAuth, getAuthToken, getTenantId, type User, type Tenant } from '../services/api';
 
 // Auth context interface
@@ -107,6 +107,7 @@ export const AuthProvider = component$(() => {
   });
 
   // Check for existing authentication on mount (browser-only)
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     const token = getAuthToken();
     const tenantId = getTenantId();

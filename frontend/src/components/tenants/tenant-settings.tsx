@@ -28,7 +28,7 @@ interface TenantSettings {
 
 interface TenantSettingsProps {
   tenant: TenantSettings;
-  onUpdateSettings: (settings: any) => void;
+  onUpdateSettings: (_settings: any) => void;
 }
 
 export const TenantSettingsComponent = component$<TenantSettingsProps>(({ tenant, onUpdateSettings }) => {
@@ -36,15 +36,27 @@ export const TenantSettingsComponent = component$<TenantSettingsProps>(({ tenant
   const settings = useSignal(tenant.settings);
 
   const handleSave = $(() => {
-    onUpdateSettings(settings.value);
+    setTimeout(() => {
+      onUpdateSettings(settings.value);
+    }, 0);
   });
 
   const tabs = [
-    { id: 'general', label: 'General', icon: LuBuilding },
-    { id: 'branding', label: 'Branding', icon: LuPalette },
-    { id: 'features', label: 'Features', icon: LuGlobe },
-    { id: 'security', label: 'Security', icon: LuShield },
+    { id: 'general', label: 'General' },
+    { id: 'branding', label: 'Branding' },
+    { id: 'features', label: 'Features' },
+    { id: 'security', label: 'Security' },
   ];
+
+  const getTabIcon = (tabId: string) => {
+    switch (tabId) {
+      case 'general': return <LuBuilding class="w-4 h-4" />;
+      case 'branding': return <LuPalette class="w-4 h-4" />;
+      case 'features': return <LuGlobe class="w-4 h-4" />;
+      case 'security': return <LuShield class="w-4 h-4" />;
+      default: return null;
+    }
+  };
 
   return (
     <div class="space-y-6">
@@ -77,7 +89,7 @@ export const TenantSettingsComponent = component$<TenantSettingsProps>(({ tenant
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <tab.icon class="w-4 h-4" />
+                {getTabIcon(tab.id)}
                 {tab.label}
               </button>
             ))}

@@ -1,13 +1,13 @@
-import { component$, useSignal, $ } from '@builder.io/qwik';
+import { component$, useSignal, $, useTask$ } from '@builder.io/qwik';
 import { LuFileText, LuPlus, LuPenTool, LuTrash2, LuEye, LuCalendar, LuUser } from '@qwikest/icons/lucide';
 import { api, type Content } from '../../services/api';
 
 interface ContentManagementProps {
   content: Content[];
   onCreateContent$: () => void;
-  onEditContent$: (id: string) => void;
-  onDeleteContent$: (id: string) => void;
-  onPublishContent$: (id: string) => void;
+  onEditContent$: (_id: string) => void;
+  onDeleteContent$: (_id: string) => void;
+  onPublishContent$: (_id: string) => void;
   onRefresh$: () => void;
 }
 
@@ -26,6 +26,52 @@ export default component$<ContentManagementProps>(({
   const newContentSlug = useSignal('');
   const newContentContent = useSignal('');
   const error = useSignal<string | null>(null);
+  
+  // Signals to trigger callbacks
+  const triggerRefresh = useSignal(0);
+  const triggerCreate = useSignal(0);
+  const triggerPublish = useSignal('');
+  const triggerDelete = useSignal('');
+  const triggerEdit = useSignal('');
+  
+  // Handle callback triggers
+  useTask$(({ track }) => {
+    track(() => triggerRefresh.value);
+    if (triggerRefresh.value > 0) {
+      onRefresh$();
+    }
+  });
+  
+  useTask$(({ track }) => {
+    track(() => triggerCreate.value);
+    if (triggerCreate.value > 0) {
+      onCreateContent$();
+    }
+  });
+  
+  useTask$(({ track }) => {
+    track(() => triggerPublish.value);
+    if (triggerPublish.value) {
+      onPublishContent$(triggerPublish.value);
+      triggerPublish.value = '';
+    }
+  });
+  
+  useTask$(({ track }) => {
+    track(() => triggerDelete.value);
+    if (triggerDelete.value) {
+      onDeleteContent$(triggerDelete.value);
+      triggerDelete.value = '';
+    }
+  });
+  
+  useTask$(({ track }) => {
+    track(() => triggerEdit.value);
+    if (triggerEdit.value) {
+      onEditContent$(triggerEdit.value);
+      triggerEdit.value = '';
+    }
+  });
 
   // Handle creating new content
   const handleCreateContent = $(async () => {
@@ -51,9 +97,9 @@ export default component$<ContentManagementProps>(({
       newContentContent.value = '';
       showCreateModal.value = false;
 
-      // Refresh content list
-      onRefresh$();
-      onCreateContent$();
+      // Trigger callbacks via signals
+      triggerRefresh.value++;
+      triggerCreate.value++;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to create content';
     } finally {
@@ -65,8 +111,8 @@ export default component$<ContentManagementProps>(({
   const handlePublishContent = $(async (id: string) => {
     try {
       await api.publishContent(id);
-      onRefresh$();
-      onPublishContent$(id);
+      triggerRefresh.value++;
+      triggerPublish.value = id;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to publish content';
     }
@@ -80,8 +126,8 @@ export default component$<ContentManagementProps>(({
 
     try {
       await api.deleteContent(id);
-      onRefresh$();
-      onDeleteContent$(id);
+      triggerRefresh.value++;
+      triggerDelete.value = id;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to delete content';
     }
@@ -184,7 +230,7 @@ export default component$<ContentManagementProps>(({
                     </button>
                   )}
                   <button
-                    onClick$={() => onEditContent$(item.id)}
+                    onClick$={() => triggerEdit.value = item.id}
                     class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition-colors"
                   >
                     <LuPenTool class="w-4 h-4" />

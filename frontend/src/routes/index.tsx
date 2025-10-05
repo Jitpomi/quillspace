@@ -91,6 +91,7 @@ export default component$(() => {
   });
 
   // Check authentication and load data (browser-only)
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     const token = getAuthToken();
     
