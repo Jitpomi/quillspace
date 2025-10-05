@@ -51,10 +51,10 @@ fn content_status_to_string(status: &ContentStatus) -> &'static str {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_content).post(create_content))
-        .route("/:content_id", get(get_content).put(update_content).delete(delete_content))
-        .route("/:content_id/publish", post(publish_content))
-        .route("/:content_id/archive", post(archive_content))
-        .route("/:content_id/analytics", get(get_content_analytics))
+        .route("/{content_id}", get(get_content).put(update_content).delete(delete_content))
+        .route("/{content_id}/publish", post(publish_content))
+        .route("/{content_id}/archive", post(archive_content))
+        .route("/{content_id}/analytics", get(get_content_analytics))
 }
 
 /// List content with tenant isolation

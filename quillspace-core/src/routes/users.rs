@@ -51,8 +51,8 @@ fn user_role_to_string(role: &UserRole) -> &'static str {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_users).post(create_user))
-        .route("/:user_id", get(get_user).put(update_user))
-        .route("/:user_id/role", put(update_user_role))
+        .route("/{user_id}", get(get_user).put(update_user))
+        .route("/{user_id}/role", put(update_user_role))
         .route("/me", get(get_current_user))
 }
 

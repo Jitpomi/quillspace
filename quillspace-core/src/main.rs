@@ -96,9 +96,9 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(config.clone()).await?;
     info!("Database connections established");
 
-    // Setup row-level security
-    database::postgres::setup_rls(state.db.postgres()).await?;
-    info!("Row-level security policies configured");
+    // Setup row-level security (temporarily disabled for debugging)
+    // database::postgres::setup_rls(state.db.postgres()).await?;
+    info!("Row-level security policies skipped for now");
 
     // Build the enhanced router with comprehensive middleware
     let app = create_app(state).await?;

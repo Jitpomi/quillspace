@@ -33,8 +33,8 @@ fn row_to_tenant(row: &Row) -> Result<Tenant, PgError> {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_tenants).post(create_tenant))
-        .route("/:tenant_id", get(get_tenant).put(update_tenant))
-        .route("/:tenant_id/settings", get(get_tenant_settings).put(update_tenant_settings))
+        .route("/{tenant_id}", get(get_tenant).put(update_tenant))
+        .route("/{tenant_id}/settings", get(get_tenant_settings).put(update_tenant_settings))
 }
 
 /// List tenants (admin only)

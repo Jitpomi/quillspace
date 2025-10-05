@@ -56,9 +56,10 @@ services:
     environment:
       - RUN_MODE=development
       - RUST_LOG=info
-      - QUILLSPACE__DATABASE__URL=postgresql://quillspace:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/quillspace_dev
+      - QUILLSPACE__DATABASE__URL=postgresql://quillspace:dev_password@postgres:5432/quillspace_dev
       - QUILLSPACE__CLICKHOUSE__URL=http://clickhouse:8123
       - QUILLSPACE__SERVER__HOST=0.0.0.0
+      - QUILLSPACE__AUTH__JWT_SECRET=your-super-secure-jwt-secret-key-change-in-production
     ports:
       - "3000:3000"
     depends_on:

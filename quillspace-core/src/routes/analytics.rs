@@ -23,7 +23,7 @@ pub fn create_routes() -> Router<AppState> {
         .route("/events", post(record_event))
         .route("/stats", get(get_tenant_stats))
         .route("/content/top", get(get_top_content))
-        .route("/users/:user_id/activity", get(get_user_activity))
+        .route("/users/{user_id}/activity", get(get_user_activity))
 }
 
 /// Record an analytics event
