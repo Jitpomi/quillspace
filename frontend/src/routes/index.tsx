@@ -146,7 +146,7 @@ export default component$(() => {
   // Show loading state
   if (authLoading.value || isLoading.value) {
     return (
-      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div class="min-h-screen flex items-center justify-center">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p class="mt-4 text-gray-600">Loading QuillSpace...</p>
@@ -158,7 +158,7 @@ export default component$(() => {
   // Show error state
   if (error.value) {
     return (
-      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div class="min-h-screen  flex items-center justify-center">
         <div class="text-center">
           <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
             <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Dashboard</h3>
@@ -301,18 +301,12 @@ export default component$(() => {
           {activeTab.value === 'dashboard' && analytics.value && (
             <AnalyticsDashboard 
               data={analytics.value} 
-              onInteraction$={handleInteraction}
             />
           )}
           
           {activeTab.value === 'content' && (
             <ContentManagement
               content={content.value}
-              onCreateContent$={$(() => handleInteraction('content_create'))}
-              onEditContent$={$((id: string) => handleInteraction(`content_edit_${id}`))}
-              onDeleteContent$={$((id: string) => handleInteraction(`content_delete_${id}`))}
-              onPublishContent$={$((id: string) => handleInteraction(`content_publish_${id}`))}
-              onRefresh$={loadData}
             />
           )}
           

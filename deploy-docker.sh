@@ -77,7 +77,30 @@ main() {
     log_info "🛑 Stopping existing deployment..."
     $COMPOSE_CMD down --remove-orphans >/dev/null 2>&1 || true
     
-    # Step 5: Build and start services
+    # Step 5: Code Quality Checks
+    log_info "🔍 Running code quality checks..."
+    
+    # Frontend linting
+    log_info "Checking frontend code quality..."
+    cd frontend
+    if ! pnpm run lint; then
+        log_error "Frontend linting failed! Please fix errors before deploying."
+        exit 1
+    fi
+    log_success "Frontend linting passed!"
+    cd ..
+    
+    # Backend checks
+    log_info "Checking backend code quality..."
+    cd quillspace-core
+    if ! cargo check; then
+        log_error "Backend compilation check failed!"
+        exit 1
+    fi
+    log_success "Backend checks passed!"
+    cd ..
+    
+    # Step 6: Build and start services
     log_info "🏗️ Building and starting services..."
     log_info "This may take a few minutes on first run..."
     
