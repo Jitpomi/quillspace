@@ -1,23 +1,21 @@
-import { component$, useSignal, $, useTask$ } from '@builder.io/qwik';
+import { component$, useSignal, $ } from '@builder.io/qwik';
 import { LuFileText, LuPlus, LuPenTool, LuTrash2, LuEye, LuCalendar, LuUser } from '@qwikest/icons/lucide';
 import { api, type Content } from '../../services/api';
+import { 
+  useActions, 
+  triggerRefreshContent, 
+  triggerCreateContent, 
+  triggerEditContent, 
+  triggerDeleteContent, 
+  triggerPublishContent 
+} from '../../contexts/actions';
 
 interface ContentManagementProps {
   content: Content[];
-  onCreateContent$: () => void;
-  onEditContent$: (_id: string) => void;
-  onDeleteContent$: (_id: string) => void;
-  onPublishContent$: (_id: string) => void;
-  onRefresh$: () => void;
 }
 
 export default component$<ContentManagementProps>(({ 
-  content, 
-  onCreateContent$, 
-  onEditContent$, 
-  onDeleteContent$, 
-  onPublishContent$,
-  onRefresh$
+  content
 }) => {
   const selectedStatus = useSignal<string>('all');
   const isCreating = useSignal(false);
@@ -27,51 +25,8 @@ export default component$<ContentManagementProps>(({
   const newContentContent = useSignal('');
   const error = useSignal<string | null>(null);
   
-  // Signals to trigger callbacks
-  const triggerRefresh = useSignal(0);
-  const triggerCreate = useSignal(0);
-  const triggerPublish = useSignal('');
-  const triggerDelete = useSignal('');
-  const triggerEdit = useSignal('');
-  
-  // Handle callback triggers
-  useTask$(({ track }) => {
-    track(() => triggerRefresh.value);
-    if (triggerRefresh.value > 0) {
-      onRefresh$();
-    }
-  });
-  
-  useTask$(({ track }) => {
-    track(() => triggerCreate.value);
-    if (triggerCreate.value > 0) {
-      onCreateContent$();
-    }
-  });
-  
-  useTask$(({ track }) => {
-    track(() => triggerPublish.value);
-    if (triggerPublish.value) {
-      onPublishContent$(triggerPublish.value);
-      triggerPublish.value = '';
-    }
-  });
-  
-  useTask$(({ track }) => {
-    track(() => triggerDelete.value);
-    if (triggerDelete.value) {
-      onDeleteContent$(triggerDelete.value);
-      triggerDelete.value = '';
-    }
-  });
-  
-  useTask$(({ track }) => {
-    track(() => triggerEdit.value);
-    if (triggerEdit.value) {
-      onEditContent$(triggerEdit.value);
-      triggerEdit.value = '';
-    }
-  });
+  // Get actions context
+  const actions = useActions();
 
   // Handle creating new content
   const handleCreateContent = $(async () => {
@@ -97,9 +52,9 @@ export default component$<ContentManagementProps>(({
       newContentContent.value = '';
       showCreateModal.value = false;
 
-      // Trigger callbacks via signals
-      triggerRefresh.value++;
-      triggerCreate.value++;
+      // Trigger callbacks via actions context
+      triggerRefreshContent(actions);
+      triggerCreateContent(actions);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to create content';
     } finally {
@@ -111,8 +66,8 @@ export default component$<ContentManagementProps>(({
   const handlePublishContent = $(async (id: string) => {
     try {
       await api.publishContent(id);
-      triggerRefresh.value++;
-      triggerPublish.value = id;
+      triggerRefreshContent(actions);
+      triggerPublishContent(actions, id);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to publish content';
     }
@@ -126,8 +81,8 @@ export default component$<ContentManagementProps>(({
 
     try {
       await api.deleteContent(id);
-      triggerRefresh.value++;
-      triggerDelete.value = id;
+      triggerRefreshContent(actions);
+      triggerDeleteContent(actions, id);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to delete content';
     }
@@ -230,7 +185,7 @@ export default component$<ContentManagementProps>(({
                     </button>
                   )}
                   <button
-                    onClick$={() => triggerEdit.value = item.id}
+                    onClick$={() => triggerEditContent(actions, item.id)}
                     class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition-colors"
                   >
                     <LuPenTool class="w-4 h-4" />
@@ -251,7 +206,7 @@ export default component$<ContentManagementProps>(({
             <LuFileText class="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p class="text-gray-600">No content found</p>
             <button
-              onClick$={onCreateContent$}
+              onClick$={() => triggerCreateContent(actions)}
               class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
             >
               Create your first content
