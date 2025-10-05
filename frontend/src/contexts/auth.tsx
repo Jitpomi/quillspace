@@ -16,15 +16,17 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  login: (arg0: string, arg1: string) => Promise<void>;
-  register: (arg0: {
+  // eslint-disable-next-line no-unused-vars
+  login(email: string, password: string): Promise<void>;
+  // eslint-disable-next-line no-unused-vars
+  register(userData: {
     email: string;
     password: string;
     name: string;
     tenant_name: string;
-  }) => Promise<void>;
-  logout: () => void;
-  clearError: () => void;
+  }): Promise<void>;
+  logout(): void;
+  clearError(): void;
 }
 
 // Create context
