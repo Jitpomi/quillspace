@@ -1,5 +1,6 @@
 import { component$, useSignal, $ } from '@builder.io/qwik';
-import { LuSettings, LuSave, LuBuilding, LuGlobe, LuPalette, LuShield } from '@qwikest/icons/lucide';
+import { LuSettings, LuBuilding, LuPalette, LuGlobe, LuShield, LuSave } from '@qwikest/icons/lucide';
+import { useActions, triggerUpdateTenantSettings } from '../../contexts/actions';
 
 interface TenantSettings {
   id: string;
@@ -28,17 +29,15 @@ interface TenantSettings {
 
 interface TenantSettingsProps {
   tenant: TenantSettings;
-  onUpdateSettings: (_settings: any) => void;
 }
 
-export const TenantSettingsComponent = component$<TenantSettingsProps>(({ tenant, onUpdateSettings }) => {
+export const TenantSettingsComponent = component$<TenantSettingsProps>(({ tenant }) => {
   const activeTab = useSignal('general');
   const settings = useSignal(tenant.settings);
+  const actions = useActions();
 
   const handleSave = $(() => {
-    setTimeout(() => {
-      onUpdateSettings(settings.value);
-    }, 0);
+    triggerUpdateTenantSettings(actions, settings.value);
   });
 
   const tabs = [

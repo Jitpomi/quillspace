@@ -1,5 +1,12 @@
 import { component$, useSignal } from '@builder.io/qwik';
-import { LuUsers, LuPlus, LuPencil, LuTrash2, LuShield, LuMail, LuCalendar } from '@qwikest/icons/lucide';
+import { LuUsers, LuPlus, LuPencil, LuTrash2, LuMail, LuCalendar } from '@qwikest/icons/lucide';
+import { 
+  useActions, 
+  triggerCreateUser, 
+  triggerEditUser, 
+  triggerDeleteUser, 
+  triggerUpdateUserRole 
+} from '../../contexts/actions';
 
 interface User {
   id: string;
@@ -14,20 +21,13 @@ interface User {
 interface UserManagementProps {
   users: User[];
   currentUserRole: string;
-  onCreateUser: () => void;
-  onEditUser: (id: string) => void;
-  onDeleteUser: (id: string) => void;
-  onUpdateUserRole: (id: string, role: string) => void;
 }
 
 export const UserManagement = component$<UserManagementProps>(({ 
   users, 
-  currentUserRole,
-  onCreateUser, 
-  onEditUser, 
-  onDeleteUser, 
-  onUpdateUserRole 
+  currentUserRole
 }) => {
+  const actions = useActions();
   const selectedRole = useSignal<string>('all');
 
   const filteredUsers = users.filter(user => 
@@ -55,7 +55,7 @@ export const UserManagement = component$<UserManagementProps>(({
         </div>
         {canManageUsers && (
           <button
-            onClick$={onCreateUser}
+            onClick$={() => triggerCreateUser(actions)}
             class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
           >
             <LuPlus class="w-4 h-4" />
@@ -119,7 +119,7 @@ export const UserManagement = component$<UserManagementProps>(({
                 {canManageUsers && (
                   <div class="flex items-center gap-2">
                     <select
-                      onChange$={(e) => onUpdateUserRole(user.id, (e.target as HTMLSelectElement).value)}
+                      onChange$={(e) => triggerUpdateUserRole(actions, user.id, (e.target as HTMLSelectElement).value)}
                       value={user.role}
                       class="border border-gray-300 rounded px-2 py-1 text-sm"
                     >
@@ -128,13 +128,13 @@ export const UserManagement = component$<UserManagementProps>(({
                       <option value="admin">Admin</option>
                     </select>
                     <button
-                      onClick$={() => onEditUser(user.id)}
+                      onClick$={() => triggerEditUser(actions, user.id)}
                       class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition-colors"
                     >
                       <LuPencil class="w-4 h-4" />
                     </button>
                     <button
-                      onClick$={() => onDeleteUser(user.id)}
+                      onClick$={() => triggerDeleteUser(actions, user.id)}
                       class="bg-red-600 hover:bg-red-700 text-white p-2 rounded transition-colors"
                     >
                       <LuTrash2 class="w-4 h-4" />
@@ -152,7 +152,7 @@ export const UserManagement = component$<UserManagementProps>(({
             <p class="text-gray-600">No users found</p>
             {canManageUsers && (
               <button
-                onClick$={onCreateUser}
+                onClick$={() => triggerCreateUser(actions)}
                 class="mt-4 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
               >
                 Invite your first user

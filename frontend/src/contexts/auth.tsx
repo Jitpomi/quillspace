@@ -16,8 +16,8 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: {
+  login: (arg0: string, arg1: string) => Promise<void>;
+  register: (arg0: {
     email: string;
     password: string;
     name: string;

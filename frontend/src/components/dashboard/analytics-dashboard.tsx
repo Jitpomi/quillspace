@@ -13,10 +13,9 @@ interface AnalyticsData {
 
 interface AnalyticsDashboardProps {
   data: AnalyticsData;
-  onInteraction$: (eventType: string) => void;
 }
 
-export default component$<AnalyticsDashboardProps>(({ data, onInteraction$ }) => {
+export default component$<AnalyticsDashboardProps>(({ data }) => {
   return (
     <div class="space-y-8">
       {/* Analytics Overview */}
