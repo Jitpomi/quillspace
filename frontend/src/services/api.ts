@@ -273,22 +273,21 @@ class ApiClient {
 
   // Analytics endpoints
   async getAnalyticsMetrics(): Promise<AnalyticsMetrics> {
-    return this.request('/analytics/metrics');
+    return this.request('/analytics/stats');
   }
 
   async recordEvent(eventData: {
     event_type: string;
-    event_data: Record<string, any>;
-    session_id?: string;
+    properties?: Record<string, any>;
   }): Promise<void> {
     return this.request('/analytics/events', {
       method: 'POST',
-      body: JSON.stringify(eventData),
+      body: JSON.stringify(eventData)
     });
   }
 
   async getTopContent(): Promise<Array<{ title: string; views: number; }>> {
-    return this.request('/analytics/top-content');
+    return this.request('/analytics/content/top');
   }
 
   async getRecentActivity(): Promise<Array<{ type: string; description: string; timestamp: string; }>> {

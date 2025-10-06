@@ -166,7 +166,7 @@ export default component$(() => {
     if (isAuthenticated.value) {
       api.recordEvent({
         event_type: eventType,
-        event_data: { timestamp: new Date().toISOString() },
+        properties: { timestamp: new Date().toISOString() },
       }).catch(console.error);
     }
   });

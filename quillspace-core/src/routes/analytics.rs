@@ -23,6 +23,7 @@ pub fn create_routes() -> Router<AppState> {
         .route("/events", post(record_event))
         .route("/stats", get(get_tenant_stats))
         .route("/content/top", get(get_top_content))
+        .route("/recent-activity", get(get_recent_activity))
         .route("/users/{user_id}/activity", get(get_user_activity))
 }
 
@@ -240,4 +241,40 @@ struct UserActivityResponse {
     user_id: Uuid,
     period_days: u32,
     activity: Vec<crate::database::clickhouse::UserActivity>,
+}
+
+/// Get recent activity for the tenant
+async fn get_recent_activity(
+    State(state): State<AppState>,
+    Query(params): Query<StatsQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // Placeholder tenant context
+    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
+    let request_id = Uuid::new_v4();
+    
+    let _analytics = state.db.clickhouse();
+    let _days = params.days.unwrap_or(7).min(365);
+    
+    // For now, return mock recent activity data
+    // In a real implementation, this would query the events table
+    let recent_activity = vec![
+        serde_json::json!({
+            "type": "content_created",
+            "description": "New article published",
+            "timestamp": "2024-01-15T10:30:00Z"
+        }),
+        serde_json::json!({
+            "type": "user_login", 
+            "description": "User logged in",
+            "timestamp": "2024-01-15T09:15:00Z"
+        }),
+        serde_json::json!({
+            "type": "content_viewed",
+            "description": "Article viewed by reader", 
+            "timestamp": "2024-01-15T08:45:00Z"
+        }),
+    ];
+    
+    let response = ApiResponse::success(recent_activity, request_id);
+    Ok(Json(response))
 }
