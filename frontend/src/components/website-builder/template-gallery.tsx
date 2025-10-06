@@ -3,8 +3,8 @@
  * Helps authors choose beautiful website templates for their book selling sites
  */
 
-import { component$, useSignal, $ } from '@builder.io/qwik';
-import { LuEye, LuCheck, LuStar, LuHeart, LuZap } from '@qwikest/icons/lucide';
+import { component$, useSignal, $, useComputed$ } from '@builder.io/qwik';
+import { LuEye, LuCheck, LuStar, LuHeart, LuZap, LuChevronLeft, LuChevronRight } from '@qwikest/icons/lucide';
 
 // Template data - in a real app this would come from an API
 const templates = [
@@ -80,12 +80,36 @@ export default component$(() => {
   const selectedTemplate = useSignal<string | null>(null);
   const selectedCategory = useSignal<string>('All');
   const showPreview = useSignal<string | null>(null);
+  const currentPage = useSignal(1);
+  const templatesPerPage = 9; // 3x3 grid
 
   const categories = ['All', 'Literary', 'Modern', 'Cozy', 'Genre', 'Professional', 'Creative'];
 
-  const filteredTemplates = selectedCategory.value === 'All' 
-    ? templates 
-    : templates.filter(t => t.category === selectedCategory.value);
+  const filteredTemplates = useComputed$(() => {
+    return selectedCategory.value === 'All' 
+      ? templates 
+      : templates.filter(t => t.category === selectedCategory.value);
+  });
+
+  const totalPages = useComputed$(() => {
+    return Math.ceil(filteredTemplates.value.length / templatesPerPage);
+  });
+
+  const paginatedTemplates = useComputed$(() => {
+    const startIndex = (currentPage.value - 1) * templatesPerPage;
+    const endIndex = startIndex + templatesPerPage;
+    return filteredTemplates.value.slice(startIndex, endIndex);
+  });
+
+  const paginationInfo = useComputed$(() => {
+    const startIndex = (currentPage.value - 1) * templatesPerPage + 1;
+    const endIndex = Math.min(currentPage.value * templatesPerPage, filteredTemplates.value.length);
+    return {
+      start: startIndex,
+      end: endIndex,
+      total: filteredTemplates.value.length
+    };
+  });
 
   const handleSelectTemplate = $((id: string) => {
     selectedTemplate.value = id;
@@ -100,6 +124,17 @@ export default component$(() => {
     if (templateId) {
       console.log("Template selected:", templateId);
     }
+  });
+
+  const handleCategoryChange = $((category: string) => {
+    selectedCategory.value = category;
+    currentPage.value = 1; // Reset to first page when category changes
+  });
+
+  const handlePageChange = $((page: number) => {
+    currentPage.value = page;
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   return (
@@ -122,7 +157,7 @@ export default component$(() => {
         {categories.map((category) => (
           <button
             key={category}
-            onClick$={() => selectedCategory.value = category}
+            onClick$={() => handleCategoryChange(category)}
             class={`px-4 py-2 rounded-full font-sans text-sm transition-gentle ${
               selectedCategory.value === category
                 ? 'bg-[#9CAF88] text-white shadow-warm'
@@ -134,9 +169,14 @@ export default component$(() => {
         ))}
       </div>
 
+      {/* Pagination Info */}
+      <div class="text-center text-sm font-sans text-gray-600 mb-4">
+        Showing {paginationInfo.value.start}-{paginationInfo.value.end} of {paginationInfo.value.total} templates
+      </div>
+
       {/* Template Grid */}
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredTemplates.map((template) => (
+        {paginatedTemplates.value.map((template: any) => (
           <div
             key={template.id}
             class={`bg-[#FEFCF7] rounded-xl border-2 transition-gentle hover-lift cursor-pointer ${
@@ -201,7 +241,7 @@ export default component$(() => {
               <div class="mb-4">
                 <div class="text-xs font-sans font-medium text-[#9CAF88] mb-2">COLORS:</div>
                 <div class="flex gap-2">
-                  {template.colors.map((color, index) => (
+                  {template.colors.map((color: string, index: number) => (
                     <div
                       key={index}
                       class="w-4 h-4 rounded-full bg-gradient-to-br from-gray-300 to-gray-400"
@@ -213,7 +253,7 @@ export default component$(() => {
 
               {/* Features */}
               <div class="space-y-1">
-                {template.features.slice(0, 3).map((feature, index) => (
+                {template.features.slice(0, 3).map((feature: string, index: number) => (
                   <div key={index} class="flex items-center gap-2 text-xs font-sans text-gray-600">
                     <LuZap class="w-3 h-3 text-[#9CAF88]" />
                     {feature}
@@ -229,6 +269,45 @@ export default component$(() => {
           </div>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages.value > 1 && (
+        <div class="flex items-center justify-center gap-4 py-8">
+          <button
+            onClick$={() => handlePageChange(currentPage.value - 1)}
+            disabled={currentPage.value === 1}
+            class="flex items-center gap-2 px-4 py-2 rounded-lg font-sans text-sm transition-gentle disabled:opacity-50 disabled:cursor-not-allowed bg-[#F7F3E9] text-[#2D3748] hover:bg-[#9CAF88]/20 hover-lift"
+          >
+            <LuChevronLeft class="w-4 h-4" />
+            Previous
+          </button>
+
+          <div class="flex items-center gap-2">
+            {Array.from({ length: totalPages.value }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick$={() => handlePageChange(page)}
+                class={`w-10 h-10 rounded-lg font-sans text-sm transition-gentle ${
+                  currentPage.value === page
+                    ? 'bg-[#9CAF88] text-white shadow-warm'
+                    : 'bg-[#F7F3E9] text-[#2D3748] hover:bg-[#9CAF88]/20 hover-lift'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick$={() => handlePageChange(currentPage.value + 1)}
+            disabled={currentPage.value === totalPages.value}
+            class="flex items-center gap-2 px-4 py-2 rounded-lg font-sans text-sm transition-gentle disabled:opacity-50 disabled:cursor-not-allowed bg-[#F7F3E9] text-[#2D3748] hover:bg-[#9CAF88]/20 hover-lift"
+          >
+            Next
+            <LuChevronRight class="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Continue Button */}
       {selectedTemplate.value && (
