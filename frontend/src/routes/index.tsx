@@ -230,14 +230,14 @@ export default component$(() => {
   }
 
   return (
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-[#FEFCF7]">
       {/* Sidebar - Always visible on desktop, toggleable on mobile */}
-      <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 hidden lg:block">
+      <div class="fixed inset-y-0 left-0 z-50 w-64 bg-[#F7F3E9] shadow-sm border-r border-[#E8E2D4] hidden lg:block">
         {/* Desktop Sidebar - Always Visible */}
-        <div class="flex items-center justify-center h-16 border-b border-gray-200 bg-white">
+        <div class="flex items-center justify-center h-16 border-b border-[#E8E2D4] bg-[#F7F3E9]">
           <div class="flex items-center gap-2">
-            <LuRocket class="w-8 h-8 text-[#1B2330]" />
-            <span class="text-xl font-bold text-[#1B2330]">QuillSpace</span>
+            <LuRocket class="w-8 h-8 text-[#2D3748]" />
+            <span class="text-xl font-bold text-[#2D3748]">QuillSpace</span>
           </div>
         </div>
         
@@ -251,8 +251,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'dashboard'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuBarChart3 class="w-5 h-5" />
@@ -267,8 +267,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'content'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuFileText class="w-5 h-5" />
@@ -283,8 +283,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'users'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuUsers class="w-5 h-5" />
@@ -299,8 +299,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'settings'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuSettings class="w-5 h-5" />
@@ -311,13 +311,13 @@ export default component$(() => {
       </div>
 
       {/* Mobile Sidebar - Toggleable */}
-      <div class={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
+      <div class={`fixed inset-y-0 left-0 z-50 w-64 bg-[#F7F3E9] shadow-sm border-r border-[#E8E2D4] transform transition-transform duration-300 ease-in-out lg:hidden ${
         sidebarOpen.value ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div class="flex items-center justify-center h-16 border-b border-gray-200 bg-white">
+        <div class="flex items-center justify-center h-16 border-b border-[#E8E2D4] bg-[#F7F3E9]">
           <div class="flex items-center gap-2">
-            <LuRocket class="w-8 h-8 text-[#1B2330]" />
-            <span class="text-xl font-bold text-[#1B2330]">QuillSpace</span>
+            <LuRocket class="w-8 h-8 text-[#2D3748]" />
+            <span class="text-xl font-bold text-[#2D3748]">QuillSpace</span>
           </div>
         </div>
         
@@ -331,8 +331,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'dashboard'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuBarChart3 class="w-5 h-5" />
@@ -347,8 +347,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'content'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuFileText class="w-5 h-5" />
@@ -363,8 +363,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'users'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuUsers class="w-5 h-5" />
@@ -379,8 +379,8 @@ export default component$(() => {
               }}
               class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
                 activeTab.value === 'settings'
-                  ? 'bg-[#F4EAD8] text-[#1B2330] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B2330]'
+                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
+                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
               }`}
             >
               <LuSettings class="w-5 h-5" />
@@ -393,7 +393,7 @@ export default component$(() => {
       {/* Main Content */}
       <div class="lg:pl-64">
         {/* Header - Minimal and clean */}
-        <header class="bg-white border-b border-gray-200">
+        <header class="bg-[#FEFCF7] border-b border-[#E8E2D4]">
           <div class="flex items-center justify-between px-4 py-3">
             {/* Left side - Just hamburger menu on mobile */}
             <div class="flex items-center">
@@ -404,7 +404,7 @@ export default component$(() => {
                 <LuMenu class="w-5 h-5" />
               </button>
               {/* Title only on large screens */}
-              <h1 class="hidden lg:block text-2xl font-semibold text-gray-900 ml-4">
+              <h1 class="hidden lg:block text-2xl font-semibold text-[#2D3748] ml-4">
                 {activeTab.value === 'dashboard' && 'Dashboard'}
                 {activeTab.value === 'content' && 'My Writing'}
                 {activeTab.value === 'users' && 'Readers'}
@@ -416,7 +416,7 @@ export default component$(() => {
             <div class="flex items-center gap-2">
               {/* Desktop only - Create button + user info */}
               <div class="hidden lg:flex items-center gap-3">
-                <button class="bg-[#E3B23C] hover:bg-[#d4a332] text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                <button class="bg-[#9CAF88] hover:bg-[#8a9e7a] text-white px-4 py-2 rounded-lg font-medium transition-colors">
                   Create
                 </button>
                 <span class="text-sm text-gray-600">Welcome back, <span class="font-medium text-gray-900">{currentUser.value?.name}</span></span>
@@ -448,59 +448,59 @@ export default component$(() => {
             <div class="max-w-6xl mx-auto space-y-8">
               {/* Welcome Message */}
               <div class="text-center py-8">
-                <h2 class="text-3xl font-bold text-[#1B2330] mb-2">Where authors own their words</h2>
-                <p class="text-lg text-gray-600">Your personal home for books, connected to global marketplaces, with insights to grow your readership.</p>
+                <h2 class="text-3xl font-bold text-[#2D3748] mb-2">Your quiet corner of the internet</h2>
+                <p class="text-lg text-gray-600">A sanctuary where your stories find their home, and your words connect with readers who truly appreciate them.</p>
               </div>
 
               {/* Quick Actions - Ultra Clean */}
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
-                  <div class="w-16 h-16 bg-[#F4EAD8] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#ede0c8] transition-colors">
-                    <LuFileText class="w-8 h-8 text-[#1B2330]" />
+                <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center hover:shadow-md transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-[#9CAF88]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#9CAF88]/30 transition-colors">
+                    <LuFileText class="w-8 h-8 text-[#2D3748]" />
                   </div>
-                  <h3 class="text-xl font-semibold text-[#1B2330] mb-2">Start Writing</h3>
-                  <p class="text-gray-600 mb-4">Create your next article with our distraction-free editor.</p>
-                  <div class="text-[#E3B23C] font-medium">New Article →</div>
+                  <h3 class="text-xl font-semibold text-[#2D3748] mb-2">Start Writing</h3>
+                  <p class="text-gray-600 mb-4">Create your next piece in a distraction-free, calming environment.</p>
+                  <div class="text-[#9CAF88] font-medium">New Article →</div>
                 </div>
 
-                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
-                  <div class="w-16 h-16 bg-[#4CA6A8]/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#4CA6A8]/20 transition-colors">
-                    <LuUsers class="w-8 h-8 text-[#4CA6A8]" />
+                <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center hover:shadow-md transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-[#7C9CBF]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#7C9CBF]/30 transition-colors">
+                    <LuUsers class="w-8 h-8 text-[#2D3748]" />
                   </div>
-                  <h3 class="text-xl font-semibold text-[#1B2330] mb-2">Your Readers</h3>
-                  <p class="text-gray-600 mb-4">Connect with your audience and grow your readership.</p>
-                  <div class="text-[#4CA6A8] font-medium">View Readers →</div>
+                  <h3 class="text-xl font-semibold text-[#2D3748] mb-2">Your Readers</h3>
+                  <p class="text-gray-600 mb-4">Connect with the people who love your writing and want to hear more.</p>
+                  <div class="text-[#7C9CBF] font-medium">View Readers →</div>
                 </div>
 
-                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
-                  <div class="w-16 h-16 bg-[#6E4B7E]/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#6E4B7E]/20 transition-colors">
-                    <LuBarChart3 class="w-8 h-8 text-[#6E4B7E]" />
+                <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center hover:shadow-md transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-[#B8A9C9]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#B8A9C9]/30 transition-colors">
+                    <LuBarChart3 class="w-8 h-8 text-[#2D3748]" />
                   </div>
-                  <h3 class="text-xl font-semibold text-[#1B2330] mb-2">Your Impact</h3>
-                  <p class="text-gray-600 mb-4">See how your writing is reaching and inspiring readers.</p>
-                  <div class="text-[#6E4B7E] font-medium">View Stats →</div>
+                  <h3 class="text-xl font-semibold text-[#2D3748] mb-2">Your Impact</h3>
+                  <p class="text-gray-600 mb-4">See how your words are touching hearts and inspiring minds.</p>
+                  <div class="text-[#B8A9C9] font-medium">View Stats →</div>
                 </div>
               </div>
 
               {/* Writing Stats - Clean & Minimal */}
-              <div class="bg-white rounded-xl border border-gray-200 p-8">
-                <h3 class="text-xl font-semibold text-[#1B2330] mb-6 text-center">Your Writing Journey</h3>
+              <div class="bg-[#F7F3E9] rounded-xl border border-[#E8E2D4] p-8">
+                <h3 class="text-xl font-semibold text-[#2D3748] mb-6 text-center">Your Writing Journey</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                   <div>
-                    <div class="text-3xl font-bold text-[#E3B23C] mb-1">12</div>
-                    <div class="text-sm text-gray-600">Articles Published</div>
+                    <div class="text-3xl font-bold text-[#9CAF88] mb-1">12</div>
+                    <div class="text-sm text-gray-600">Stories Shared</div>
                   </div>
                   <div>
-                    <div class="text-3xl font-bold text-[#4CA6A8] mb-1">2.3k</div>
-                    <div class="text-sm text-gray-600">Total Reads</div>
+                    <div class="text-3xl font-bold text-[#7C9CBF] mb-1">2.3k</div>
+                    <div class="text-sm text-gray-600">Hearts Touched</div>
                   </div>
                   <div>
-                    <div class="text-3xl font-bold text-[#6E4B7E] mb-1">156</div>
-                    <div class="text-sm text-gray-600">Readers</div>
+                    <div class="text-3xl font-bold text-[#B8A9C9] mb-1">156</div>
+                    <div class="text-sm text-gray-600">Loyal Readers</div>
                   </div>
                   <div>
-                    <div class="text-3xl font-bold text-[#1B2330] mb-1">4.2m</div>
-                    <div class="text-sm text-gray-600">Avg. Read Time</div>
+                    <div class="text-3xl font-bold text-[#2D3748] mb-1">4.2m</div>
+                    <div class="text-sm text-gray-600">Time Well Spent</div>
                   </div>
                 </div>
               </div>
@@ -548,7 +548,7 @@ export default component$(() => {
                 </div>
                 <h3 class="text-2xl font-semibold text-gray-900 mb-3">Your Perfect Writing Environment</h3>
                 <p class="text-gray-600 mb-6 max-w-md mx-auto">Set up your workspace, customize your editor, manage your profile, and configure how you want to connect with readers.</p>
-                <button class="bg-[#E3B23C] hover:bg-[#d4a332] text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                <button class="bg-[#9CAF88] hover:bg-[#8a9e7a] text-white px-6 py-3 rounded-lg font-medium transition-colors">
                   Customize Workspace
                 </button>
               </div>
@@ -559,7 +559,7 @@ export default component$(() => {
 
       {/* Floating Action Button - Mobile only */}
       <button 
-        class="lg:hidden fixed bottom-6 right-6 bg-[#E3B23C] hover:bg-[#d4a332] text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
+        class="lg:hidden fixed bottom-6 right-6 bg-[#9CAF88] hover:bg-[#8a9e7a] text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
         onClick$={() => {
           activeTab.value = 'content';
           handleInteraction('fab_create');
