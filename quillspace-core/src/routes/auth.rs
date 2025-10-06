@@ -264,18 +264,60 @@ async fn refresh_token(
 
 /// User logout
 async fn logout(
-    State(_state): State<AppState>,
-    Json(_logout_request): Json<LogoutRequest>,
+    State(state): State<AppState>,
+    request: Request,
 ) -> Result<impl IntoResponse, StatusCode> {
     let request_id = Uuid::new_v4(); // Generate request ID
 
-    // In a real implementation, you would:
-    // 1. Add the token to a blacklist
-    // 2. Revoke refresh tokens
-    // 3. Log the logout event
-    // 4. Clear any server-side sessions
+    // Extract Authorization header to get user info for logging
+    let auth_header = request
+        .headers()
+        .get("authorization")
+        .and_then(|h| h.to_str().ok());
+    
+    let user_id = if let Some(auth_header) = auth_header {
+        if let Some(token) = auth_header.strip_prefix("Bearer ") {
+            // Decode token to get user ID for logging
+            match jsonwebtoken::decode::<Claims>(
+                token,
+                &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
+                &Validation::default(),
+            ) {
+                Ok(token_data) => {
+                    match Uuid::parse_str(&token_data.claims.sub) {
+                        Ok(id) => Some(id),
+                        Err(_) => None,
+                    }
+                }
+                Err(_) => None,
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
-    info!("User logged out successfully");
+    // In a real implementation, you would:
+    // 1. Add the token to a blacklist/Redis cache
+    // 2. Revoke refresh tokens from database
+    // 3. Log the logout event with user context
+    // 4. Clear any server-side sessions
+    // 5. Invalidate related tokens
+
+    // For now, we'll log the logout event
+    if let Some(user_id) = user_id {
+        info!(
+            user_id = %user_id,
+            request_id = %request_id,
+            "User logged out successfully"
+        );
+    } else {
+        info!(
+            request_id = %request_id,
+            "Logout request processed (token invalid or missing)"
+        );
+    }
 
     let response_data = LogoutResponse {
         message: "Logged out successfully".to_string(),
@@ -396,9 +438,11 @@ struct RefreshTokenResponse {
     expires_in: i64,
 }
 
+// LogoutRequest is no longer needed since we extract token from Authorization header
+// Keeping for backward compatibility if needed
 #[derive(Debug, Deserialize)]
 struct LogoutRequest {
-    token: String,
+    token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

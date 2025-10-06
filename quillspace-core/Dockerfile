@@ -1,5 +1,5 @@
-# Multi-stage build for Rust backend using nightly for edition 2024 support
-FROM rustlang/rust:nightly-slim as builder
+# Multi-stage build for Rust backend using stable Rust
+FROM rust:1.82-slim-bookworm as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

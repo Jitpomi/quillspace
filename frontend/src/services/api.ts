@@ -191,6 +191,13 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async logout(): Promise<{ message: string }> {
+    return this.request('/auth/logout', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
   // Content endpoints
   async getContent(): Promise<Content[]> {
     return this.request('/content');
@@ -310,6 +317,7 @@ export const api = {
   login: apiClient.login.bind(apiClient),
   register: apiClient.register.bind(apiClient),
   getCurrentUser: apiClient.getCurrentUser.bind(apiClient),
+  logout: apiClient.logout.bind(apiClient),
 
   // Content
   getContent: apiClient.getContent.bind(apiClient),

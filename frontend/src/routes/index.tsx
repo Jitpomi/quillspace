@@ -1,7 +1,6 @@
 import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
 import { routeAction$ } from '@builder.io/qwik-city';
-import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuBell, LuSearch, LuLogOut } from '@qwikest/icons/lucide';
-import AnalyticsDashboard from '../components/dashboard/analytics-dashboard';
+import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuLogOut } from '@qwikest/icons/lucide';
 import ContentManagement from '../components/content/content-management';
 import Login from '../components/auth/login';
 import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from '../services/api';
@@ -171,17 +170,31 @@ export default component$(() => {
     }
   });
 
-  const handleLogout = $(() => {
-    clearAuth();
-    isAuthenticated.value = false;
-    currentUser.value = null;
-    // Reload the page to reset state
-    window.location.reload();
+  const handleLogout = $(async () => {
+    try {
+      // Call backend logout endpoint
+      await api.logout();
+    } catch (err) {
+      console.error('Backend logout failed:', err);
+    } finally {
+      // Always clear local auth state
+      clearAuth();
+      isAuthenticated.value = false;
+      currentUser.value = null;
+      // Reload the page to reset state
+      window.location.reload();
+    }
   });
 
   // Show login if not authenticated
   if (!isAuthenticated.value && !authLoading.value) {
-    return <Login />;
+    return (
+      <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+          <Login />
+        </div>
+      </div>
+    );
   }
 
   // Show loading state
@@ -218,81 +231,86 @@ export default component$(() => {
 
   return (
     <div class="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div class={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+      {/* Sidebar - MailerLite inspired */}
+      <div class={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
         sidebarOpen.value ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 lg:static lg:inset-0`}>
-        <div class="flex items-center justify-center h-16 bg-blue-600">
+      } lg:translate-x-0`}>
+        <div class="flex items-center justify-center h-16 border-b border-gray-200 bg-white">
           <div class="flex items-center gap-2">
-            <LuRocket class="w-8 h-8 text-white" />
-            <span class="text-xl font-bold text-white">QuillSpace</span>
+            <LuRocket class="w-8 h-8 text-green-600" />
+            <span class="text-xl font-bold text-gray-900">QuillSpace</span>
           </div>
         </div>
         
-        <nav class="mt-8">
-          <button
-            onClick$={() => {
-              activeTab.value = 'dashboard';
-              handleInteraction('nav_dashboard');
-            }}
-            class={`w-full flex items-center gap-3 px-6 py-3 text-left transition-colors ${
-              activeTab.value === 'dashboard'
-                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <LuBarChart3 class="w-5 h-5" />
-            Dashboard
-          </button>
-          <button
-            onClick$={() => {
-              activeTab.value = 'content';
-              handleInteraction('nav_content');
-            }}
-            class={`w-full flex items-center gap-3 px-6 py-3 text-left transition-colors ${
-              activeTab.value === 'content'
-                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <LuFileText class="w-5 h-5" />
-            Content
-          </button>
-          <button
-            onClick$={() => {
-              activeTab.value = 'users';
-              handleInteraction('nav_users');
-            }}
-            class={`w-full flex items-center gap-3 px-6 py-3 text-left transition-colors ${
-              activeTab.value === 'users'
-                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <LuUsers class="w-5 h-5" />
-            Users
-          </button>
-          <button
-            onClick$={() => {
-              activeTab.value = 'settings';
-              handleInteraction('nav_settings');
-            }}
-            class={`w-full flex items-center gap-3 px-6 py-3 text-left transition-colors ${
-              activeTab.value === 'settings'
-                ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <LuSettings class="w-5 h-5" />
-            Settings
-          </button>
+        <nav class="mt-8 px-4">
+          <div class="space-y-2">
+            <button
+              onClick$={() => {
+                activeTab.value = 'dashboard';
+                handleInteraction('nav_dashboard');
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === 'dashboard'
+                  ? 'bg-green-50 text-green-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <LuBarChart3 class="w-5 h-5" />
+              <span>Dashboard</span>
+            </button>
+            
+            <button
+              onClick$={() => {
+                activeTab.value = 'content';
+                handleInteraction('nav_content');
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === 'content'
+                  ? 'bg-green-50 text-green-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <LuFileText class="w-5 h-5" />
+              <span>My Writing</span>
+            </button>
+            
+            <button
+              onClick$={() => {
+                activeTab.value = 'users';
+                handleInteraction('nav_users');
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === 'users'
+                  ? 'bg-green-50 text-green-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <LuUsers class="w-5 h-5" />
+              <span>Readers</span>
+            </button>
+            
+            <button
+              onClick$={() => {
+                activeTab.value = 'settings';
+                handleInteraction('nav_settings');
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === 'settings'
+                  ? 'bg-green-50 text-green-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <LuSettings class="w-5 h-5" />
+              <span>Settings</span>
+            </button>
+          </div>
         </nav>
       </div>
 
       {/* Main Content */}
       <div class="lg:pl-64">
         {/* Header */}
-        <header class="bg-white shadow-sm border-b border-gray-200">
+        <header class="bg-white border-b border-gray-200">
           <div class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center gap-4">
               <button
@@ -303,34 +321,25 @@ export default component$(() => {
               </button>
               <h1 class="text-2xl font-semibold text-gray-900">
                 {activeTab.value === 'dashboard' && 'Dashboard'}
-                {activeTab.value === 'content' && 'Content Management'}
-                {activeTab.value === 'users' && 'User Management'}
+                {activeTab.value === 'content' && 'My Writing'}
+                {activeTab.value === 'users' && 'Readers'}
                 {activeTab.value === 'settings' && 'Settings'}
               </h1>
             </div>
             
             <div class="flex items-center gap-4">
-              <div class="relative">
-                <LuSearch class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                <LuBell class="w-5 h-5" />
+              <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                Create
               </button>
               <div class="flex items-center gap-3">
-                <div class="text-right">
-                  <p class="text-sm font-medium text-gray-900">{currentUser.value?.name}</p>
-                  <p class="text-xs text-gray-500">{currentUser.value?.role}</p>
-                </div>
+                <span class="text-sm text-gray-600">Welcome back, <span class="font-medium text-gray-900">{currentUser.value?.name}</span></span>
                 <button 
                   onClick$={handleLogout}
-                  class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                  class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
+                  title="Sign out"
                 >
-                  <LuLogOut class="w-5 h-5" />
+                  <LuLogOut class="w-4 h-4" />
+                  <span>Sign out</span>
                 </button>
               </div>
             </div>
@@ -339,31 +348,114 @@ export default component$(() => {
 
         {/* Page Content */}
         <main class="p-6">
-          {activeTab.value === 'dashboard' && analytics.value && (
-            <AnalyticsDashboard 
-              data={analytics.value} 
-            />
+          {activeTab.value === 'dashboard' && (
+            <div class="max-w-6xl mx-auto space-y-8">
+              {/* Welcome Message */}
+              <div class="text-center py-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Welcome to your writing space</h2>
+                <p class="text-lg text-gray-600">Everything you need to write, publish, and connect with readers.</p>
+              </div>
+
+              {/* Quick Actions - Ultra Clean */}
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
+                    <LuFileText class="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Start Writing</h3>
+                  <p class="text-gray-600 mb-4">Create your next article with our distraction-free editor.</p>
+                  <div class="text-green-600 font-medium">New Article →</div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
+                    <LuUsers class="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Your Readers</h3>
+                  <p class="text-gray-600 mb-4">Connect with your audience and grow your readership.</p>
+                  <div class="text-blue-600 font-medium">View Readers →</div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all cursor-pointer group">
+                  <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
+                    <LuBarChart3 class="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Your Impact</h3>
+                  <p class="text-gray-600 mb-4">See how your writing is reaching and inspiring readers.</p>
+                  <div class="text-purple-600 font-medium">View Stats →</div>
+                </div>
+              </div>
+
+              {/* Writing Stats - Clean & Minimal */}
+              <div class="bg-white rounded-xl border border-gray-200 p-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Your Writing Journey</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                  <div>
+                    <div class="text-3xl font-bold text-green-600 mb-1">12</div>
+                    <div class="text-sm text-gray-600">Articles Published</div>
+                  </div>
+                  <div>
+                    <div class="text-3xl font-bold text-blue-600 mb-1">2.3k</div>
+                    <div class="text-sm text-gray-600">Total Reads</div>
+                  </div>
+                  <div>
+                    <div class="text-3xl font-bold text-purple-600 mb-1">156</div>
+                    <div class="text-sm text-gray-600">Readers</div>
+                  </div>
+                  <div>
+                    <div class="text-3xl font-bold text-orange-600 mb-1">4.2m</div>
+                    <div class="text-sm text-gray-600">Avg. Read Time</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           
           {activeTab.value === 'content' && (
-            <ContentManagement
-              content={content.value}
-            />
+            <div class="max-w-6xl mx-auto">
+              <div class="text-center py-8 mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Your Writing</h2>
+                <p class="text-lg text-gray-600">All your articles, drafts, and published pieces in one place.</p>
+              </div>
+              <ContentManagement content={content.value} />
+            </div>
           )}
           
           {activeTab.value === 'users' && (
-            <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-              <LuUsers class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 class="text-xl font-semibold text-gray-900 mb-2">User Management</h3>
-              <p class="text-gray-600">User management component coming soon...</p>
+            <div class="max-w-6xl mx-auto">
+              <div class="text-center py-8 mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Your Readers</h2>
+                <p class="text-lg text-gray-600">The people who love your writing and want to hear from you.</p>
+              </div>
+              <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <LuUsers class="w-10 h-10 text-blue-600" />
+                </div>
+                <h3 class="text-2xl font-semibold text-gray-900 mb-3">Connect with Your Audience</h3>
+                <p class="text-gray-600 mb-6 max-w-md mx-auto">Build meaningful relationships with readers who appreciate your work. Share your thoughts, get feedback, and grow your community.</p>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                  Add Readers
+                </button>
+              </div>
             </div>
           )}
           
           {activeTab.value === 'settings' && (
-            <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-              <LuSettings class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 class="text-xl font-semibold text-gray-900 mb-2">Settings</h3>
-              <p class="text-gray-600">Settings component coming soon...</p>
+            <div class="max-w-6xl mx-auto">
+              <div class="text-center py-8 mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Settings</h2>
+                <p class="text-lg text-gray-600">Customize your writing space to work exactly how you want.</p>
+              </div>
+              <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <LuSettings class="w-10 h-10 text-green-600" />
+                </div>
+                <h3 class="text-2xl font-semibold text-gray-900 mb-3">Your Perfect Writing Environment</h3>
+                <p class="text-gray-600 mb-6 max-w-md mx-auto">Set up your workspace, customize your editor, manage your profile, and configure how you want to connect with readers.</p>
+                <button class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                  Customize Workspace
+                </button>
+              </div>
             </div>
           )}
         </main>

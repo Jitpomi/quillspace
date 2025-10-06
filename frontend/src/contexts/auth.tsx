@@ -96,12 +96,23 @@ export const AuthProvider = component$(() => {
     }
   });
 
-  const logout = $(() => {
-    clearAuth();
-    user.value = null;
-    tenant.value = null;
-    isAuthenticated.value = false;
-    error.value = null;
+  const logout = $(async () => {
+    try {
+      // Call backend logout endpoint if authenticated
+      if (isAuthenticated.value) {
+        await api.logout();
+      }
+    } catch (err) {
+      // Log error but continue with logout process
+      console.error('Backend logout failed:', err);
+    } finally {
+      // Always clear local auth state
+      clearAuth();
+      user.value = null;
+      tenant.value = null;
+      isAuthenticated.value = false;
+      error.value = null;
+    }
   });
 
   const clearError = $(() => {
