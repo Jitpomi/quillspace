@@ -4,7 +4,7 @@
  */
 
 import { component$, useSignal, $, useComputed$ } from '@builder.io/qwik';
-import { LuEye, LuCheck, LuStar, LuHeart, LuZap, LuChevronLeft, LuChevronRight } from '@qwikest/icons/lucide';
+import { LuEye, LuCheck, LuStar, LuHeart, LuZap, LuChevronLeft, LuChevronRight, LuArrowUpDown } from '@qwikest/icons/lucide';
 
 // Template data - in a real app this would come from an API
 const templates = [
@@ -76,19 +76,55 @@ const templates = [
   }
 ];
 
+type SortOption = 'popular' | 'name' | 'category' | 'newest';
+
 export default component$(() => {
   const selectedTemplate = useSignal<string | null>(null);
   const selectedCategory = useSignal<string>('All');
   const showPreview = useSignal<string | null>(null);
   const currentPage = useSignal(1);
+  const sortBy = useSignal<SortOption>('popular');
   const templatesPerPage = 9; // 3x3 grid
 
   const categories = ['All', 'Literary', 'Modern', 'Cozy', 'Genre', 'Professional', 'Creative'];
+  const sortOptions = [
+    { value: 'popular' as SortOption, label: 'Most Popular', icon: '⭐' },
+    { value: 'name' as SortOption, label: 'Name (A-Z)', icon: '🔤' },
+    { value: 'category' as SortOption, label: 'Category', icon: '📂' },
+    { value: 'newest' as SortOption, label: 'Newest First', icon: '🆕' }
+  ];
 
   const filteredTemplates = useComputed$(() => {
-    return selectedCategory.value === 'All' 
-      ? templates 
+    // First filter by category
+    let filtered = selectedCategory.value === 'All' 
+      ? [...templates] 
       : templates.filter(t => t.category === selectedCategory.value);
+    
+    // Then sort based on selected option
+    switch (sortBy.value) {
+      case 'popular':
+        filtered.sort((a, b) => {
+          if (a.popular && !b.popular) return -1;
+          if (!a.popular && b.popular) return 1;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case 'name':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'category':
+        filtered.sort((a, b) => {
+          const categoryCompare = a.category.localeCompare(b.category);
+          return categoryCompare !== 0 ? categoryCompare : a.name.localeCompare(b.name);
+        });
+        break;
+      case 'newest':
+        // For demo purposes, reverse alphabetical order (in real app, would use creation date)
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+    }
+    
+    return filtered;
   });
 
   const totalPages = useComputed$(() => {
@@ -131,6 +167,11 @@ export default component$(() => {
     currentPage.value = 1; // Reset to first page when category changes
   });
 
+  const handleSortChange = $((sort: SortOption) => {
+    sortBy.value = sort;
+    currentPage.value = 1; // Reset to first page when sort changes
+  });
+
   const handlePageChange = $((page: number) => {
     currentPage.value = page;
     // Scroll to top when page changes
@@ -167,6 +208,30 @@ export default component$(() => {
             {category}
           </button>
         ))}
+      </div>
+
+      {/* Sort Options */}
+      <div class="flex items-center justify-center gap-4 mb-6">
+        <div class="flex items-center gap-2 text-sm font-sans text-gray-600">
+          <LuArrowUpDown class="w-4 h-4" />
+          <span>Sort by:</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {sortOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick$={() => handleSortChange(option.value)}
+              class={`flex items-center gap-2 px-3 py-2 rounded-lg font-sans text-sm transition-gentle ${
+                sortBy.value === option.value
+                  ? 'bg-[#9CAF88] text-white shadow-warm'
+                  : 'bg-[#F7F3E9] text-[#2D3748] hover:bg-[#9CAF88]/20 hover-lift'
+              }`}
+            >
+              <span>{option.icon}</span>
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Pagination Info */}
