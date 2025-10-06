@@ -18,7 +18,7 @@ const templates = [
     bestFor: 'Literary fiction, poetry, classic literature',
     colors: ['Deep navy', 'Cream', 'Gold accents'],
     popular: true
-  },
+  },,
   {
     id: 'modern-minimalist',
     name: 'Modern Minimalist',
@@ -29,7 +29,6 @@ const templates = [
     bestFor: 'Non-fiction, business books, self-help',
     colors: ['White', 'Black', 'Sage green'],
     popular: false
-  }
   },
   {
     id: 'cozy-bookshop',
@@ -41,7 +40,7 @@ const templates = [
     bestFor: 'Romance, cozy mystery, children\'s books',
     colors: ['Warm brown', 'Cream', 'Soft orange'],
     popular: true
-  },
+  },,
   {
     id: 'sci-fi-futuristic',
     name: 'Sci-Fi Futuristic',
@@ -52,8 +51,8 @@ const templates = [
     bestFor: 'Science fiction, fantasy, thriller',
     colors: ['Dark blue', 'Electric blue', 'Silver'],
     popular: false
-  }
   },
+  },,
   {
     id: 'author-portfolio',
     name: 'Author Portfolio',
@@ -64,7 +63,7 @@ const templates = [
     bestFor: 'Established authors, speakers, consultants',
     colors: ['Charcoal', 'White', 'Accent blue'],
     popular: true
-  },
+  },,
   {
     id: 'indie-creative',
     name: 'Indie Creative',
@@ -75,7 +74,7 @@ const templates = [
     bestFor: 'Indie authors, creative non-fiction, memoirs',
     colors: ['Teal', 'Coral', 'Cream'],
     popular: false
-  }
+  },
   
 ];
 
@@ -175,7 +174,7 @@ export default component$(() => {
                 onClick$={(e) => {
                   e.stopPropagation();
                   handlePreview(template.id);
-                }
+                },
                 class="absolute top-3 left-3 bg-white/90 hover:bg-white text-[#2D3748] px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-soft"
               >
                 <LuEye class="w-3 h-3" />
