@@ -39,11 +39,11 @@ const steps: CustomizationStep[] = [
   }
 ];
 
-interface CustomizationWizardProps {
-  templateId?: string | null;
-}
+// Simplified component without props for now
 
-export default component$<CustomizationWizardProps>((_props: CustomizationWizardProps) => {
+
+export default component$(() => {
+  
   const currentStep = useSignal(0);
   const authorData = useSignal({
     name: '',

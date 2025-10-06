@@ -29,6 +29,7 @@ const templates = [
     bestFor: 'Non-fiction, business books, self-help',
     colors: ['White', 'Black', 'Sage green'],
     popular: false
+  }
   },
   {
     id: 'cozy-bookshop',
@@ -51,6 +52,7 @@ const templates = [
     bestFor: 'Science fiction, fantasy, thriller',
     colors: ['Dark blue', 'Electric blue', 'Silver'],
     popular: false
+  }
   },
   {
     id: 'author-portfolio',
@@ -74,13 +76,16 @@ const templates = [
     colors: ['Teal', 'Coral', 'Cream'],
     popular: false
   }
+  
 ];
 
-interface TemplateGalleryProps {
-  onTemplateSelected?: (templateId: string) => void;
-}
+// Simplified component without props for now
 
-export default component$<TemplateGalleryProps>((props) => {
+
+
+export default component$(() => {
+  
+  
   const selectedTemplate = useSignal<string | null>(null);
   const selectedCategory = useSignal<string>('All');
   const showPreview = useSignal<string | null>(null);
@@ -91,25 +96,25 @@ export default component$<TemplateGalleryProps>((props) => {
     ? templates 
     : templates.filter(t => t.category === selectedCategory.value);
 
-  const handleSelectTemplate = $((templateId: string) => {
-    selectedTemplate.value = templateId;
-  });
+  const handleSelectTemplate = $((id: string) => {
+    selectedTemplate.value = id;
+  );
 
   const handlePreview = $((templateId: string) => {
     showPreview.value = templateId;
-  });
+  );
 
-  const handleContinue = $(() => {
-    const templateId = selectedTemplate.value;
+  const handleContinue = $((templateId: string) => {
+    // templateId is passed as parameter
     if (templateId) {
       // In a real app, this would navigate to the customization step
-      console.log('Continue with template:', selectedTemplate.value);
-    }
-  });
+      console.log("Template selected:", templateId);
+    
+  );
 
   return (
     <div class="max-w-7xl mx-auto space-y-8">
-      {/* Header */}
+      {/* Header */
       <div class="text-center py-8">
         <h2 class="text-4xl font-serif font-semibold text-[#2D3748] mb-3 leading-tight">
           Choose Your Perfect Website
@@ -122,135 +127,135 @@ export default component$<TemplateGalleryProps>((props) => {
         </div>
       </div>
 
-      {/* Category Filter */}
+      {/* Category Filter */
       <div class="flex flex-wrap justify-center gap-3 mb-8">
         {categories.map((category) => (
           <button
-            key={category}
-            onClick$={() => selectedCategory.value = category}
+            key={category
+            onClick$={() => selectedCategory.value = category
             class={`px-4 py-2 rounded-full font-sans text-sm transition-gentle ${
               selectedCategory.value === category
                 ? 'bg-[#9CAF88] text-white shadow-warm'
                 : 'bg-[#F7F3E9] text-[#2D3748] hover:bg-[#9CAF88]/20 hover-lift'
-            }`}
+            `}
           >
-            {category}
+            {category
           </button>
-        ))}
+        ))
       </div>
 
-      {/* Template Grid */}
+      {/* Template Grid */
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredTemplates.map((template) => (
           <div
-            key={template.id}
+            key={template.id
             class={`bg-[#FEFCF7] rounded-xl border-2 transition-gentle hover-lift cursor-pointer ${
               selectedTemplate.value === template.id
                 ? 'border-[#9CAF88] shadow-warm-lg'
                 : 'border-[#E8E2D4] hover:border-[#9CAF88]/50'
-            }`}
-            onClick$={() => handleSelectTemplate(template.id)}
+            `}
+            onClick$={() => handleSelectTemplate(template.id)
           >
-            {/* Template Preview */}
+            {/* Template Preview */
             <div class="relative">
               <div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl flex items-center justify-center">
                 <div class="text-gray-400 font-serif text-lg">Template Preview</div>
               </div>
               
-              {/* Popular Badge */}
+              {/* Popular Badge */
               {template.popular && (
                 <div class="absolute top-3 right-3 bg-[#9CAF88] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                   <LuStar class="w-3 h-3" />
                   Popular
                 </div>
-              )}
+              )
 
-              {/* Preview Button */}
+              {/* Preview Button */
               <button
                 onClick$={(e) => {
                   e.stopPropagation();
                   handlePreview(template.id);
-                }}
+                }
                 class="absolute top-3 left-3 bg-white/90 hover:bg-white text-[#2D3748] px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-soft"
               >
                 <LuEye class="w-3 h-3" />
                 Preview
               </button>
 
-              {/* Selection Indicator */}
+              {/* Selection Indicator */
               {selectedTemplate.value === template.id && (
                 <div class="absolute inset-0 bg-[#9CAF88]/10 rounded-t-xl flex items-center justify-center">
                   <div class="bg-[#9CAF88] text-white p-2 rounded-full">
                     <LuCheck class="w-6 h-6" />
                   </div>
                 </div>
-              )}
+              )
             </div>
 
-            {/* Template Info */}
+            {/* Template Info */
             <div class="p-6">
               <h3 class="text-xl font-serif font-semibold text-[#2D3748] mb-2">
-                {template.name}
+                {template.name
               </h3>
               <p class="font-sans text-gray-600 text-sm mb-4 leading-relaxed">
-                {template.description}
+                {template.description
               </p>
 
-              {/* Best For */}
+              {/* Best For */
               <div class="mb-4">
                 <div class="text-xs font-sans font-medium text-[#9CAF88] mb-1">PERFECT FOR:</div>
-                <div class="text-sm font-sans text-gray-600">{template.bestFor}</div>
+                <div class="text-sm font-sans text-gray-600">{template.bestFor</div>
               </div>
 
-              {/* Color Palette */}
+              {/* Color Palette */
               <div class="mb-4">
                 <div class="text-xs font-sans font-medium text-[#9CAF88] mb-2">COLORS:</div>
                 <div class="flex gap-2">
                   {template.colors.map((color, index) => (
                     <div
-                      key={index}
+                      key={index
                       class="w-4 h-4 rounded-full bg-gradient-to-br from-gray-300 to-gray-400"
-                      title={color}
+                      title={color
                     />
-                  ))}
+                  ))
                 </div>
               </div>
 
-              {/* Features */}
+              {/* Features */
               <div class="space-y-1">
                 {template.features.slice(0, 3).map((feature, index) => (
-                  <div key={index} class="flex items-center gap-2 text-xs font-sans text-gray-600">
+                  <div key={index class="flex items-center gap-2 text-xs font-sans text-gray-600">
                     <LuZap class="w-3 h-3 text-[#9CAF88]" />
-                    {feature}
+                    {feature
                   </div>
-                ))}
+                ))
                 {template.features.length > 3 && (
                   <div class="text-xs font-sans text-gray-500 italic">
-                    +{template.features.length - 3} more features
+                    +{template.features.length - 3 more features
                   </div>
-                )}
+                )
               </div>
             </div>
           </div>
-        ))}
+        ))
       </div>
 
-      {/* Continue Button */}
+      {/* Continue Button */
       {selectedTemplate.value && (
         <div class="text-center py-8">
           <button
-            onClick$={handleContinue}
+            onClick$={() => handleContinue(selectedTemplate.value!)
             class="bg-[#9CAF88] hover:bg-[#8a9e7a] text-white px-8 py-4 rounded-lg font-serif text-lg font-medium transition-gentle hover-lift shadow-warm"
           >
-            Continue with {templates.find(t => t.id === selectedTemplate.value)?.name}
+            Continue with {templates.find(t => t.id === selectedTemplate.value)?.name
           </button>
           <div class="mt-3 text-sm font-sans text-gray-600 italic">
             Next: We'll help you customize it with your content
           </div>
         </div>
-      )}
+      )
 
-      {/* Encouragement */}
+      {/* Encouragement */
       <div class="text-center py-6">
         <div class="bg-[#F7F3E9] rounded-xl border border-[#E8E2D4] p-6 max-w-2xl mx-auto">
           <LuHeart class="w-8 h-8 text-[#9CAF88] mx-auto mb-3" />
@@ -263,4 +268,4 @@ export default component$<TemplateGalleryProps>((props) => {
       </div>
     </div>
   );
-});
+);

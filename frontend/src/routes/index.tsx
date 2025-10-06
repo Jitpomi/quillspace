@@ -481,7 +481,12 @@ export default component$(() => {
             </div>
           )}
           
-          {activeTab.value === 'users' && (
+          {activeTab.value === 'website-builder' && (
+            <div class="max-w-7xl mx-auto">
+              <WebsiteBuilder />
+            </div>
+          )}
+                    {activeTab.value === 'users' && (
             <div class="max-w-6xl mx-auto">
               <div class="text-center py-8 mb-8">
                 <h2 class="text-3xl font-bold text-gray-900 mb-2">Your Readers</h2>

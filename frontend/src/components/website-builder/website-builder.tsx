@@ -12,10 +12,6 @@ export default component$(() => {
   const currentStep = useSignal<BuilderStep>('templates');
   const selectedTemplate = useSignal<string | null>(null);
 
-  const handleTemplateSelected = $((templateId: string) => {
-    selectedTemplate.value = templateId;
-    currentStep.value = 'customize';
-  });
 
   const handleBackToTemplates = $(() => {
     currentStep.value = 'templates';
@@ -25,7 +21,7 @@ export default component$(() => {
   return (
     <div class="min-h-screen bg-[#FEFCF7]">
       {currentStep.value === 'templates' && (
-        <TemplateGallery onTemplateSelected={handleTemplateSelected} />
+        <TemplateGallery />
       )}
       
       {currentStep.value === 'customize' && (
@@ -40,7 +36,7 @@ export default component$(() => {
             </button>
           </div>
           
-          <CustomizationWizard templateId={selectedTemplate.value} />
+          <CustomizationWizard />
         </div>
       )}
     </div>
