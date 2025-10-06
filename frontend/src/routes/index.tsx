@@ -1,9 +1,9 @@
 import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
 import { routeAction$ } from '@builder.io/qwik-city';
-import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuLogOut } from '@qwikest/icons/lucide';
+import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuLogOut, LuGlobe } from '@qwikest/icons/lucide';
 import ContentManagement from '../components/content/content-management';
 import Login from '../components/auth/login';
-import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from '../services/api';
+import TemplateGallery from "../components/website-builder/template-gallery";import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from '../services/api';
 
 // This loader is now replaced by real-time data fetching in the component
 
@@ -277,6 +277,21 @@ export default component$(() => {
             
             <button
               onClick$={() => {
+                activeTab.value = "website-builder";
+                handleInteraction("nav_website");
+                sidebarOpen.value = false;
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === "website-builder"
+                  ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium"
+                  : "text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
+              }`}
+            >
+              <LuGlobe class="w-5 h-5" />
+              <span>My Website</span>            </button>
+            
+            <button
+              onClick$={() => {
                 activeTab.value = 'users';
                 handleInteraction('nav_users');
                 sidebarOpen.value = false;
@@ -354,6 +369,21 @@ export default component$(() => {
               <LuFileText class="w-5 h-5" />
               <span>My Writing</span>
             </button>
+            
+            <button
+              onClick$={() => {
+                activeTab.value = "website-builder";
+                handleInteraction("nav_website");
+                sidebarOpen.value = false;
+              }}
+              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
+                activeTab.value === "website-builder"
+                  ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium"
+                  : "text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
+              }`}
+            >
+              <LuGlobe class="w-5 h-5" />
+              <span>My Website</span>            </button>
             
             <button
               onClick$={() => {
@@ -455,14 +485,17 @@ export default component$(() => {
 
               {/* Quick Actions - Ultra Clean */}
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group">
+                <div 
+                  class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group"
+                  onClick$={() => activeTab.value = 'website-builder'}
+                >
                   <div class="w-16 h-16 bg-[#9CAF88]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#9CAF88]/30 transition-soft animate-breathe">
                     <LuFileText class="w-8 h-8 text-[#2D3748] group-hover:scale-110 transition-soft" />
                   </div>
-                  <h3 class="text-xl font-serif font-semibold text-[#2D3748] mb-2">Start Writing</h3>
-                  <p class="font-sans text-gray-600 mb-4 leading-relaxed">Create your next piece in a distraction-free, calming environment.</p>
-                  <div class="text-[#9CAF88] font-medium font-sans">New Article →</div>
-                  <div class="mt-2 text-xs text-gray-500 italic">"Every great story begins with a single word"</div>
+                  <h3 class="text-xl font-serif font-semibold text-[#2D3748] mb-2">Create Your Website</h3>
+                  <p class="font-sans text-gray-600 mb-4 leading-relaxed">Build a beautiful website to showcase and sell your books.</p>
+                  <div class="text-[#9CAF88] font-medium font-sans">Choose Template →</div>
+                  <div class="mt-2 text-xs text-gray-500 italic">"Your words deserve a beautiful home"</div>
                 </div>
 
                 <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group">
