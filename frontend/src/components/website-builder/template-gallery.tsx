@@ -4,7 +4,7 @@
  */
 
 import { component$, useSignal, $ } from '@builder.io/qwik';
-import { LuEye, LuCheck, LuBookOpen, LuStar, LuHeart, LuZap } from '@qwikest/icons/lucide';
+import { LuEye, LuCheck, LuStar, LuHeart, LuZap } from '@qwikest/icons/lucide';
 
 // Template data - in a real app this would come from an API
 const templates = [
@@ -76,7 +76,11 @@ const templates = [
   }
 ];
 
-export default component$(() => {
+interface TemplateGalleryProps {
+  onTemplateSelected?: (templateId: string) => void;
+}
+
+export default component$<TemplateGalleryProps>((props) => {
   const selectedTemplate = useSignal<string | null>(null);
   const selectedCategory = useSignal<string>('All');
   const showPreview = useSignal<string | null>(null);
@@ -96,7 +100,8 @@ export default component$(() => {
   });
 
   const handleContinue = $(() => {
-    if (selectedTemplate.value) {
+    const templateId = selectedTemplate.value;
+    if (templateId) {
       // In a real app, this would navigate to the customization step
       console.log('Continue with template:', selectedTemplate.value);
     }

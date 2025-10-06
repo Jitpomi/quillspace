@@ -3,7 +3,8 @@ import { routeAction$ } from '@builder.io/qwik-city';
 import { LuRocket, LuBarChart3, LuUsers, LuFileText, LuSettings, LuMenu, LuLogOut, LuGlobe } from '@qwikest/icons/lucide';
 import ContentManagement from '../components/content/content-management';
 import Login from '../components/auth/login';
-import TemplateGallery from "../components/website-builder/template-gallery";import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from '../services/api';
+import { api, getAuthToken, clearAuth, type User, type Content, type Tenant } from "../services/api";
+import WebsiteBuilder from "../components/website-builder/website-builder";
 
 // This loader is now replaced by real-time data fetching in the component
 
@@ -336,88 +337,6 @@ export default component$(() => {
           </div>
         </div>
         
-        <nav class="mt-8 px-4">
-          <div class="space-y-2">
-            <button
-              onClick$={() => {
-                activeTab.value = 'dashboard';
-                handleInteraction('nav_dashboard');
-                sidebarOpen.value = false; // Close mobile menu after selection
-              }}
-              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
-                activeTab.value === 'dashboard'
-                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
-                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-              }`}
-            >
-              <LuBarChart3 class="w-5 h-5" />
-              <span>Dashboard</span>
-            </button>
-            
-            <button
-              onClick$={() => {
-                activeTab.value = 'content';
-                handleInteraction('nav_content');
-                sidebarOpen.value = false;
-              }}
-              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
-                activeTab.value === 'content'
-                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
-                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-              }`}
-            >
-              <LuFileText class="w-5 h-5" />
-              <span>My Writing</span>
-            </button>
-            
-            <button
-              onClick$={() => {
-                activeTab.value = "website-builder";
-                handleInteraction("nav_website");
-                sidebarOpen.value = false;
-              }}
-              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
-                activeTab.value === "website-builder"
-                  ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium"
-                  : "text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
-              }`}
-            >
-              <LuGlobe class="w-5 h-5" />
-              <span>My Website</span>            </button>
-            
-            <button
-              onClick$={() => {
-                activeTab.value = 'users';
-                handleInteraction('nav_users');
-                sidebarOpen.value = false;
-              }}
-              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
-                activeTab.value === 'users'
-                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
-                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-              }`}
-            >
-              <LuUsers class="w-5 h-5" />
-              <span>Readers</span>
-            </button>
-            
-            <button
-              onClick$={() => {
-                activeTab.value = 'settings';
-                handleInteraction('nav_settings');
-                sidebarOpen.value = false;
-              }}
-              class={`w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg transition-all ${
-                activeTab.value === 'settings'
-                  ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium'
-                  : 'text-gray-600 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-              }`}
-            >
-              <LuSettings class="w-5 h-5" />
-              <span>Settings</span>
-            </button>
-          </div>
-        </nav>
       </div>
 
       {/* Main Content */}
