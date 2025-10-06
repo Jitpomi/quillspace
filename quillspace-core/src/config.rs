@@ -84,9 +84,9 @@ impl Default for AppConfig {
             },
             clickhouse: ClickHouseConfig {
                 url: "http://localhost:8123".to_string(),
-                database: "quillspace_analytics".to_string(),
-                username: "default".to_string(),
-                password: "".to_string(),
+                database: "analytics_dev".to_string(),
+                username: "quillspace".to_string(),
+                password: "dev_password".to_string(),
                 compression: "lz4".to_string(),
             },
             auth: AuthConfig {
