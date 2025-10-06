@@ -34,6 +34,7 @@ pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_tenants).post(create_tenant))
         .route("/current", get(get_current_tenant))
+        .route("/current/settings", get(get_current_tenant_settings).put(update_current_tenant_settings))
         .route("/{tenant_id}", get(get_tenant).put(update_tenant))
         .route("/{tenant_id}/settings", get(get_tenant_settings).put(update_tenant_settings))
 }
@@ -382,5 +383,33 @@ async fn get_current_tenant(
     };
     
     let response = ApiResponse::success(mock_tenant, request_id);
+    Ok(Json(response))
+}
+
+/// Get current tenant settings
+async fn get_current_tenant_settings(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let request_id = Uuid::new_v4();
+    
+    let mock_settings = serde_json::json!({
+        "theme": "light",
+        "timezone": "UTC",
+        "notifications": true
+    });
+    
+    let response = ApiResponse::success(mock_settings, request_id);
+    Ok(Json(response))
+}
+
+/// Update current tenant settings
+async fn update_current_tenant_settings(
+    State(state): State<AppState>,
+    Json(settings): Json<serde_json::Value>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let request_id = Uuid::new_v4();
+    
+    // In a real implementation, this would update the tenant settings in the database
+    let response = ApiResponse::success(settings, request_id);
     Ok(Json(response))
 }
