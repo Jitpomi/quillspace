@@ -39,7 +39,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new(config: AppConfig) -> anyhow::Result<Self> {
-        let db = DatabaseConnections::new(&config.database.url, &config.clickhouse.url).await?;
+        let db = DatabaseConnections::new(&config.database.url, &config.clickhouse).await?;
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),

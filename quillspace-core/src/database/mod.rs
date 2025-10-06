@@ -15,7 +15,7 @@ pub struct DatabaseConnections {
 
 impl DatabaseConnections {
     /// Create new database connections
-    pub async fn new(postgres_url: &str, clickhouse_url: &str) -> Result<Self> {
+    pub async fn new(postgres_url: &str, clickhouse_config: &crate::config::ClickHouseConfig) -> Result<Self> {
         tracing::info!("Creating database connection pool with URL: {}", postgres_url);
         let mut cfg = Config::new();
         cfg.url = Some(postgres_url.to_string());
@@ -26,8 +26,12 @@ impl DatabaseConnections {
             tracing::error!("Database connection pool test failed: {}", e);
         }
         
-        // Create ClickHouse client and service
-        let clickhouse_client = clickhouse::Client::default().with_url(clickhouse_url);
+        // Create ClickHouse client with proper authentication
+        let clickhouse_client = clickhouse::Client::default()
+            .with_url(&clickhouse_config.url)
+            .with_user(&clickhouse_config.username)
+            .with_password(&clickhouse_config.password)
+            .with_database(&clickhouse_config.database);
         let clickhouse_service = clickhouse::AnalyticsService::new(clickhouse_client);
         
         Ok(Self {
