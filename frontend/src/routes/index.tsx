@@ -448,8 +448,8 @@ export default component$(() => {
             <div class="max-w-6xl mx-auto space-y-8">
               {/* Welcome Message */}
               <div class="text-center py-8">
-                <h2 class="text-3xl font-bold text-[#2D3748] mb-2">Your quiet corner of the internet</h2>
-                <p class="text-lg text-gray-600">A sanctuary where your stories find their home, and your words connect with readers who truly appreciate them.</p>
+                <h2 class="text-3xl font-bold text-[#2D3748] mb-2">Welcome home, writer</h2>
+                <p class="text-lg text-gray-600">This is your sanctuary—where thoughts become stories, and stories find the hearts they're meant to touch.</p>
               </div>
 
               {/* Quick Actions - Ultra Clean */}

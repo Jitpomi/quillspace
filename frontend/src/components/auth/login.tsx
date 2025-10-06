@@ -56,10 +56,10 @@ export default component$(() => {
             <LuRocket class="w-12 h-12 text-[#2D3748]" />
           </div>
           <h2 class="mt-6 text-3xl font-bold text-[#2D3748]">
-            Welcome to QuillSpace
+            A personal home for your thoughts
           </h2>
           <p class="mt-2 text-sm text-gray-600">
-            Your quiet corner of the internet awaits
+            Where your words find warmth and your stories find their voice
           </p>
         </div>
 
