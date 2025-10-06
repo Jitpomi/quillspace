@@ -33,6 +33,7 @@ fn row_to_tenant(row: &Row) -> Result<Tenant, PgError> {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_tenants).post(create_tenant))
+        .route("/current", get(get_current_tenant))
         .route("/{tenant_id}", get(get_tenant).put(update_tenant))
         .route("/{tenant_id}/settings", get(get_tenant_settings).put(update_tenant_settings))
 }
@@ -357,4 +358,29 @@ struct CreateTenantRequest {
 struct UpdateTenantRequest {
     name: Option<String>,
     slug: Option<String>,
+}
+
+/// Get current tenant (based on auth context)
+async fn get_current_tenant(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // For now, return a mock current tenant
+    // In a real implementation, this would get the tenant from JWT token
+    let request_id = Uuid::new_v4();
+    
+    let mock_tenant = Tenant {
+        id: Uuid::new_v4(),
+        name: "Demo Tenant".to_string(),
+        slug: "demo-tenant".to_string(),
+        settings: serde_json::json!({
+            "theme": "light",
+            "timezone": "UTC"
+        }),
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        is_active: true,
+    };
+    
+    let response = ApiResponse::success(mock_tenant, request_id);
+    Ok(Json(response))
 }
