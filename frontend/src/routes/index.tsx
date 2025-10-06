@@ -189,7 +189,7 @@ export default component$(() => {
   // Show login if not authenticated
   if (!isAuthenticated.value && !authLoading.value) {
     return (
-      <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div class="min-h-screen bg-[#FEFCF7] flex items-center justify-center p-4">
         <div class="w-full max-w-md">
           <Login />
         </div>
@@ -200,10 +200,10 @@ export default component$(() => {
   // Show loading state
   if (authLoading.value || isLoading.value) {
     return (
-      <div class="min-h-screen flex items-center justify-center">
+      <div class="min-h-screen bg-[#FEFCF7] flex items-center justify-center">
         <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p class="mt-4 text-gray-600">Loading QuillSpace...</p>
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9CAF88] mx-auto"></div>
+          <p class="mt-4 text-gray-600">Loading your sanctuary...</p>
         </div>
       </div>
     );
@@ -212,7 +212,7 @@ export default component$(() => {
   // Show error state
   if (error.value) {
     return (
-      <div class="min-h-screen  flex items-center justify-center">
+      <div class="min-h-screen bg-[#FEFCF7] flex items-center justify-center">
         <div class="text-center">
           <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
             <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Dashboard</h3>
