@@ -9,7 +9,10 @@ min_connections = 1
 
 [clickhouse]
 url = "http://localhost:8123"
-database = "quillspace_analytics_dev"
+database = "analytics_dev"
+username = "quillspace"
+password = "dev_password"
+compression = "lz4"
 
 [auth]
 jwt_secret = "dev-secret-key-not-for-production"

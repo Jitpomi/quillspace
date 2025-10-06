@@ -11,9 +11,9 @@ connect_timeout = 30
 
 [clickhouse]
 url = "http://localhost:8123"
-database = "quillspace_analytics"
-username = "default"
-password = ""
+database = "analytics_dev"
+username = "quillspace"
+password = "dev_password"
 compression = "lz4"
 
 [auth]
