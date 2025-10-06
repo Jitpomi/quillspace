@@ -55,16 +55,16 @@ export default component$(() => {
           <div class="flex justify-center">
             <LuRocket class="w-12 h-12 text-[#2D3748]" />
           </div>
-          <h2 class="mt-6 text-3xl font-bold text-[#2D3748]">
+          <h2 class="mt-6 text-3xl font-serif font-semibold text-[#2D3748] leading-tight">
             A personal home for your thoughts
           </h2>
-          <p class="mt-2 text-sm text-gray-600">
+          <p class="mt-3 text-base font-sans text-gray-600 leading-relaxed">
             Where your words find warmth and your stories find their voice
           </p>
         </div>
 
         {/* Login Form */}
-        <div class="bg-[#F7F3E9] rounded-xl border border-[#E8E2D4] shadow-sm p-8">
+        <div class="bg-[#F7F3E9] rounded-xl border border-[#E8E2D4] shadow-warm p-8 transition-gentle hover-lift">
           <form onSubmit$={handleSubmit} class="space-y-6">
             {/* Error Message */}
             {error.value && (
