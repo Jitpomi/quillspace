@@ -13,7 +13,7 @@ WORKDIR /app
 
 # Copy Cargo files from quillspace-core directory
 COPY quillspace-core/Cargo.toml ./
-COPY quillspace-core/Cargo.loc[k] ./
+COPY quillspace-core/Cargo.lock ./
 
 # Copy source code
 COPY quillspace-core/src ./src
@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     libpq5 \
     curl \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
@@ -48,6 +49,15 @@ COPY --from=builder /app/migrations /app/migrations
 # Copy config files
 COPY config /app/config
 
+# Copy scripts directory
+COPY scripts /app/scripts
+
+# Copy entrypoint script
+COPY quillspace-core/entrypoint.sh /app/entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
 # Change ownership
 RUN chown -R quillspace:quillspace /app
 
@@ -61,5 +71,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Run the application
-CMD ["./quillspace-core"]
+# Run the application with entrypoint
+CMD ["./entrypoint.sh"]
