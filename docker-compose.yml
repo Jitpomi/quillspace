@@ -56,13 +56,14 @@ services:
     environment:
       - RUN_MODE=development
       - RUST_LOG=info
-      - QUILLSPACE__DATABASE__URL=postgresql://quillspace:dev_password@postgres:5432/quillspace_dev
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dev_password}
+      - QUILLSPACE__DATABASE__URL=postgresql://quillspace:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/quillspace_dev
       - QUILLSPACE__CLICKHOUSE__URL=http://clickhouse:8123
       - QUILLSPACE__CLICKHOUSE__USERNAME=quillspace
-      - QUILLSPACE__CLICKHOUSE__PASSWORD=dev_password
+      - QUILLSPACE__CLICKHOUSE__PASSWORD=${CLICKHOUSE_PASSWORD:-dev_password}
       - QUILLSPACE__CLICKHOUSE__DATABASE=analytics_dev
       - QUILLSPACE__SERVER__HOST=0.0.0.0
-      - QUILLSPACE__AUTH__JWT_SECRET=your-super-secure-jwt-secret-key-that-is-at-least-32-characters-long-change-in-production
+      - QUILLSPACE__AUTH__JWT_SECRET=${JWT_SECRET:-your-super-secure-jwt-secret-key-that-is-at-least-32-characters-long-change-in-production}
     ports:
       - "3001:3000"
     depends_on:
@@ -86,7 +87,7 @@ services:
       dockerfile: Dockerfile
     container_name: quillspace-frontend
     environment:
-      - VITE_API_BASE_URL=http://localhost:3001/api
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:3001/api}
       - VITE_INTERNAL_API_URL=http://backend:3000/api
     ports:
       - "80:80"

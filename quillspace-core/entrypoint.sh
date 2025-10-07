@@ -16,7 +16,7 @@ echo "🌱 Seeding database with demo data..."
 if [ -f "/app/scripts/seed-dev.sql" ]; then
     # Clear existing demo data first
     echo "🧹 Clearing existing demo data..."
-    PGPASSWORD=dev_password psql -h postgres -U quillspace -d quillspace_dev -c "
+    PGPASSWORD=${POSTGRES_PASSWORD:-dev_password} psql -h postgres -U quillspace -d quillspace_dev -c "
         DELETE FROM content WHERE tenant_id IN (
             SELECT id FROM tenants WHERE slug IN ('demo', 'demo-publishing')
         );
@@ -27,7 +27,7 @@ if [ -f "/app/scripts/seed-dev.sql" ]; then
     "
     
     # Run seeding script
-    PGPASSWORD=dev_password psql -h postgres -U quillspace -d quillspace_dev -f /app/scripts/seed-dev.sql
+    PGPASSWORD=${POSTGRES_PASSWORD:-dev_password} psql -h postgres -U quillspace -d quillspace_dev -f /app/scripts/seed-dev.sql
     echo "✅ Database seeded successfully!"
 else
     echo "⚠️  Seed file not found, skipping seeding"
