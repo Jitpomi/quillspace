@@ -1,36 +1,27 @@
-use crate::types::{RequestContext, TenantId, UserId, UserRole};
+use crate::{
+    types::{RequestContext, TenantId, UserId, UserRole},
+    auth::JwtManager,
+};
 use axum::{
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
 use std::{sync::Arc, pin::Pin, future::Future};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-/// JWT Claims structure
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String,        // User ID
-    pub tenant_id: String,  // Tenant ID
-    pub role: String,       // User role
-    pub exp: usize,         // Expiration time
-    pub iat: usize,         // Issued at
-}
-
 /// Tenant context extraction middleware
 pub async fn tenant_context_middleware(
-    State(jwt_secret): State<Arc<String>>,
+    State(jwt_manager): State<Arc<JwtManager>>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
     let headers = request.headers();
     
     // Try to extract tenant context from JWT token
-    if let Some(context) = extract_tenant_from_jwt(headers, &jwt_secret).await? {
+    if let Some(context) = extract_tenant_from_jwt(headers, &jwt_manager).await? {
         request.extensions_mut().insert(context);
         Ok(next.run(request).await)
     } else {
@@ -48,20 +39,14 @@ pub async fn tenant_context_middleware(
 /// Extract tenant context from JWT token
 async fn extract_tenant_from_jwt(
     headers: &HeaderMap,
-    jwt_secret: &str,
+    jwt_manager: &JwtManager,
 ) -> Result<Option<RequestContext>, StatusCode> {
     if let Some(auth_header) = headers.get("authorization") {
         let auth_str = auth_header.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
         
         if let Some(token) = auth_str.strip_prefix("Bearer ") {
-            match decode::<Claims>(
-                token,
-                &DecodingKey::from_secret(jwt_secret.as_ref()),
-                &Validation::default(),
-            ) {
-                Ok(token_data) => {
-                    let claims = token_data.claims;
-                    
+            match jwt_manager.verify_token(token) {
+                Ok(claims) => {
                     let tenant_id = Uuid::parse_str(&claims.tenant_id)
                         .map_err(|_| StatusCode::BAD_REQUEST)?;
                     let user_id = Uuid::parse_str(&claims.sub)
@@ -87,7 +72,7 @@ async fn extract_tenant_from_jwt(
                     return Ok(Some(context));
                 }
                 Err(e) => {
-                    warn!("Invalid JWT token: {}", e);
+                    warn!("Invalid JWT token: {:?}", e);
                     return Err(StatusCode::UNAUTHORIZED);
                 }
             }

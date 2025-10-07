@@ -1,5 +1,6 @@
 use crate::{
     types::{ApiResponse, User, UserRole},
+    auth::{JwtManager, Claims},
     AppState,
 };
 use axum::{
@@ -9,21 +10,11 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 use uuid::Uuid;
 
-/// JWT Claims structure
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,        // User ID
-    tenant_id: String,  // Tenant ID
-    role: String,       // User role
-    exp: usize,         // Expiration time
-    iat: usize,         // Issued at
-}
+// Using Claims from auth::jwt module
 
 /// Helper function to convert database role string to UserRole enum
 fn parse_user_role(role_str: &str) -> UserRole {
@@ -106,25 +97,22 @@ async fn login(
             };
 
             info!("Creating JWT token for user: {}", user.id);
-            let now = Utc::now();
-            let exp_time = now + Duration::seconds(state.config.auth.jwt_expiration);
-
-            let claims = Claims {
-                sub: user.id.to_string(),
-                tenant_id: user.tenant_id.to_string(),
-                role: match user.role {
-                    UserRole::Admin => "admin".to_string(),
-                    UserRole::Editor => "editor".to_string(),
-                    UserRole::Viewer => "viewer".to_string(),
-                },
-                exp: exp_time.timestamp() as usize,
-                iat: now.timestamp() as usize,
+            
+            // Create JWT manager
+            let jwt_manager = JwtManager::new("your-very-secure-secret-key-that-is-long-enough-for-jwt", "quillspace");
+            
+            let role_str = match user.role {
+                UserRole::Admin => "admin",
+                UserRole::Editor => "editor", 
+                UserRole::Viewer => "viewer",
             };
 
-            match encode(
-                &Header::default(),
-                &claims,
-                &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
+            match jwt_manager.generate_token(
+                &user.id.to_string(),
+                &user.email,
+                &user.name,
+                role_str,
+                &user.tenant_id.to_string()
             ) {
                 Ok(token) => {
                     info!(
@@ -180,13 +168,8 @@ async fn refresh_token(
     // 4. Optionally rotate refresh token
 
     // For demo purposes, we'll decode the existing token and issue a new one
-    match jsonwebtoken::decode::<Claims>(
-        &refresh_request.refresh_token,
-        &jsonwebtoken::DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &jsonwebtoken::Validation::default(),
-    ) {
-        Ok(token_data) => {
-            let old_claims = token_data.claims;
+    match state.jwt_manager.verify_token(&refresh_request.refresh_token) {
+        Ok(old_claims) => {
             
             // Verify user still exists and is active
             let user_id = Uuid::parse_str(&old_claims.sub)
@@ -219,21 +202,13 @@ async fn refresh_token(
                         updated_at: row.get("updated_at"),
                     };
 
-                    let now = Utc::now();
-                    let exp_time = now + Duration::seconds(state.config.auth.jwt_expiration);
-
-                    let new_claims = Claims {
-                        sub: user.id.to_string(),
-                        tenant_id: user.tenant_id.to_string(),
-                        role: old_claims.role,
-                        exp: exp_time.timestamp() as usize,
-                        iat: now.timestamp() as usize,
-                    };
-
-                    match encode(
-                        &Header::default(),
-                        &new_claims,
-                        &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
+                    // Generate new JWT token using our JWT manager
+                    match state.jwt_manager.generate_token(
+                        &user.id.to_string(),
+                        &user.email,
+                        &user.name,
+                        &user.role.to_string(),
+                        &user.tenant_id.to_string(),
                     ) {
                         Ok(token) => {
                             let response_data = RefreshTokenResponse {
@@ -278,13 +253,9 @@ async fn logout(
     let user_id = if let Some(auth_header) = auth_header {
         if let Some(token) = auth_header.strip_prefix("Bearer ") {
             // Decode token to get user ID for logging
-            match jsonwebtoken::decode::<Claims>(
-                token,
-                &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-                &Validation::default(),
-            ) {
-                Ok(token_data) => {
-                    match Uuid::parse_str(&token_data.claims.sub) {
+            match state.jwt_manager.verify_token(token) {
+                Ok(claims) => {
+                    match Uuid::parse_str(&claims.sub) {
                         Ok(id) => Some(id),
                         Err(_) => None,
                     }
@@ -347,12 +318,8 @@ async fn get_current_user(
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     // Decode and validate JWT token
-    let claims = match jsonwebtoken::decode::<Claims>(
-        token,
-        &jsonwebtoken::DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &jsonwebtoken::Validation::default(),
-    ) {
-        Ok(token_data) => token_data.claims,
+    let claims = match state.jwt_manager.verify_token(token) {
+        Ok(claims) => claims,
         Err(_) => return Err(StatusCode::UNAUTHORIZED),
     };
     

@@ -108,6 +108,16 @@ pub enum UserRole {
     Viewer,
 }
 
+impl std::fmt::Display for UserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UserRole::Admin => write!(f, "admin"),
+            UserRole::Editor => write!(f, "editor"),
+            UserRole::Viewer => write!(f, "viewer"),
+        }
+    }
+}
+
 /// Publishing content model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Content {

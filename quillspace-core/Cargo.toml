@@ -2,29 +2,30 @@
 name = "quillspace-core"
 version = "0.1.0"
 edition = "2021"
-resolver = "2"
 
 
 [package.metadata.ferrisup]
 component_type = "server"
 
 [dependencies]
-axum = "0.8.6"
-tokio = { version = "1.47.1", features = ["full"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
-tower = "0.5.2"
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+josekit = "0.8"
+axum = { version = "0.7", features = ["macros"] }
+serde = { version = "1.0", features = ["derive"] }
+tower = "0.4"
 tower-http = { version = "0.6", features = ["trace", "cors", "timeout", "compression-gzip"] }
+tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 # Database integrations
 tokio-postgres = { version = "0.7.12", features = ["with-uuid-1", "with-chrono-0_4", "with-serde_json-1"] }
-deadpool-postgres = "0.14.0"
+deadpool-postgres = { version = "0.14.0", features = ["serde"] }
 clickhouse = { version = "0.13.3", features = ["uuid", "chrono"] }
-# Multi-tenancy and auth
-uuid = { version = "1.18.1", features = ["v4", "serde"] }
-chrono = { version = "0.4.42", features = ["serde"] }
-jsonwebtoken = "9.3.1"
+# Multi-tenancy and auth - using josekit instead of jsonwebtoken
 # Observability
 metrics = "0.24.2"
 metrics-exporter-prometheus = { version = "0.17.2", features = ["http-listener"] }
@@ -35,9 +36,7 @@ config = { version = "0.15.18", features = ["toml", "json", "yaml"] }
 dotenvy = "0.15.7"
 # Serialization
 postcard = "1.1.3"
-# Error handling
-anyhow = "1.0.100"
-thiserror = "2.0.17"
+# Error handling - already defined above
 # HTTP client for Tinybird integration
 reqwest = { version = "0.12.23", features = ["json", "rustls-tls", "stream"], default-features = false }
 

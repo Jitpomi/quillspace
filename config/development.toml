@@ -15,7 +15,7 @@ password = "dev_password"
 compression = "lz4"
 
 [auth]
-jwt_secret = "dev-secret-key-not-for-production"
+jwt_secret = "dev-secret-key-that-is-at-least-32-characters-long-not-for-production"
 jwt_expiration = 7200  # 2 hours for development
 
 [observability]

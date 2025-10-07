@@ -4,6 +4,7 @@ mod database;
 mod middleware;
 mod routes;
 mod services;
+mod auth;
 
 use axum::{
     extract::State,
@@ -15,6 +16,7 @@ use axum::{
 };
 use config::AppConfig;
 use database::DatabaseConnections;
+use auth::JwtManager;
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
@@ -34,15 +36,18 @@ pub struct AppState {
     pub config: Arc<AppConfig>,
     pub db: DatabaseConnections,
     pub jwt_secret: Arc<String>,
+    pub jwt_manager: Arc<JwtManager>,
     pub request_count: Arc<Mutex<usize>>,
 }
 
 impl AppState {
     pub async fn new(config: AppConfig) -> anyhow::Result<Self> {
         let db = DatabaseConnections::new(&config.database.url, &config.clickhouse).await?;
+        let jwt_manager = JwtManager::new(&config.auth.jwt_secret, "quillspace");
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),
+            jwt_manager: Arc::new(jwt_manager),
             config: Arc::new(config),
             db,
             request_count: Arc::new(Mutex::new(0)),
