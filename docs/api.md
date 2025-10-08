@@ -2,11 +2,17 @@
 
 ## Overview
 
-The QuillSpace API is a RESTful service built with Rust and Axum, designed for high-performance multi-tenant content management. All API endpoints are tenant-scoped and require authentication.
+The QuillSpace API is a RESTful service built with Rust and Axum, designed for high-performance multi-tenant content management and web builder functionality. All API endpoints are tenant-scoped and require authentication.
 
 **Base URL**: `https://api.quillspace.com/v1`  
 **Authentication**: Bearer JWT tokens  
 **Content-Type**: `application/json`
+
+### API Modules
+
+1. **Core Platform APIs** - User management, content, analytics
+2. **Web Builder APIs** - Templates, sites, pages, domains *(New)*
+3. **Widget Marketplace APIs** - Components, external integrations *(New)*
 
 ## Authentication
 
@@ -643,6 +649,169 @@ The complete OpenAPI 3.0 specification is available at:
 - **JSON**: `https://api.quillspace.com/v1/openapi.json`
 - **YAML**: `https://api.quillspace.com/v1/openapi.yaml`
 - **Interactive Docs**: `https://api.quillspace.com/docs`
+
+---
+
+# Web Builder APIs *(New)*
+
+## Templates
+
+### List Templates
+
+```http
+GET /api/templates?category=blog&is_public=true&limit=20
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters**:
+- `category` (optional): Filter by template category
+- `is_public` (optional): Include public templates
+- `limit` (optional): Number of templates to return (1-100, default: 20)
+- `cursor` (optional): Pagination cursor
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "minimal-blog",
+      "description": "A clean, minimal blog template",
+      "category": "blog",
+      "preview_image_url": "https://cdn.quillspace.com/templates/minimal-blog.png",
+      "is_public": true,
+      "version": 1,
+      "created_at": "2023-12-01T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "limit": 20,
+    "has_more": false,
+    "next_cursor": null
+  }
+}
+```
+
+### Create Template
+
+```http
+POST /api/templates
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "name": "my-custom-template",
+  "description": "A custom template for my brand",
+  "category": "business",
+  "html_source": "<!DOCTYPE html>...",
+  "default_schema": {
+    "components": ["Hero", "TextBlock", "ContactForm"],
+    "theme": {
+      "primaryColor": "#007bff",
+      "fontFamily": "Inter"
+    }
+  }
+}
+```
+
+## Sites
+
+### List Sites
+
+```http
+GET /api/sites?is_published=true&limit=20
+Authorization: Bearer <access_token>
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "My Author Website",
+      "subdomain": "john-doe",
+      "custom_domain": "johndoe.com",
+      "template_id": "456e7890-e89b-12d3-a456-426614174001",
+      "is_published": true,
+      "build_status": "published",
+      "created_at": "2023-12-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Create Site
+
+```http
+POST /api/sites
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "name": "My New Website",
+  "template_id": "456e7890-e89b-12d3-a456-426614174001",
+  "subdomain": "my-site"
+}
+```
+
+## Pages
+
+### Create Page
+
+```http
+POST /api/sites/{site_id}/pages
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "slug": "about",
+  "title": "About Me",
+  "meta_description": "Learn more about me",
+  "puck_data": {
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "title": "About Me",
+          "subtitle": "Welcome to my story"
+        }
+      }
+    ]
+  }
+}
+```
+
+## Domains
+
+### Add Custom Domain
+
+```http
+POST /api/sites/{site_id}/domains
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "domain": "mysite.com"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "domain": "mysite.com",
+  "verification_token": "quillspace-verify-abc123",
+  "is_verified": false,
+  "ssl_status": "pending",
+  "instructions": {
+    "txt_record": {
+      "name": "_quillspace-verify.mysite.com",
+      "value": "quillspace-verify-abc123"
+    }
+  }
+}
+```
 
 ## Support
 

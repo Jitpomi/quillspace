@@ -50,37 +50,59 @@ Based on our evaluation of Rust web frameworks:
 - Backed by Tokio maintainers
 - Extensive community support
 
-### Database: PostgreSQL + ClickHouse
+### Database: PostgreSQL + ClickHouse + Web Builder Schema
 
 **PostgreSQL as System of Record**
 - **ACID Transactions**: Ensures data consistency
-- **Row-Level Security**: Native multi-tenant isolation
-- **JSON Support**: Flexible schema evolution
-- **Mature Ecosystem**: Extensive tooling and monitoring
+- **Row-Level Security**: Native multi-tenant isolation with session variables
+- **JSON Support**: Flexible schema for Puck compositions and widget configs
+- **Template Storage**: MiniJinja templates stored in database for runtime loading
+- **Domain Management**: Custom domain verification and SSL certificate tracking
 
 **ClickHouse for Analytics**
 - **Columnar Storage**: 10-100x faster analytical queries
 - **Compression**: Significant storage savings vs. row-based databases
 - **Multi-Tenant Support**: Built-in row policies and tenant isolation
-- **Real-Time**: Sub-second query latency on petabyte datasets
+- **Real-Time**: Sub-second query latency for site analytics and performance metrics
+- **Web Builder Analytics**: Page views, editor usage, template popularity
 
-**Why Not TypeDB?**
-Our evaluation revealed critical limitations:
-- **No Multi-Tenant RBAC**: All users share the same logical database
-- **Write Bottleneck**: Single-leader architecture limits write scalability
-- **Limited Ecosystem**: Fewer tools, drivers, and community support
-- **Operational Complexity**: Requires specialized knowledge for scaling
+**Web Builder Schema Extensions**
+- **Templates**: Runtime-compiled MiniJinja templates with versioning
+- **Sites**: Author websites with custom domains and publishing status
+- **Pages**: Individual pages with Puck JSON composition data
+- **Domains**: Custom domain verification and SSL certificate management
+- **Widgets**: Component marketplace with external data source integration
+- **Assets**: File uploads and media management with CDN integration
 
-### Frontend: Qwik
+**Database Migration Strategy**
+- Schema changes tracked in `migrations/004_web_builder_schema.sql`
+- Row-Level Security policies for complete tenant isolation
+- Automatic tenant_id population via triggers
+- Optimized indexes for multi-tenant queries
+
+### Frontend: Qwik + Puck Visual Editor
+
+**Core Frontend Architecture**
+- **Qwik City**: SSR/SSG framework for SEO-optimized rendering
+- **Puck Editor**: Open-source React visual editor integrated via qwikify$
+- **Component System**: Reusable widgets with external data source support
+- **Real-time Preview**: Live editing with instant visual feedback
 
 **Resumability vs. Hydration**
 - **Traditional Hydration**: Download → Parse → Execute → Hydrate
 - **Qwik Resumability**: Resume execution from server state
 - **Performance Impact**: ~90ms Time-to-Interactive vs. 350ms for Next.js
+- **Web Builder Benefit**: Instant editor loading, zero hydration overhead
+
+**Visual Editor Integration**
+- **Puck (MIT Licensed)**: Vendor-independent drag-and-drop editor
+- **React Compatibility**: Integrated via qwikify$ helper function
+- **JSON Composition**: Serializable page structure for database storage
+- **Component Marketplace**: Extensible widget system with external APIs
 
 **Trade-offs**
-- ✅ **Pros**: Instant interactivity, O(1) JavaScript payload, edge-friendly
-- ⚠️ **Cons**: Smaller ecosystem, learning curve, serialization complexity
+- ✅ **Pros**: Instant interactivity, O(1) JavaScript payload, edge-friendly, SEO-optimized
+- ⚠️ **Cons**: Smaller ecosystem, learning curve, React integration complexity
 
 ## System Architecture
 
