@@ -81,20 +81,10 @@ async fn login(
             let password_hash: String = row.try_get("password_hash")
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             
-            info!("DEBUG: Verifying password '{}' against hash '{}'", login_request.password, password_hash);
-            
-            match bcrypt::verify(&login_request.password, &password_hash) {
-                Ok(is_valid) => {
-                    info!("DEBUG: bcrypt::verify returned: {}", is_valid);
-                    if !is_valid {
-                        error!("Login attempt with invalid password: {}", login_request.email);
-                        return Err(StatusCode::UNAUTHORIZED);
-                    }
-                },
-                Err(e) => {
-                    error!("bcrypt::verify error: {}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
+            if !bcrypt::verify(&login_request.password, &password_hash)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+                error!("Login attempt with invalid password: {}", login_request.email);
+                return Err(StatusCode::UNAUTHORIZED);
             }
 
             // Fetch tenant information

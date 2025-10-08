@@ -1,16 +1,15 @@
 use crate::{
     auth::{jwt_helpers::{extract_auth_context, extract_auth_context_with_role}, Resource, Action},
-    types::{ApiResponse, Content, ContentStatus, TenantId, PaginatedResponse, PaginationParams},
+    types::{ApiResponse, Content, ContentStatus, PaginatedResponse, PaginationParams},
     AppState,
 };
 use axum::{
-    extract::{Path, Query, Request, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{get, post, put, delete},
+    routing::{get, post},
     Json, Router,
 };
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};

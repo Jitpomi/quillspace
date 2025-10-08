@@ -8,10 +8,9 @@ mod auth;
 
 use axum::{
     extract::State,
-    http::StatusCode,
     middleware::from_fn,
     response::IntoResponse,
-    routing::{get, post},
+    routing::get,
     Json, Router,
 };
 use crate::{
@@ -19,18 +18,12 @@ use crate::{
     config::AppConfig,
     database::DatabaseConnections,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
-use tower_http::{
-    compression::CompressionLayer,
-    timeout::TimeoutLayer,
-    trace::TraceLayer,
-};
 use tracing::{info, warn};
-use std::time::Duration;
 
 // Enhanced application state with database connections
 #[derive(Clone)]
