@@ -1,11 +1,11 @@
 use crate::{
-    middleware::tenant::get_request_context,
+    auth::jwt_helpers::extract_auth_context,
     types::{ApiResponse, Tenant, UserRole},
     AppState,
 };
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post, put},
     Json, Router,
@@ -35,16 +35,17 @@ pub fn create_routes() -> Router<AppState> {
         .route("/", get(list_tenants).post(create_tenant))
         .route("/current", get(get_current_tenant))
         .route("/current/settings", get(get_current_tenant_settings).put(update_current_tenant_settings))
-        .route("/{tenant_id}", get(get_tenant).put(update_tenant))
-        .route("/{tenant_id}/settings", get(get_tenant_settings).put(update_tenant_settings))
+        .route("/:tenant_id", get(get_tenant).put(update_tenant))
+        .route("/:tenant_id/settings", get(get_tenant_settings).put(update_tenant_settings))
 }
 
 /// List tenants (admin only)
 async fn list_tenants(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<ListTenantsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip admin check (implement proper auth later)
@@ -91,9 +92,10 @@ async fn list_tenants(
 /// Create a new tenant
 async fn create_tenant(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(tenant_request): Json<CreateTenantRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip admin check (implement proper auth later)
@@ -157,9 +159,10 @@ async fn create_tenant(
 /// Get tenant details
 async fn get_tenant(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip tenant access check (implement proper auth later)
@@ -177,6 +180,7 @@ async fn get_tenant(
     let query = "SELECT * FROM tenants WHERE id = $1";
     let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&tenant_id];
 
+    info!("Querying tenant with ID: {}", tenant_id);
     match client.query_opt(query, &params).await {
         Ok(Some(row)) => {
             let tenant = match row_to_tenant(&row) {
@@ -190,7 +194,10 @@ async fn get_tenant(
             let response = ApiResponse::success(tenant, request_id);
             Ok(Json(response))
         }
-        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Ok(None) => {
+            info!("No tenant found with ID: {}", tenant_id);
+            Err(StatusCode::NOT_FOUND)
+        },
         Err(e) => {
             error!("Failed to get tenant: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -201,10 +208,11 @@ async fn get_tenant(
 /// Update tenant
 async fn update_tenant(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
     Json(update_request): Json<UpdateTenantRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip tenant access check (implement proper auth later)
@@ -265,9 +273,10 @@ async fn update_tenant(
 /// Get tenant settings
 async fn get_tenant_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip tenant access check (implement proper auth later)
@@ -302,10 +311,11 @@ async fn get_tenant_settings(
 /// Update tenant settings
 async fn update_tenant_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
     Json(settings): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip tenant access check (implement proper auth later)
@@ -364,52 +374,112 @@ struct UpdateTenantRequest {
 /// Get current tenant (based on auth context)
 async fn get_current_tenant(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // For now, return a mock current tenant
-    // In a real implementation, this would get the tenant from JWT token
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
     
-    let mock_tenant = Tenant {
-        id: Uuid::new_v4(),
-        name: "Demo Tenant".to_string(),
-        slug: "demo-tenant".to_string(),
-        settings: serde_json::json!({
-            "theme": "light",
-            "timezone": "UTC"
-        }),
-        created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
-        is_active: true,
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     };
-    
-    let response = ApiResponse::success(mock_tenant, request_id);
-    Ok(Json(response))
+
+    let query = "SELECT * FROM tenants WHERE id = $1";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let tenant = Tenant {
+                id: row.try_get("id").unwrap_or_default(),
+                name: row.try_get("name").unwrap_or_default(),
+                slug: row.try_get("slug").unwrap_or_default(),
+                settings: row.try_get("settings").unwrap_or_default(),
+                created_at: row.try_get("created_at").unwrap_or_default(),
+                updated_at: row.try_get("updated_at").unwrap_or_default(),
+                is_active: row.try_get("is_active").unwrap_or_default(),
+            };
+            
+            let response = ApiResponse::success(tenant, request_id);
+            Ok(Json(response))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get current tenant: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Get current tenant settings
 async fn get_current_tenant_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
     
-    let mock_settings = serde_json::json!({
-        "theme": "light",
-        "timezone": "UTC",
-        "notifications": true
-    });
-    
-    let response = ApiResponse::success(mock_settings, request_id);
-    Ok(Json(response))
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = "SELECT settings FROM tenants WHERE id = $1";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let settings: serde_json::Value = row.try_get("settings").unwrap_or_default();
+            let response = ApiResponse::success(settings, request_id);
+            Ok(Json(response))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get tenant settings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Update current tenant settings
 async fn update_current_tenant_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(settings): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
+    let now = chrono::Utc::now();
     
-    // In a real implementation, this would update the tenant settings in the database
-    let response = ApiResponse::success(settings, request_id);
-    Ok(Json(response))
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = "UPDATE tenants SET settings = $1, updated_at = $2 WHERE id = $3 RETURNING settings";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&settings, &now, tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let updated_settings: serde_json::Value = row.try_get("settings").unwrap_or_default();
+            let response = ApiResponse::success(updated_settings, request_id);
+            Ok(Json(response))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to update tenant settings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }

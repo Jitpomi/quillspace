@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use postgres_types::{ToSql, FromSql};
 // Removed SQLx dependencies - using tokio-postgres instead
 use uuid::Uuid;
 
@@ -101,10 +102,14 @@ pub struct User {
 }
 
 /// User roles for RBAC
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql)]
+#[postgres(name = "user_role")]
 pub enum UserRole {
+    #[postgres(name = "admin")]
     Admin,
+    #[postgres(name = "editor")]
     Editor,
+    #[postgres(name = "viewer")]
     Viewer,
 }
 
@@ -133,10 +138,14 @@ pub struct Content {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql)]
+#[postgres(name = "content_status")]
 pub enum ContentStatus {
+    #[postgres(name = "draft")]
     Draft,
+    #[postgres(name = "published")]
     Published,
+    #[postgres(name = "archived")]
     Archived,
 }
 

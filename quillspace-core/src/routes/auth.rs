@@ -58,7 +58,7 @@ async fn login(
         }
     };
 
-    let query = "SELECT id, tenant_id, email, name, role::text as role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true ORDER BY created_at ASC LIMIT 1";
+    let query = "SELECT id, tenant_id, email, name, role::text as role, password_hash, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true ORDER BY created_at ASC LIMIT 1";
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {
@@ -77,8 +77,25 @@ async fn login(
                 updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
             };
 
-            // TODO: Verify password hash here
-            // For demo, we'll assume password is correct
+            // Verify password hash
+            let password_hash: String = row.try_get("password_hash")
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            
+            info!("DEBUG: Verifying password '{}' against hash '{}'", login_request.password, password_hash);
+            
+            match bcrypt::verify(&login_request.password, &password_hash) {
+                Ok(is_valid) => {
+                    info!("DEBUG: bcrypt::verify returned: {}", is_valid);
+                    if !is_valid {
+                        error!("Login attempt with invalid password: {}", login_request.email);
+                        return Err(StatusCode::UNAUTHORIZED);
+                    }
+                },
+                Err(e) => {
+                    error!("bcrypt::verify error: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
 
             // Fetch tenant information
             let tenant_query = "SELECT id, name, slug FROM tenants WHERE id = $1";
@@ -98,16 +115,13 @@ async fn login(
 
             info!("Creating JWT token for user: {}", user.id);
             
-            // Create JWT manager
-            let jwt_manager = JwtManager::new("your-very-secure-secret-key-that-is-long-enough-for-jwt", "quillspace");
-            
             let role_str = match user.role {
                 UserRole::Admin => "admin",
                 UserRole::Editor => "editor", 
                 UserRole::Viewer => "viewer",
             };
 
-            match jwt_manager.generate_token(
+            match state.jwt_manager.generate_token(
                 &user.id.to_string(),
                 &user.email,
                 &user.name,

@@ -1,14 +1,13 @@
 use crate::{
-    database::clickhouse::AnalyticsService,
-    middleware::tenant::get_request_context,
-    types::{ApiResponse, Content, ContentStatus, PaginatedResponse, PaginationParams, UserRole},
+    auth::{jwt_helpers::{extract_auth_context, extract_auth_context_with_role}, Resource, Action},
+    types::{ApiResponse, Content, ContentStatus, TenantId, PaginatedResponse, PaginationParams},
     AppState,
 };
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{delete, get, post, put},
+    routing::{get, post, put, delete},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
@@ -16,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};
 use uuid::Uuid;
+
 
 /// Helper function to convert a tokio-postgres Row to Content
 fn row_to_content(row: &Row) -> Result<Content, PgError> {
@@ -25,12 +25,7 @@ fn row_to_content(row: &Row) -> Result<Content, PgError> {
         title: row.try_get("title")?,
         slug: row.try_get("slug")?,
         body: row.try_get("body")?,
-        status: match row.try_get::<_, String>("status")?.as_str() {
-            "Draft" => ContentStatus::Draft,
-            "Published" => ContentStatus::Published,
-            "Archived" => ContentStatus::Archived,
-            _ => ContentStatus::Draft,
-        },
+        status: row.try_get("status")?,
         author_id: row.try_get("author_id")?,
         published_at: row.try_get("published_at")?,
         created_at: row.try_get("created_at")?,
@@ -41,9 +36,9 @@ fn row_to_content(row: &Row) -> Result<Content, PgError> {
 /// Helper function to convert ContentStatus to string for database
 fn content_status_to_string(status: &ContentStatus) -> &'static str {
     match status {
-        ContentStatus::Draft => "Draft",
-        ContentStatus::Published => "Published",
-        ContentStatus::Archived => "Archived",
+        ContentStatus::Draft => "draft",
+        ContentStatus::Published => "published",
+        ContentStatus::Archived => "archived",
     }
 }
 
@@ -51,19 +46,19 @@ fn content_status_to_string(status: &ContentStatus) -> &'static str {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_content).post(create_content))
-        .route("/{content_id}", get(get_content).put(update_content).delete(delete_content))
-        .route("/{content_id}/publish", post(publish_content))
-        .route("/{content_id}/archive", post(archive_content))
-        .route("/{content_id}/analytics", get(get_content_analytics))
+        .route("/:content_id", get(get_content).put(update_content).delete(delete_content))
+        .route("/:content_id/publish", post(publish_content))
+        .route("/:content_id/archive", post(archive_content))
+        .route("/:content_id/analytics", get(get_content_analytics))
 }
 
 /// List content with tenant isolation
 async fn list_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<ListContentQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     let limit: u32 = params.pagination.limit.unwrap_or(20).min(100);
@@ -107,57 +102,61 @@ async fn list_content(
     let count_query = "SELECT COUNT(*) FROM content WHERE tenant_id = $1";
     let count_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![tenant_id.as_uuid()];
 
-    let content_result = client.query(&query, &params_vec);
-    let count_result = client.query_one(count_query, &count_params);
-    
-    match tokio::try_join!(content_result, count_result) {
-        Ok((content_rows, count_row)) => {
-            let content: Result<Vec<Content>, _> = content_rows.iter().map(row_to_content).collect();
-            let content = match content {
-                Ok(content) => content,
-                Err(e) => {
-                    error!("Failed to parse content rows: {}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            };
-
-            let total: u64 = count_row.get::<_, i64>(0) as u64;
-            let page = params.pagination.page.unwrap_or(1);
-            let total_pages = ((total + limit as u64 - 1) / limit as u64) as u32;
-
-            let paginated = PaginatedResponse {
-                items: content,
-                total,
-                page,
-                limit,
-                total_pages,
-            };
-
-            let response = ApiResponse::success(paginated, request_id);
-            Ok(Json(response))
-        }
+    let content_rows = match client.query(query.as_str(), &params_vec).await {
+        Ok(rows) => rows,
         Err(e) => {
-            error!("Failed to list content: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            error!("Failed to query content: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
-    }
+    };
+    
+    let count_row = match client.query_one(count_query, &count_params).await {
+        Ok(row) => row,
+        Err(e) => {
+            error!("Failed to query content count: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+    
+    let content: Result<Vec<Content>, _> = content_rows.iter().map(row_to_content).collect();
+    let content = match content {
+        Ok(content) => content,
+        Err(e) => {
+            error!("Failed to parse content rows: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let total: u64 = count_row.get::<_, i64>(0) as u64;
+    let page = params.pagination.page.unwrap_or(1);
+    let total_pages = ((total + limit as u64 - 1) / limit as u64) as u32;
+
+    let paginated = PaginatedResponse {
+        items: content,
+        total,
+        page,
+        limit,
+        total_pages,
+    };
+
+    let response = ApiResponse::success(paginated, request_id);
+    Ok(Json(response))
 }
 
 /// Create new content
 async fn create_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(content_request): Json<CreateContentRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
-    let user_id = Uuid::new_v4(); // Placeholder user ID
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // For now, skip permission check (implement proper auth later)
-    // In real implementation: check if user has Editor or Admin role
+    // Require write permission to create content using Casbin
+    state.authorizer.require_permission(&auth_context.user_role, Resource::Content.as_str(), Action::Write.as_str()).await?;
 
     let content_id = Uuid::new_v4();
-    let author_id = user_id; // Use placeholder user ID
+    let author_id = auth_context.user_id; // Use actual user ID from JWT
     let now = chrono::Utc::now();
 
     // Get database connection
@@ -169,21 +168,22 @@ async fn create_content(
         }
     };
 
+    // Use the status from the request, defaulting to Draft if not provided
+    let status = content_request.status.unwrap_or(ContentStatus::Draft);
+    
     let query = r#"
         INSERT INTO content (id, tenant_id, title, slug, body, status, author_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
         "#;
-
-    let status_str = content_status_to_string(&ContentStatus::Draft);
     
     let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
         &content_id,
-        tenant_id.as_uuid(),
+        auth_context.tenant_id.as_uuid(),
         &content_request.title,
         &content_request.slug,
         &content_request.body,
-        &status_str,
+        &status,
         &author_id,
         &now,
         &now,
@@ -201,7 +201,7 @@ async fn create_content(
 
             // Record analytics event
             let _ = state.db.clickhouse().record_content_action(
-                *tenant_id.as_uuid(),
+                *auth_context.tenant_id.as_uuid(),
                 content_id,
                 "create",
                 Some(author_id),
@@ -210,7 +210,7 @@ async fn create_content(
 
             info!(
                 content_id = %content_id,
-                tenant_id = %tenant_id,
+                tenant_id = %auth_context.tenant_id,
                 "Content created"
             );
 
@@ -227,10 +227,52 @@ async fn create_content(
 /// Get content by ID
 async fn get_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
+    let request_id = Uuid::new_v4();
+
+    // Get database connection
+    let client = match state.db.postgres().get().await {
+        Ok(client) => client,
+        Err(e) => {
+            error!("Failed to get database connection: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let query = "SELECT * FROM content WHERE id = $1 AND tenant_id = $2";
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
+
+    match client.query_opt(query, &params).await {
+        Ok(Some(row)) => {
+            let content = match row_to_content(&row) {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to parse content row: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+            let response = ApiResponse::success(content, request_id);
+            Ok(Json(response))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get content: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Delete content
+async fn delete_content(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(content_id): Path<Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // Get database connection
@@ -260,7 +302,7 @@ async fn get_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "view",
-                Some(Uuid::new_v4()), // Placeholder user ID
+                Some(_user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -278,11 +320,11 @@ async fn get_content(
 /// Update content
 async fn update_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(content_id): Path<Uuid>,
     Json(update_request): Json<UpdateContentRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip permission check (implement proper auth later)
@@ -337,7 +379,7 @@ async fn update_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "update",
-                Some(Uuid::new_v4()), // Placeholder user ID
+                Some(_user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -356,10 +398,10 @@ async fn update_content(
 /// Publish content
 async fn publish_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip permission check (implement proper auth later)
@@ -408,7 +450,7 @@ async fn publish_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "publish",
-                Some(Uuid::new_v4()), // Placeholder user ID
+                Some(_user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -427,10 +469,10 @@ async fn publish_content(
 /// Archive content
 async fn archive_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip permission check (implement proper auth later)
@@ -484,53 +526,14 @@ async fn archive_content(
     }
 }
 
-/// Delete content
-async fn delete_content(
-    State(state): State<AppState>,
-    Path(content_id): Path<Uuid>,
-) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
-
-    // For now, skip admin check (implement proper auth later)
-    // In real implementation: check if user has Admin role
-
-    // Get database connection
-    let client = match state.db.postgres().get().await {
-        Ok(client) => client,
-        Err(e) => {
-            error!("Failed to get database connection: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
-
-    let query = "DELETE FROM content WHERE id = $1 AND tenant_id = $2";
-    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&content_id, tenant_id.as_uuid()];
-
-    match client.execute(query, &params).await {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
-                info!(content_id = %content_id, "Content deleted");
-                Ok(StatusCode::NO_CONTENT)
-            } else {
-                Err(StatusCode::NOT_FOUND)
-            }
-        }
-        Err(e) => {
-            error!("Failed to delete content: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
 /// Get content analytics
 async fn get_content_analytics(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(content_id): Path<Uuid>,
     Query(params): Query<ContentAnalyticsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     let days = params.days.unwrap_or(30);
@@ -590,6 +593,7 @@ struct CreateContentRequest {
     title: String,
     slug: String,
     body: String,
+    status: Option<ContentStatus>,
 }
 
 #[derive(Debug, Deserialize)]

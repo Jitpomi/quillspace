@@ -1,11 +1,11 @@
 use crate::{
-    middleware::tenant::get_request_context,
-    types::{ApiResponse, User, UserRole},
+    auth::jwt_helpers::extract_auth_context,
+    types::{ApiResponse, User, UserRole, TenantId},
     AppState,
 };
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post, put},
     Json, Router,
@@ -16,15 +16,10 @@ use tokio_postgres::{Row, Error as PgError};
 use tracing::{error, info};
 use uuid::Uuid;
 
+
 /// Helper function to convert a tokio-postgres Row to User
 fn row_to_user(row: &Row) -> Result<User, PgError> {
-    let role_str: String = row.try_get("role")?;
-    let role = match role_str.as_str() {
-        "Admin" => UserRole::Admin,
-        "Editor" => UserRole::Editor,
-        "Viewer" => UserRole::Viewer,
-        _ => UserRole::Viewer, // Default fallback
-    };
+    let role = row.try_get("role")?;
 
     Ok(User {
         id: row.try_get("id")?,
@@ -41,9 +36,9 @@ fn row_to_user(row: &Row) -> Result<User, PgError> {
 /// Helper function to convert UserRole to string for database
 fn user_role_to_string(role: &UserRole) -> &'static str {
     match role {
-        UserRole::Admin => "Admin",
-        UserRole::Editor => "Editor",
-        UserRole::Viewer => "Viewer",
+        UserRole::Admin => "admin",
+        UserRole::Editor => "editor",
+        UserRole::Viewer => "viewer",
     }
 }
 
@@ -51,18 +46,18 @@ fn user_role_to_string(role: &UserRole) -> &'static str {
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list_users).post(create_user))
-        .route("/{user_id}", get(get_user).put(update_user))
-        .route("/{user_id}/role", put(update_user_role))
         .route("/me", get(get_current_user))
+        .route("/:user_id", get(get_user).put(update_user))
+        .route("/:user_id/role", put(update_user_role))
 }
 
 /// List users in tenant
 async fn list_users(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<ListUsersQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip admin check (implement proper auth later)
@@ -119,10 +114,10 @@ async fn list_users(
 /// Create a new user
 async fn create_user(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(user_request): Json<CreateUserRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip admin check (implement proper auth later)
@@ -130,6 +125,10 @@ async fn create_user(
 
     let user_id = Uuid::new_v4();
     let now = chrono::Utc::now();
+    
+    // Hash the password
+    let password_hash = bcrypt::hash(&user_request.password, bcrypt::DEFAULT_COST)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Get database connection
     let client = match state.db.postgres().get().await {
@@ -140,19 +139,22 @@ async fn create_user(
         }
     };
 
+    // Use the role from the request
+    let role = &user_request.role;
+    
     let query = r#"
-        INSERT INTO users (id, tenant_id, email, name, role, created_at, updated_at, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO users (id, tenant_id, email, name, role, password_hash, created_at, updated_at, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
         "#;
 
-    let role_str = user_role_to_string(&user_request.role);
     let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
         &user_id,
         tenant_id.as_uuid(),
         &user_request.email,
         &user_request.name,
-        &role_str,
+        role,
+        &password_hash,
         &now,
         &now,
         &true,
@@ -192,10 +194,10 @@ async fn create_user(
 /// Get user by ID
 async fn get_user(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip user access check (implement proper auth later)
@@ -237,11 +239,11 @@ async fn get_user(
 /// Update user
 async fn update_user(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(user_id): Path<Uuid>,
     Json(update_request): Json<UpdateUserRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip user access check (implement proper auth later)
@@ -302,11 +304,11 @@ async fn update_user(
 /// Update user role (admin only)
 async fn update_user_role(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(user_id): Path<Uuid>,
     Json(role_request): Json<UpdateUserRoleRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
     // For now, skip admin check (implement proper auth later)
@@ -362,15 +364,12 @@ async fn update_user_role(
 /// Get current user profile
 async fn get_current_user(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context (implement proper JWT auth later)
-    let tenant_id = crate::types::TenantId::from_uuid(Uuid::new_v4());
+    let (tenant_id, user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // For now, return a placeholder current user (implement proper JWT auth later)
-    // In real implementation: extract user ID from JWT and fetch from database
-
-    let placeholder_user_id = Uuid::new_v4();
+    // Use the actual user ID from JWT token
 
     // Get database connection
     let client = match state.db.postgres().get().await {
@@ -382,7 +381,7 @@ async fn get_current_user(
     };
 
     let query = "SELECT * FROM users WHERE id = $1 AND tenant_id = $2";
-    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&placeholder_user_id, tenant_id.as_uuid()];
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&user_id, tenant_id.as_uuid()];
 
     match client.query_opt(query, &params).await {
         Ok(Some(row)) => {
@@ -417,6 +416,7 @@ struct CreateUserRequest {
     email: String,
     name: String,
     role: UserRole,
+    password: String,
 }
 
 #[derive(Debug, Deserialize)]

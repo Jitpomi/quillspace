@@ -145,21 +145,28 @@ impl AnalyticsService {
 
     /// Record an analytics event
     pub async fn record_event(&self, event: &AnalyticsEvent) -> Result<()> {
-        let mut insert = self.client.insert("events")?;
+        // Use direct query instead of insert builder to avoid serialization issues
+        let query = r#"
+            INSERT INTO events (
+                event_id, tenant_id, user_id, event_type, event_data, 
+                timestamp, session_id, ip_address, user_agent
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#;
         
-        insert.write(&EventRow {
-            event_id: event.event_id,
-            tenant_id: event.tenant_id,
-            user_id: event.user_id,
-            event_type: event.event_type.clone(),
-            event_data: serde_json::to_string(&event.event_data)?,
-            timestamp: event.timestamp,
-            session_id: event.session_id.clone(),
-            ip_address: event.ip_address.clone(),
-            user_agent: event.user_agent.clone(),
-        }).await?;
-
-        insert.end().await?;
+        self.client
+            .query(query)
+            .bind(event.event_id)
+            .bind(event.tenant_id)
+            .bind(event.user_id)
+            .bind(&event.event_type)
+            .bind(serde_json::to_string(&event.event_data)?)
+            .bind(event.timestamp.timestamp_millis() as f64 / 1000.0)
+            .bind(event.session_id.as_deref())
+            .bind(event.ip_address.as_deref())
+            .bind(event.user_agent.as_deref())
+            .execute()
+            .await?;
+            
         Ok(())
     }
 
@@ -172,18 +179,24 @@ impl AnalyticsService {
         user_id: Option<Uuid>,
         metadata: serde_json::Value,
     ) -> Result<()> {
-        let mut insert = self.client.insert("content_analytics")?;
+        // Use direct query to avoid serialization issues
+        let query = r#"
+            INSERT INTO content_analytics (
+                content_id, tenant_id, action, user_id, timestamp, metadata
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        "#;
         
-        insert.write(&ContentAnalyticsRow {
-            content_id,
-            tenant_id,
-            action: action.to_string(),
-            user_id,
-            timestamp: Utc::now(),
-            metadata: serde_json::to_string(&metadata)?,
-        }).await?;
-
-        insert.end().await?;
+        self.client
+            .query(query)
+            .bind(content_id)
+            .bind(tenant_id)
+            .bind(action)
+            .bind(user_id)
+            .bind(Utc::now().timestamp_millis() as f64 / 1000.0)
+            .bind(serde_json::to_string(&metadata)?)
+            .execute()
+            .await?;
+            
         Ok(())
     }
 
@@ -295,7 +308,7 @@ impl AnalyticsService {
 }
 
 // ClickHouse row structures
-#[derive(clickhouse::Row, Serialize)]
+#[derive(clickhouse::Row, Serialize, Deserialize)]
 struct EventRow {
     event_id: Uuid,
     tenant_id: Uuid,

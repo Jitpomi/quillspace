@@ -6,7 +6,7 @@ use crate::{
 };
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -16,6 +16,28 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{error, info};
 use uuid::Uuid;
+
+/// Extract tenant and user context from JWT token
+fn extract_auth_context(headers: &HeaderMap, jwt_manager: &crate::auth::jwt::JwtManager) -> Result<(TenantId, Uuid), StatusCode> {
+    let auth_header = headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    let claims = jwt_manager.verify_token(token)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    
+    let tenant_id = TenantId::from_uuid(
+        Uuid::parse_str(&claims.tenant_id).map_err(|_| StatusCode::UNAUTHORIZED)?
+    );
+    let user_id = Uuid::parse_str(&claims.sub).map_err(|_| StatusCode::UNAUTHORIZED)?;
+    
+    Ok((tenant_id, user_id))
+}
 
 /// Create analytics routes
 pub fn create_routes() -> Router<AppState> {
@@ -30,13 +52,12 @@ pub fn create_routes() -> Router<AppState> {
 /// Record an analytics event
 async fn record_event(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(event_request): Json<RecordEventRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // For now, we'll use a placeholder tenant context
-    // In a real implementation, you'd extract this from JWT token in headers
-    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4()); // Placeholder
-    let user_id = Some(uuid::Uuid::new_v4()); // Placeholder
     let request_id = Uuid::new_v4();
+    let (tenant_id, user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
+    let user_id = Some(user_id);
 
     let analytics = state.db.clickhouse();
     
@@ -83,10 +104,10 @@ async fn record_event(
 /// Get tenant analytics statistics
 async fn get_tenant_stats(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<StatsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context
-    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     
     let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365); // Cap at 1 year
@@ -117,10 +138,10 @@ async fn get_tenant_stats(
 /// Get top content for tenant
 async fn get_top_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<TopContentQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context
-    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     
     let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365);
@@ -152,11 +173,11 @@ async fn get_top_content(
 /// Get user activity analytics
 async fn get_user_activity(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(user_id): Path<Uuid>,
     Query(params): Query<UserActivityQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context
-    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     
     // For now, skip authorization check (implement proper JWT auth later)
     
@@ -246,35 +267,38 @@ struct UserActivityResponse {
 /// Get recent activity for the tenant
 async fn get_recent_activity(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(params): Query<StatsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Placeholder tenant context
-    let tenant_id = TenantId::from_uuid(uuid::Uuid::new_v4());
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
     
-    let _analytics = state.db.clickhouse();
-    let _days = params.days.unwrap_or(7).min(365);
+    let analytics = state.db.clickhouse();
+    let days = params.days.unwrap_or(7).min(365);
     
-    // For now, return mock recent activity data
-    // In a real implementation, this would query the events table
-    let recent_activity = vec![
-        serde_json::json!({
-            "type": "content_created",
-            "description": "New article published",
-            "timestamp": "2024-01-15T10:30:00Z"
-        }),
-        serde_json::json!({
-            "type": "user_login", 
-            "description": "User logged in",
-            "timestamp": "2024-01-15T09:15:00Z"
-        }),
-        serde_json::json!({
-            "type": "content_viewed",
-            "description": "Article viewed by reader", 
-            "timestamp": "2024-01-15T08:45:00Z"
-        }),
-    ];
-    
-    let response = ApiResponse::success(recent_activity, request_id);
-    Ok(Json(response))
+    // Query real tenant stats from ClickHouse (using existing method)
+    match analytics.get_tenant_stats(&tenant_id, days).await {
+        Ok(stats) => {
+            // Convert stats to activity format
+            let recent_activity = vec![
+                serde_json::json!({
+                    "type": "tenant_stats",
+                    "total_events": stats.total_events,
+                    "unique_users": stats.unique_users,
+                    "period_days": days,
+                    "timestamp": chrono::Utc::now()
+                })
+            ];
+            
+            let response = ApiResponse::success(recent_activity, request_id);
+            Ok(Json(response))
+        }
+        Err(e) => {
+            error!("Failed to get tenant stats from ClickHouse: {}", e);
+            // Return empty array instead of failing completely
+            let empty_activity: Vec<serde_json::Value> = vec![];
+            let response = ApiResponse::success(empty_activity, request_id);
+            Ok(Json(response))
+        }
+    }
 }

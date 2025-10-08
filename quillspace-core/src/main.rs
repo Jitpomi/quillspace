@@ -12,11 +12,13 @@ use axum::{
     middleware::from_fn,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router, serve,
+    Json, Router,
 };
-use config::AppConfig;
-use database::DatabaseConnections;
-use auth::JwtManager;
+use crate::{
+    auth::{JwtManager, CasbinAuthorizer},
+    config::AppConfig,
+    database::DatabaseConnections,
+};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
@@ -37,6 +39,7 @@ pub struct AppState {
     pub db: DatabaseConnections,
     pub jwt_secret: Arc<String>,
     pub jwt_manager: Arc<JwtManager>,
+    pub authorizer: Arc<CasbinAuthorizer>,
     pub request_count: Arc<Mutex<usize>>,
 }
 
@@ -44,10 +47,12 @@ impl AppState {
     pub async fn new(config: AppConfig) -> anyhow::Result<Self> {
         let db = DatabaseConnections::new(&config.database.url, &config.clickhouse).await?;
         let jwt_manager = JwtManager::new(&config.auth.jwt_secret, "quillspace");
+        let authorizer = CasbinAuthorizer::new().await?;
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),
             jwt_manager: Arc::new(jwt_manager),
+            authorizer: Arc::new(authorizer),
             config: Arc::new(config),
             db,
             request_count: Arc::new(Mutex::new(0)),
@@ -56,7 +61,7 @@ impl AppState {
 }
 
 // Response models
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 struct InfoResponse {
     app_name: String,
     version: String,
@@ -68,7 +73,7 @@ struct CreateItemRequest {
     name: String,
 }
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 struct CreateItemResponse {
     id: u64,
     name: String,
@@ -119,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Run the server
     let listener = TcpListener::bind(addr).await?;
-    serve(listener, app).await?;
+    axum::serve(listener, app).await?;
     
     Ok(())
 }
@@ -220,5 +225,5 @@ async fn create_item(
         name: request.name,
     };
 
-    (StatusCode::CREATED, Json(response))
+    (axum::http::StatusCode::CREATED, Json(response))
 }

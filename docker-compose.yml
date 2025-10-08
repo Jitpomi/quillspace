@@ -51,7 +51,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: quillspace-core/Dockerfile
+      dockerfile: docker/Dockerfile.api
     container_name: quillspace-backend
     environment:
       - RUN_MODE=development
