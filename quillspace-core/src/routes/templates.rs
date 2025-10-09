@@ -91,6 +91,8 @@ pub async fn list_templates(
     let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
+    
+    info!("LIST_TEMPLATES: tenant_id={}, query={:?}", tenant_id, query);
 
     let limit = query.limit.unwrap_or(20).min(100);
     let offset = query.offset.unwrap_or(0);

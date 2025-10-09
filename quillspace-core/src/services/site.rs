@@ -69,7 +69,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -103,7 +103,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -143,7 +143,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -206,7 +206,7 @@ impl SiteService {
 
         // Set RLS context within transaction
         transaction
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -267,7 +267,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -350,7 +350,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -373,7 +373,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -403,7 +403,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -422,27 +422,13 @@ impl SiteService {
         }
     }
 
-    /// Check if subdomain is available
-    pub async fn is_subdomain_available(&self, subdomain: &str) -> Result<bool> {
-        let client = self.db.get().await
-            .context("Failed to get database connection")?;
-
-        let exists = client
-            .query_opt("SELECT id FROM sites WHERE subdomain = $1", &[&subdomain])
-            .await
-            .context("Failed to check subdomain availability")?;
-
-        Ok(exists.is_none())
-    }
-
     /// Count sites for a tenant
     pub async fn count_sites(&self, tenant_id: &TenantId) -> Result<i64> {
         let client = self.db.get().await
             .context("Failed to get database connection")?;
-
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -453,6 +439,44 @@ impl SiteService {
             .get(0);
 
         Ok(count)
+    }
+
+    /// Check if subdomain is available (global check across all tenants)
+    pub async fn is_subdomain_available(&self, subdomain: &str) -> Result<bool> {
+        let mut client = self.db.get().await
+            .context("Failed to get database connection")?;
+
+        // Use a transaction to temporarily disable FORCE RLS for global subdomain check
+        let transaction = client.transaction().await
+            .context("Failed to start transaction")?;
+
+        // Temporarily disable FORCE RLS for this global check
+        transaction
+            .execute("ALTER TABLE sites NO FORCE ROW LEVEL SECURITY", &[])
+            .await
+            .context("Failed to disable FORCE RLS for subdomain check")?;
+
+        transaction
+            .execute("SET LOCAL row_security = off", &[])
+            .await
+            .context("Failed to disable RLS for subdomain check")?;
+
+        let exists = transaction
+            .query_opt("SELECT id FROM sites WHERE subdomain = $1", &[&subdomain])
+            .await
+            .context("Failed to check subdomain availability")?;
+
+        // Re-enable FORCE RLS
+        transaction
+            .execute("ALTER TABLE sites FORCE ROW LEVEL SECURITY", &[])
+            .await
+            .context("Failed to re-enable FORCE RLS")?;
+
+        // Commit transaction
+        transaction.commit().await
+            .context("Failed to commit transaction")?;
+
+        Ok(exists.is_none())
     }
 
     /// Validate subdomain format

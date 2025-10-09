@@ -58,7 +58,7 @@ async fn login(
         }
     };
 
-    let query = "SELECT id, tenant_id, email, name, role::text as role, password_hash, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true ORDER BY created_at ASC LIMIT 1";
+    let query = "SELECT id, tenant_id, email, first_name, last_name, role::text as role, password_hash, active, created_at, updated_at FROM users WHERE email = $1 AND active = true ORDER BY created_at ASC LIMIT 1";
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {
@@ -66,13 +66,17 @@ async fn login(
             let role_str: String = row.try_get("role").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let role = parse_user_role(&role_str);
 
+            let first_name: String = row.try_get("first_name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let last_name: String = row.try_get("last_name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let full_name = format!("{} {}", first_name, last_name);
+
             let user = User {
                 id: row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
                 tenant_id: row.try_get("tenant_id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
                 email: row.try_get("email").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                name: row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                name: full_name,
                 role,
-                is_active: row.try_get("is_active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                is_active: row.try_get("active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
                 created_at: row.try_get("created_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
                 updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
             };

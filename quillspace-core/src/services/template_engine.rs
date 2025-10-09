@@ -8,7 +8,7 @@ use tokio_postgres::Row;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::database::DatabaseConnections;
+use crate::database::{DatabaseConnections, rls_helper::RlsHelper};
 
 /// Template engine service with database loader for MiniJinja templates
 pub struct TemplateEngine {
@@ -209,34 +209,31 @@ impl TemplateEngine {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Template>> {
+        // With RLS enabled, we don't need to filter by tenant_id explicitly
+        // The RLS policy will handle tenant isolation automatically
         let mut query = "
             SELECT id, tenant_id, name, description, category, html_source, 
                    default_schema, preview_image_url, is_public, version,
                    created_at, updated_at
             FROM templates 
-            WHERE (tenant_id = $1".to_string();
+            WHERE 1=1".to_string();
         
-        if include_public {
-            query.push_str(" OR is_public = true");
-        }
+        // Note: RLS policy will automatically filter by tenant_id
+        // We only need to handle the public templates logic if needed
         
-        query.push(')');
-        
-        let mut param_count = 1;
-        if let Some(cat) = category {
+        let mut param_count = 0;
+        if let Some(_cat) = category {
             param_count += 1;
             query.push_str(&format!(" AND category = ${}", param_count));
         }
         
-        query.push_str(" ORDER BY created_at DESC LIMIT $");
         param_count += 1;
-        query.push_str(&param_count.to_string());
+        query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${}", param_count));
         
-        query.push_str(" OFFSET $");
         param_count += 1;
-        query.push_str(&param_count.to_string());
+        query.push_str(&format!(" OFFSET ${}", param_count));
         
-        let mut params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&tenant_id];
+        let mut params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![];
         let category_ref;
         if let Some(cat) = category {
             category_ref = cat;
@@ -245,12 +242,32 @@ impl TemplateEngine {
         params.push(&limit);
         params.push(&offset);
         
-        let client = self.db.postgres().get().await
+        let mut client = self.db.postgres().get().await
             .context("Failed to get database connection")?;
-        let rows = client
+        
+        // Use a transaction to ensure RLS context persists
+        let transaction = client.transaction().await
+            .context("Failed to start transaction")?;
+        
+        // Set RLS context for tenant isolation within transaction
+        info!("Setting RLS context for tenant: {}", tenant_id);
+        transaction
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .await
+            .context("Failed to set RLS tenant context")?;
+        
+        info!("Executing query: {} with params: {:?}", query, params.len());
+        
+        let rows = transaction
             .query(&query, &params)
             .await
             .context("Failed to list templates")?;
+        
+        // Commit transaction
+        transaction.commit().await
+            .context("Failed to commit transaction")?;
+        
+        info!("Found {} template rows", rows.len());
         
         let mut templates = Vec::new();
         for row in rows {
@@ -283,6 +300,10 @@ impl TemplateEngine {
         
         let client = self.db.postgres().get().await
             .context("Failed to get database connection")?;
+        
+        // Set RLS context for tenant isolation
+        RlsHelper::set_tenant_context(&client, &tenant_id).await?;
+        
         let row = client
             .query_one(query, &[&tenant_id, &name, &description, &category, &html_source, &default_schema])
             .await

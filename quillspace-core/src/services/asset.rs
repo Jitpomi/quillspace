@@ -74,7 +74,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -124,7 +124,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -150,7 +150,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -209,7 +209,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -268,7 +268,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -325,7 +325,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -356,7 +356,7 @@ impl AssetService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('rls.tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 

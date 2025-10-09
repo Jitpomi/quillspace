@@ -1,6 +1,6 @@
 pub mod postgres;
 pub mod clickhouse;
-
+pub mod rls_helper;
 use anyhow::Result;
 use deadpool_postgres::{Config, Pool, Runtime};
 use std::sync::Arc;

@@ -90,7 +90,7 @@ pub async fn list_sites(
 
     let site_service = SiteService::new(state.db.postgres().clone());
 
-    match site_service.list_sites_without_rls(&auth_context.tenant_id, limit, offset).await {
+    match site_service.list_sites(&auth_context.tenant_id, limit, offset).await {
         Ok(sites) => {
             let response_sites: Vec<SiteResponse> = sites
                 .into_iter()
