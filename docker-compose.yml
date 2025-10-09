@@ -15,6 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./quillspace-core/migrations:/docker-entrypoint-initdb.d
+      - ./scripts:/docker-entrypoint-initdb.d/scripts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U quillspace -d quillspace_dev"]
       interval: 10s

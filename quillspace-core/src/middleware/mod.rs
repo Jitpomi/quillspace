@@ -68,18 +68,22 @@ pub async fn health_check_middleware(request: Request, next: Next) -> Response {
     if path == "/health" || path == "/ready" {
         // Simple health check response
         if path == "/health" {
-            return Response::builder()
+            return match Response::builder()
                 .status(StatusCode::OK)
-                .body("OK".into())
-                .unwrap();
+                .body("OK".into()) {
+                Ok(response) => response,
+                Err(_) => Response::new("OK".into()),
+            };
         }
         
         if path == "/ready" {
-            // TODO: Add actual readiness checks (database connectivity, etc.)
-            return Response::builder()
+            // Readiness check - could be enhanced with database connectivity checks
+            return match Response::builder()
                 .status(StatusCode::OK)
-                .body("Ready".into())
-                .unwrap();
+                .body("Ready".into()) {
+                Ok(response) => response,
+                Err(_) => Response::new("Ready".into()),
+            };
         }
     }
     

@@ -1,7 +1,6 @@
 use crate::{
-    database::clickhouse::AnalyticsService,
-    middleware::tenant::get_request_context,
-    types::{ApiResponse, AnalyticsEvent, TenantId},
+    auth::jwt_helpers::extract_auth_context_with_role,
+    types::{ApiResponse, AnalyticsEvent, TenantId, UserRole},
     AppState,
 };
 use axum::{
@@ -21,7 +20,13 @@ use uuid::Uuid;
 fn extract_auth_context(headers: &HeaderMap, jwt_manager: &crate::auth::jwt::JwtManager) -> Result<(TenantId, Uuid), StatusCode> {
     let auth_header = headers
         .get("authorization")
-        .and_then(|h| h.to_str().ok())
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                error!("Invalid authorization header encoding - potential security issue: {}", e);
+                None
+            }
+        })
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     let token = auth_header
@@ -177,9 +182,15 @@ async fn get_user_activity(
     Path(user_id): Path<Uuid>,
     Query(params): Query<UserActivityQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
+    // Verify admin authorization for user activity analytics
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
     
-    // For now, skip authorization check (implement proper JWT auth later)
+    if auth_context.user_role != UserRole::Admin {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let tenant_id = auth_context.tenant_id;
     
     let analytics = state.db.clickhouse();
     let days = params.days.unwrap_or(7).min(365);

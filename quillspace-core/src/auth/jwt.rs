@@ -128,15 +128,15 @@ mod tests {
     fn test_jwt_generation_and_verification() {
         let jwt_manager = JwtManager::new("test-secret-key", "quillspace");
         
-        let token = jwt_manager.generate_token(
+        let token = jwt_manager.create_token(
             "user-123",
             "test@example.com",
             "Test User",
             "admin",
             "tenant-456"
-        ).unwrap();
+        ).expect("Failed to create test token");
 
-        let claims = jwt_manager.verify_token(&token).unwrap();
+        let claims = jwt_manager.verify_token(&token).expect("Failed to verify test token");
         
         assert_eq!(claims.sub, "user-123");
         assert_eq!(claims.email, "test@example.com");
@@ -150,13 +150,13 @@ mod tests {
     fn test_token_validation() {
         let jwt_manager = JwtManager::new("test-secret-key", "quillspace");
         
-        let token = jwt_manager.generate_token(
+        let token = jwt_manager.create_token(
             "user-123",
             "test@example.com",
             "Test User",
             "admin",
             "tenant-456"
-        ).unwrap();
+        ).expect("Failed to create test token");
 
         assert!(jwt_manager.is_token_valid(&token));
         assert!(!jwt_manager.is_token_valid("invalid-token"));

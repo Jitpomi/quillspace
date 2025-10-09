@@ -94,7 +94,9 @@ pub async fn init_analytics_tables(client: &Client) -> Result<()> {
         GROUP BY tenant_id, user_id, event_type, date
     "#;
 
-    client.query(create_user_activity_mv).execute().await.ok(); // Ignore if exists
+    if let Err(e) = client.query(create_user_activity_mv).execute().await {
+        warn!("Failed to create user_activity_mv (may already exist): {}", e);
+    }
 
     // Content performance aggregations
     let create_content_performance_mv = r#"
@@ -113,7 +115,9 @@ pub async fn init_analytics_tables(client: &Client) -> Result<()> {
         GROUP BY tenant_id, content_id, action, date
     "#;
 
-    client.query(create_content_performance_mv).execute().await.ok(); // Ignore if exists
+    if let Err(e) = client.query(create_content_performance_mv).execute().await {
+        warn!("Failed to create content_performance_daily (may already exist): {}", e);
+    }
 
     info!("ClickHouse analytics tables initialized");
     Ok(())

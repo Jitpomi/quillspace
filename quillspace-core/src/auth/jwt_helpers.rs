@@ -1,3 +1,4 @@
+use tracing::{debug, error};
 use crate::types::{TenantId, UserRole};
 use axum::http::{HeaderMap, StatusCode};
 use uuid::Uuid;
@@ -13,7 +14,13 @@ pub struct AuthContext {
 pub fn extract_auth_context_with_role(headers: &HeaderMap, jwt_manager: &crate::auth::jwt::JwtManager) -> Result<AuthContext, StatusCode> {
     let auth_header = headers
         .get("authorization")
-        .and_then(|h| h.to_str().ok())
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                error!("Invalid authorization header encoding - potential security issue: {}", e);
+                None
+            }
+        })
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     let token = auth_header
@@ -40,7 +47,13 @@ pub fn extract_auth_context_with_role(headers: &HeaderMap, jwt_manager: &crate::
 pub fn extract_auth_context(headers: &HeaderMap, jwt_manager: &crate::auth::jwt::JwtManager) -> Result<(TenantId, Uuid), StatusCode> {
     let auth_header = headers
         .get("authorization")
-        .and_then(|h| h.to_str().ok())
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                error!("Invalid authorization header encoding - potential security issue: {}", e);
+                None
+            }
+        })
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     let token = auth_header

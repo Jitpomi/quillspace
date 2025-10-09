@@ -7,7 +7,7 @@ use axum::{
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 /// Simple in-memory rate limiter
 /// In production, use Redis or a proper rate limiting service
@@ -28,7 +28,13 @@ impl RateLimiter {
     }
 
     pub fn check_rate_limit(&self, key: &str) -> bool {
-        let mut requests = self.requests.lock().unwrap();
+        let mut requests = match self.requests.lock() {
+            Ok(requests) => requests,
+            Err(poisoned) => {
+                warn!("Rate limiter mutex poisoned, recovering");
+                poisoned.into_inner()
+            }
+        };
         let now = Instant::now();
         
         // Get or create request history for this key
@@ -57,8 +63,26 @@ pub async fn rate_limit_middleware(request: Request, next: Next) -> Result<Respo
     let client_ip = request
         .headers()
         .get("x-forwarded-for")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("unknown");
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                warn!("Invalid x-forwarded-for header encoding: {}", e);
+                None
+            }
+        })
+        .unwrap_or_else(|| {
+            // Fallback to connection info if available
+            request.headers()
+                .get("x-real-ip")
+                .and_then(|h| match h.to_str() {
+                    Ok(s) => Some(s),
+                    Err(e) => {
+                        warn!("Invalid x-real-ip header encoding: {}", e);
+                        None
+                    }
+                })
+                .unwrap_or("127.0.0.1")
+        });
     
     if limiter.check_rate_limit(client_ip) {
         debug!("Rate limit check passed for {}", client_ip);
@@ -78,8 +102,17 @@ pub async fn tenant_rate_limit_middleware(
     let tenant_id = request
         .headers()
         .get("x-tenant-id")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("default");
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                error!("Invalid x-tenant-id header encoding - potential security issue: {}", e);
+                None
+            }
+        })
+        .unwrap_or_else(|| {
+            warn!("No tenant ID found in headers, using default");
+            "default"
+        });
     
     // Create tenant-specific rate limiter (1000 requests per minute per tenant)
     static TENANT_LIMITER: std::sync::OnceLock<RateLimiter> = std::sync::OnceLock::new();

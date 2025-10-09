@@ -11,7 +11,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 // Using Claims from auth::jwt module
@@ -252,7 +252,13 @@ async fn logout(
     let auth_header = request
         .headers()
         .get("authorization")
-        .and_then(|h| h.to_str().ok());
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                warn!("Invalid authorization header encoding - potential security issue: {}", e);
+                None
+            }
+        });
     
     let user_id = if let Some(auth_header) = auth_header {
         if let Some(token) = auth_header.strip_prefix("Bearer ") {
@@ -313,7 +319,13 @@ async fn get_current_user(
     let auth_header = request
         .headers()
         .get("authorization")
-        .and_then(|h| h.to_str().ok())
+        .and_then(|h| match h.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                error!("Invalid authorization header encoding - rejecting request: {}", e);
+                None
+            }
+        })
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     // Extract token from "Bearer <token>"

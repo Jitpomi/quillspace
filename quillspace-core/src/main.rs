@@ -17,8 +17,9 @@ use crate::{
     auth::{JwtManager, CasbinAuthorizer},
     config::AppConfig,
     database::DatabaseConnections,
+    services::TemplateEngine,
 };
-use serde::Deserialize;
+// Removed unused Deserialize import
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
 use tokio::net::TcpListener;
@@ -33,6 +34,7 @@ pub struct AppState {
     pub jwt_secret: Arc<String>,
     pub jwt_manager: Arc<JwtManager>,
     pub authorizer: Arc<CasbinAuthorizer>,
+    pub template_engine: Arc<TemplateEngine>,
     pub request_count: Arc<Mutex<usize>>,
 }
 
@@ -41,11 +43,13 @@ impl AppState {
         let db = DatabaseConnections::new(&config.database.url, &config.clickhouse).await?;
         let jwt_manager = JwtManager::new(&config.auth.jwt_secret, "quillspace");
         let authorizer = CasbinAuthorizer::new().await?;
+        let template_engine = TemplateEngine::new(Arc::new(db.clone()))?;
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),
             jwt_manager: Arc::new(jwt_manager),
             authorizer: Arc::new(authorizer),
+            template_engine: Arc::new(template_engine),
             config: Arc::new(config),
             db,
             request_count: Arc::new(Mutex::new(0)),
@@ -61,16 +65,7 @@ struct InfoResponse {
     request_count: usize,
 }
 
-#[derive(Deserialize)]
-struct CreateItemRequest {
-    name: String,
-}
-
-#[derive(serde::Serialize)]
-struct CreateItemResponse {
-    id: u64,
-    name: String,
-}
+// Legacy types removed - using proper web builder APIs now
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -87,21 +82,24 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Starting QuillSpace server with config: {:?}", config.server);
 
-    // Skip metrics initialization for now to get basic server running
-    // if config.observability.metrics_enabled {
-    //     let recorder = metrics_exporter_prometheus::PrometheusBuilder::new()
-    //         .build_recorder()?;
-    //     metrics::set_global_recorder(recorder)?;
-    //     info!("Prometheus metrics enabled on port {}", config.observability.prometheus_port);
-    // }
+    // Initialize metrics if enabled
+    if config.observability.metrics_enabled {
+        let recorder = metrics_exporter_prometheus::PrometheusBuilder::new()
+            .build_recorder();
+        if let Err(e) = metrics::set_global_recorder(recorder) {
+            warn!("Failed to set metrics recorder: {}", e);
+        } else {
+            info!("Prometheus metrics enabled on port {}", config.observability.prometheus_port);
+        }
+    }
 
     // Create enhanced app state with database connections
     let state = AppState::new(config.clone()).await?;
     info!("Database connections established");
 
-    // Setup row-level security (temporarily disabled to debug connection issue)
-    // database::postgres::setup_rls(state.db.postgres()).await?;
-    info!("Row-level security policies skipped for debugging");
+    // Setup row-level security policies
+    database::postgres::setup_rls(state.db.postgres()).await?;
+    info!("Row-level security policies configured");
 
     // Build the enhanced router with comprehensive middleware
     let app = create_app(state).await?;
@@ -126,14 +124,14 @@ async fn main() -> anyhow::Result<()> {
 async fn create_app(state: AppState) -> anyhow::Result<Router> {
     let _jwt_secret = state.jwt_secret.clone();
     
-    // Create routes first - completely minimal test with debug logging
+    // Create application routes
     info!("🔧 Registering routes...");
     let app = Router::new()
         // Health check routes
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
         
-        // Legacy routes for compatibility
+        // Basic routes
         .route("/", get(root))
         .route("/ping", get(ping))
         
@@ -161,12 +159,16 @@ fn create_api_routes() -> Router<AppState> {
         .nest("/content", routes::content::create_routes())
         .nest("/analytics", routes::analytics::create_routes())
         .nest("/users", routes::users::create_routes())
+        .nest("/templates", routes::templates::templates_router())
+        // Web builder routes
+        .nest("/sites", routes::sites::sites_router())
+        .merge(routes::pages::pages_router())
         // Health and monitoring endpoints
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
 
-        // Add a simple test route
-        .route("/test", get(|| async { "API is working!" }))
+        // API status route
+        .route("/status", get(|| async { "QuillSpace API is operational" }))
 }
 
 async fn health_check() -> &'static str {
@@ -177,7 +179,7 @@ async fn readiness_check() -> &'static str {
     "Ready"
 }
 
-// Legacy route handlers for compatibility
+// Root route handler
 async fn root() -> &'static str {
     "🚀 Welcome to QuillSpace - High-Performance Multi-Tenant Publishing Platform"
 }
@@ -201,22 +203,4 @@ async fn info(State(state): State<AppState>) -> impl IntoResponse {
     Json(response)
 }
 
-async fn create_item(
-    State(state): State<AppState>,
-    Json(request): Json<CreateItemRequest>,
-) -> impl IntoResponse {
-    // Increment request count
-    let mut count = state.request_count.lock().await;
-    *count += 1;
-
-    // In a real app, you'd save to a database with tenant isolation
-    let item_id = 42; // Placeholder
-
-    // Create response
-    let response = CreateItemResponse {
-        id: item_id,
-        name: request.name,
-    };
-
-    (axum::http::StatusCode::CREATED, Json(response))
-}
+// Legacy create_item function removed - using proper web builder APIs

@@ -102,7 +102,7 @@ pub struct User {
 }
 
 /// User roles for RBAC
-#[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql, PartialEq)]
 #[postgres(name = "user_role")]
 pub enum UserRole {
     #[postgres(name = "admin")]

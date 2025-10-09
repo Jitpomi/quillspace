@@ -5,7 +5,7 @@ use axum::{
     response::Response,
 };
 use std::time::Instant;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 /// Metrics middleware - simplified version for compilation
 pub async fn metrics_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
@@ -52,10 +52,15 @@ pub async fn cors_middleware(request: Request, next: Next) -> Result<Response, S
     
     // Handle preflight requests
     if request.method() == Method::OPTIONS {
-        let mut response = Response::builder()
+        let mut response = match Response::builder()
             .status(StatusCode::OK)
-            .body("".into())
-            .unwrap();
+            .body("".into()) {
+            Ok(response) => response,
+            Err(e) => {
+                error!("Failed to build CORS response: {}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        };
             
         let headers = response.headers_mut();
         
@@ -119,8 +124,13 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Result
 fn extract_header(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get(name)
-        .and_then(|value| value.to_str().ok())
-        .map(|s| s.to_string())
+        .and_then(|value| match value.to_str() {
+            Ok(s) => Some(s.to_string()),
+            Err(e) => {
+                warn!("Invalid header '{}' encoding: {}", name, e);
+                None
+            }
+        })
 }
 
 /// Normalize path for metrics (remove IDs and dynamic segments)

@@ -1,8 +1,7 @@
 use anyhow::Result;
 use deadpool_postgres::{Config, Pool, Runtime};
-use std::time::Duration;
-use tokio_postgres::{NoTls, Client};
-use tracing::info;
+use tokio_postgres::NoTls;
+use tracing::{info, warn};
 
 /// Create PostgreSQL connection pool with optimized settings
 pub async fn create_pool(postgres_url: &str) -> Result<Pool> {
@@ -23,43 +22,66 @@ pub async fn create_pool(postgres_url: &str) -> Result<Pool> {
 }
 
 /// Setup row-level security for multi-tenant isolation
+/// Note: Most RLS policies are defined in migrations, this ensures they're enabled
 pub async fn setup_rls(pool: &Pool) -> Result<()> {
-    info!("Setting up row-level security policies...");
+    info!("Verifying row-level security configuration...");
 
     let client = pool.get().await?;
 
-    // Enable RLS on tenant-scoped tables
-    let rls_queries = vec![
-        // Enable RLS on users table
-        "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
-        
-        // Enable RLS on content table
-        "ALTER TABLE content ENABLE ROW LEVEL SECURITY;",
-        
-        // Create policy for users - users can only see their own tenant's data
+    // Verify RLS is enabled on core tables (these should be set by migrations)
+    let rls_checks = vec![
+        "SELECT schemaname, tablename, rowsecurity FROM pg_tables WHERE tablename IN ('users', 'tenants', 'templates', 'sites', 'pages', 'assets') AND schemaname = 'public'",
+    ];
+
+    for query in rls_checks {
+        let rows = client.query(query, &[]).await?;
+        for row in rows {
+            let table_name: String = row.get("tablename");
+            let rls_enabled: bool = row.get("rowsecurity");
+            if rls_enabled {
+                info!("✓ RLS enabled on table: {}", table_name);
+            } else {
+                warn!("⚠ RLS not enabled on table: {}", table_name);
+            }
+        }
+    }
+
+    // Ensure core tenant isolation policies exist for legacy tables
+    let legacy_policies = vec![
+        // Create policy for users if table exists (using correct setting name)
         r#"
-        CREATE POLICY IF NOT EXISTS tenant_isolation_users ON users
-        FOR ALL TO authenticated
-        USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+                ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+                DROP POLICY IF EXISTS tenant_isolation_users ON users;
+                CREATE POLICY tenant_isolation_users ON users
+                FOR ALL
+                USING (tenant_id = current_setting('rls.tenant_id')::uuid)
+                WITH CHECK (tenant_id = current_setting('rls.tenant_id')::uuid);
+            END IF;
+        END $$;
         "#,
         
-        // Create policy for content - content is scoped to tenant
+        // Create policy for tenants if table exists
         r#"
-        CREATE POLICY IF NOT EXISTS tenant_isolation_content ON content
-        FOR ALL TO authenticated
-        USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
-        "#,
-        
-        // Create policy for tenants - users can only see their own tenant
-        r#"
-        CREATE POLICY IF NOT EXISTS tenant_isolation_tenants ON tenants
-        FOR ALL TO authenticated
-        USING (id = current_setting('app.current_tenant_id')::uuid);
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants' AND table_schema = 'public') THEN
+                ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+                DROP POLICY IF EXISTS tenant_isolation_tenants ON tenants;
+                CREATE POLICY tenant_isolation_tenants ON tenants
+                FOR ALL
+                USING (id = current_setting('rls.tenant_id')::uuid);
+            END IF;
+        END $$;
         "#,
     ];
 
-    for query in rls_queries {
-        client.execute(query, &[]).await.ok(); // Ignore errors for existing policies
+    for query in legacy_policies {
+        if let Err(e) = client.execute(query, &[]).await {
+            warn!("Failed to execute RLS policy: {}", e);
+        }
     }
 
     info!("Row-level security policies configured");
@@ -70,7 +92,7 @@ pub async fn setup_rls(pool: &Pool) -> Result<()> {
 pub async fn set_tenant_context(pool: &Pool, tenant_id: uuid::Uuid) -> Result<()> {
     let client = pool.get().await?;
     client.execute(
-        "SELECT set_config('app.current_tenant_id', $1, true)",
+        "SELECT set_config('rls.tenant_id', $1, true)",
         &[&tenant_id.to_string()]
     ).await?;
     

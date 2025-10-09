@@ -1,6 +1,6 @@
 use crate::{
-    auth::{jwt_helpers::{extract_auth_context, extract_auth_context_with_role}, Resource, Action},
-    types::{ApiResponse, Content, ContentStatus, PaginatedResponse, PaginationParams},
+    auth::jwt_helpers::{extract_auth_context, extract_auth_context_with_role},
+    types::{ApiResponse, Content, ContentStatus, PaginatedResponse, PaginationParams, UserRole},
     AppState,
 };
 use axum::{
@@ -151,8 +151,10 @@ async fn create_content(
     let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // Require write permission to create content using Casbin
-    state.authorizer.require_permission(&auth_context.user_role, Resource::Content.as_str(), Action::Write.as_str()).await?;
+    // Verify editor/admin authorization for content creation
+    if !matches!(auth_context.user_role, UserRole::Editor | UserRole::Admin) {
+        return Err(StatusCode::FORBIDDEN);
+    }
 
     let content_id = Uuid::new_v4();
     let author_id = auth_context.user_id; // Use actual user ID from JWT
@@ -229,8 +231,10 @@ async fn get_content(
     headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
+    let tenant_id = auth_context.tenant_id;
 
     // Get database connection
     let client = match state.db.postgres().get().await {
@@ -271,8 +275,10 @@ async fn delete_content(
     headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
+    let tenant_id = auth_context.tenant_id;
 
     // Get database connection
     let client = match state.db.postgres().get().await {
@@ -301,7 +307,7 @@ async fn delete_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "view",
-                Some(_user_id), // Use actual user ID from JWT
+                Some(auth_context.user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -323,12 +329,17 @@ async fn update_content(
     Path(content_id): Path<Uuid>,
     Json(update_request): Json<UpdateContentRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // For now, skip permission check (implement proper auth later)
-    // In real implementation: check if user has Editor or Admin role
-
+    // Verify editor/admin authorization for content updates
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    
+    if !matches!(auth_context.user_role, UserRole::Editor | UserRole::Admin) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let tenant_id = auth_context.tenant_id;
     let now = chrono::Utc::now();
 
     // Get database connection
@@ -378,7 +389,7 @@ async fn update_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "update",
-                Some(_user_id), // Use actual user ID from JWT
+                Some(auth_context.user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -400,12 +411,17 @@ async fn publish_content(
     headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // For now, skip permission check (implement proper auth later)
-    // In real implementation: check if user has Editor or Admin role
-
+    // Verify editor/admin authorization for content publishing
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    
+    if !matches!(auth_context.user_role, UserRole::Editor | UserRole::Admin) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let tenant_id = auth_context.tenant_id;
     let now = chrono::Utc::now();
 
     // Get database connection
@@ -449,7 +465,7 @@ async fn publish_content(
                 *tenant_id.as_uuid(),
                 content_id,
                 "publish",
-                Some(_user_id), // Use actual user ID from JWT
+                Some(auth_context.user_id), // Use actual user ID from JWT
                 serde_json::json!({}),
             ).await;
 
@@ -471,12 +487,17 @@ async fn archive_content(
     headers: HeaderMap,
     Path(content_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)?;
     let request_id = Uuid::new_v4();
 
-    // For now, skip permission check (implement proper auth later)
-    // In real implementation: check if user has Editor or Admin role
-
+    // Verify editor/admin authorization for content archiving
+    let auth_context = extract_auth_context_with_role(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    
+    if !matches!(auth_context.user_role, UserRole::Editor | UserRole::Admin) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let tenant_id = auth_context.tenant_id;
     let now = chrono::Utc::now();
 
     // Get database connection
