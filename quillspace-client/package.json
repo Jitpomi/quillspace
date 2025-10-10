@@ -26,6 +26,8 @@
     "@builder.io/qwik": "^1.17.0",
     "@builder.io/qwik-city": "^1.17.0",
     "@eslint/js": "latest",
+    "@modular-forms/qwik": "^0.29.1",
+    "@qwikest/icons": "^0.0.13",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "20.19.0",
     "eslint": "9.32.0",
@@ -40,8 +42,5 @@
     "undici": "*",
     "vite": "7.1.7",
     "vite-tsconfig-paths": "^4.2.1"
-  },
-  "dependencies": {
-    "@qwikest/icons": "^0.0.13"
   }
 }

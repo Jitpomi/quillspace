@@ -350,13 +350,18 @@ export const AssetQuerySchema = PaginationQuerySchema.extend({
 
 export const LoginRequestSchema = z.object({
     email: z.string().email(),
-    password: z.string().min(8),
+    password: z.string().min(6),
 });
 
 export const LoginResponseSchema = z.object({
-    token: z.string(),
-    user: UserSchema,
-    expires_at: z.string().datetime(),
+    success: z.boolean(),
+    data: z.object({
+        token: z.string(),
+        user: UserSchema,
+        tenant: TenantSchema,
+    }),
+    error: z.string().nullable(),
+    request_id: z.string().uuid(),
 });
 
 export const JwtClaimsSchema = z.object({

@@ -1,19 +1,17 @@
 import { component$ } from "@builder.io/qwik";
-import {routeAction$} from "@builder.io/qwik-city";
-import {LoginResponse} from "~/api/schema";
 import {LuRocket} from "@qwikest/icons/lucide";
+import {routeLoader$} from "@builder.io/qwik-city";
+import {InitialValues} from "@modular-forms/qwik";
+import {LoginRequest} from "~/api/schema";
+import LoginForm from "~/components/login-form";
 
-export const useLogin = routeAction$(async (loginJson, requestEventAction): Promise<LoginResponse> => {
-    const { env} = requestEventAction;
-    const API_BASE_URL = env.get('VITE_API_BASE_URL');
-    const response = await fetch(`${API_BASE_URL}/auth/login`,  {
-        method: 'POST',
-        body: JSON.stringify(loginJson),
-    });
-    return response.json();
-});
+export const useFormLoader = routeLoader$<InitialValues<LoginRequest>>(() => ({
+    email: '',
+    password: '',
+}));
 
 export default component$(() => {
+const login = useFormLoader();
   return (
       <div class="min-h-screen bg-[#FEFCF7] flex items-center justify-center p-4">
           <div class="max-w-md w-full space-y-8">
@@ -31,7 +29,7 @@ export default component$(() => {
               </div>
 
               {/* Login Form */}
-              
+              <LoginForm {...login} />
               {/* Footer */}
               <div class="text-center">
                   <p class="text-sm text-gray-600">

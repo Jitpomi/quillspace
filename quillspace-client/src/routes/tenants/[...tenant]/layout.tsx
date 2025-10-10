@@ -3,7 +3,7 @@ import {RequestEvent, routeLoader$} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
 
 export const onGet: RequestHandler = async ( requestEvent: RequestEvent) => {
-   const { cacheControl , json, env, url} = requestEvent;
+   const { cacheControl ,  env, url} = requestEvent;
     // Control caching for this request for best performance and to reduce hosting costs:
     // https://qwik.builder.io/docs/caching/
     cacheControl({
@@ -17,7 +17,7 @@ export const onGet: RequestHandler = async ( requestEvent: RequestEvent) => {
     const VITE_API_BASE_URL = env.get('VITE_API_BASE_URL');
     console.log('VITE_API_BASE_URL', VITE_API_BASE_URL);
 
-    json(200, { hello: 'world' });
+    // json(200, { hello: 'world' });
 };
 
 export const useServerTimeLoader = routeLoader$(() => {
