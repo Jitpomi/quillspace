@@ -154,14 +154,14 @@ impl RlsService {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub struct SecurityTest {
     pub test_name: String,
     pub status: String,
     pub details: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub struct TenantSecurityStatus {
     pub tenant_id: Uuid,
     pub tenant_name: String,
