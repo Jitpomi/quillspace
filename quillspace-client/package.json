@@ -42,5 +42,8 @@
     "undici": "*",
     "vite": "7.1.7",
     "vite-tsconfig-paths": "^4.2.1"
+  },
+  "dependencies": {
+    "qwik-storefront-ui": "0.0.9"
   }
 }

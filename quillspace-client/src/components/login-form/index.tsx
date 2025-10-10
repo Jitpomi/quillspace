@@ -6,6 +6,7 @@ import {LoginRequest, LoginRequestSchema, LoginResponse} from "~/api/schema";
 import {setValue, SubmitHandler, useForm, zodForm$,} from "@modular-forms/qwik";
 import {LuEye, LuEyeOff, LuLock, LuMail} from "@qwikest/icons/lucide";
 import {globalAction$, useNavigate, zod$} from "@builder.io/qwik-city";
+// Qwik Storefront UI components not working properly - keeping original form
 
 export interface LoginFormProps {
     login?: LoginRequest,
@@ -254,7 +255,7 @@ export default  component$<LoginFormProps>((props) => {
                 
                 {/* Error Display */}
                 {error.value && (
-                    <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <p class="text-sm text-red-600">{error.value}</p>
                     </div>
                 )}
