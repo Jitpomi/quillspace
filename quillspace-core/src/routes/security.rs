@@ -189,7 +189,7 @@ pub async fn get_user_permissions(
     Ok((StatusCode::OK, Json(response)))
 }
 
-// Request/Response types
+// Request/Response schemas
 #[derive(Debug, Deserialize)]
 pub struct SetIsolationModeRequest {
     pub mode: String,

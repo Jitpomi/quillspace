@@ -599,7 +599,7 @@ async fn get_content_analytics(
     }
 }
 
-// Request/Response types
+// Request/Response schemas
 #[derive(Debug, Deserialize)]
 struct ListContentQuery {
     #[serde(flatten)]

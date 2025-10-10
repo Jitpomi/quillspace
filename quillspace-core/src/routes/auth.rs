@@ -383,7 +383,7 @@ async fn get_current_user(
     }
 }
 
-// Request/Response types
+// Request/Response schemas
 #[derive(Debug, Deserialize)]
 struct LoginRequest {
     email: String,

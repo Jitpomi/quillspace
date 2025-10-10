@@ -65,7 +65,7 @@ struct InfoResponse {
     request_count: usize,
 }
 
-// Legacy types removed - using proper web builder APIs now
+// Legacy schemas removed - using proper web builder APIs now
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

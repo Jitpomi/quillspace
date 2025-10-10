@@ -1,7 +1,7 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types
+-- Create custom schemas
 CREATE TYPE user_role AS ENUM ('admin', 'editor', 'viewer');
 CREATE TYPE content_status AS ENUM ('draft', 'published', 'archived');
 

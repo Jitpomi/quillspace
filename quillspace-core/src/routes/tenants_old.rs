@@ -345,7 +345,7 @@ async fn update_tenant_settings(
     }
 }
 
-// Request/Response types
+// Request/Response schemas
 #[derive(Debug, Deserialize)]
 struct ListTenantsQuery {
     limit: Option<u32>,

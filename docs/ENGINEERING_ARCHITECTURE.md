@@ -959,10 +959,12 @@ The QuillSpace API is a RESTful service built with Rust and Axum, designed for h
 
 ### Authentication
 
+All API endpoints use JWT Bearer token authentication with tenant-aware authorization via Casbin RBAC.
+
 #### Login
 
 ```http
-POST /auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
@@ -971,47 +973,193 @@ Content-Type: application/json
 }
 ```
 
-**Response**:
+**Success Response (200 OK)**:
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 3600,
-  "user": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "user@example.com",
-    "role": "admin",
-    "tenant_id": "123e4567-e89b-12d3-a456-426614174001"
-  }
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyLWlkIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwibmFtZSI6IkpvaG4gRG9lIiwicm9sZSI6ImFkbWluIiwidGVuYW50X2lkIjoidGVuYW50LWlkIiwiZXhwIjoxNzYwNjcwNjI2LCJpYXQiOjE3NjAwNjU4MjYsImlzcyI6InF1aWxsc3BhY2UifQ...",
+    "user": {
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "admin",
+      "tenant_id": "11111111-1111-1111-1111-111111111111"
+    },
+    "tenant": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Example Organization",
+      "slug": "example-org"
+    }
+  },
+  "error": null,
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 }
 ```
 
+**Error Response (401 Unauthorized)**:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid email or password",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+**Error Response (500 Internal Server Error)**:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Internal server error",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+#### JWT Token Usage
+
+Include the JWT token in the Authorization header for all authenticated requests:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+**JWT Claims Structure**:
+```json
+{
+  "sub": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",  // user_id
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "admin",                                // admin|editor|viewer
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "exp": 1760670626,                             // expiration timestamp
+  "iat": 1760065826,                             // issued at timestamp
+  "iss": "quillspace"                            // issuer
+}
+```
+
+#### Security Features
+
+- **bcrypt Password Hashing**: All passwords are hashed using bcrypt with salt rounds
+- **Tenant Isolation**: JWT tokens include tenant context for multi-tenant security
+- **Role-Based Access Control**: Casbin RBAC with admin > editor > viewer hierarchy
+- **Request Tracking**: Every request includes a unique request_id for debugging
+- **Security Logging**: All authentication events are logged for audit trails
+
 ### Core Platform APIs
 
+All endpoints return responses in the standardized `ApiResponse` format with `success`, `data`, `error`, and `request_id` fields.
+
 #### Authentication Endpoints
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh JWT token
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/me` - Get current user info
+
+**`POST /api/auth/login`** - User authentication
+- **Request**: `{ "email": "string", "password": "string" }`
+- **Response**: JWT token, user info, and tenant details
+- **Permissions**: Public endpoint
+
+**`POST /api/auth/refresh`** - Refresh JWT token (Future)
+- **Request**: `{ "refresh_token": "string" }`
+- **Response**: New access token
+- **Status**: Not yet implemented
+
+**`POST /api/auth/logout`** - User logout
+- **Request**: No body required (token from Authorization header)
+- **Response**: `{ "message": "Logged out successfully" }`
+- **Permissions**: Authenticated users
+
+**`GET /api/auth/me`** - Get current user information
+- **Request**: No parameters
+- **Response**: Current user details with tenant info
+- **Permissions**: Authenticated users
 
 #### Tenant Management
-- `GET /api/tenant` - Get current tenant
-- `PATCH /api/tenant` - Update tenant settings
+
+**`GET /api/tenants/current`** - Get current user's tenant
+- **Response**: Tenant details including settings
+- **Permissions**: All authenticated users
+
+**`PUT /api/tenants/current/settings`** - Update tenant settings
+- **Request**: `{ "settings": { "key": "value" } }`
+- **Response**: Updated tenant settings
+- **Permissions**: Admin and Editor roles only
 
 #### User Management
-- `GET /api/users` - List users (with pagination)
-- `POST /api/users` - Create new user
-- `GET /api/users/{id}` - Get user details
-- `PUT /api/users/{id}` - Update user
-- `DELETE /api/users/{id}` - Delete user
+
+**`GET /api/users`** - List tenant users (paginated)
+- **Query Parameters**: `?limit=20&offset=0&role=admin`
+- **Response**: Array of users with pagination metadata
+- **Permissions**: Admin role only
+
+**`POST /api/users`** - Create new user
+- **Request**: User creation data with role assignment
+- **Response**: Created user details
+- **Permissions**: Admin role only
+
+**`GET /api/users/{id}`** - Get user details
+- **Response**: User information
+- **Permissions**: Admin or own user data
+
+**`PUT /api/users/{id}`** - Update user
+- **Request**: Partial user update data
+- **Response**: Updated user details
+- **Permissions**: Admin or own user data
+
+**`DELETE /api/users/{id}`** - Deactivate user
+- **Response**: Success confirmation
+- **Permissions**: Admin role only
 
 #### Content Management
-- `GET /api/content` - List content (with filters)
-- `POST /api/content` - Create new content
-- `GET /api/content/{id}` - Get content details
-- `PUT /api/content/{id}` - Update content
-- `DELETE /api/content/{id}` - Delete content
-- `POST /api/content/{id}/publish` - Publish content
+
+**`GET /api/content`** - List content (paginated, filtered)
+- **Query Parameters**: `?limit=20&offset=0&status=published&author_id=uuid`
+- **Response**: Array of content with pagination
+- **Permissions**: Based on tenant isolation mode
+
+**`POST /api/content`** - Create new content
+- **Request**: Content creation data
+- **Response**: Created content details
+- **Permissions**: Editor and Admin roles
+
+**`GET /api/content/{id}`** - Get content details
+- **Response**: Full content information
+- **Permissions**: Based on content ownership and tenant isolation
+
+**`PUT /api/content/{id}`** - Update content
+- **Request**: Partial content update data
+- **Response**: Updated content details
+- **Permissions**: Content author or Admin
+
+**`DELETE /api/content/{id}`** - Delete content
+- **Response**: Success confirmation
+- **Permissions**: Content author or Admin
+
+**`POST /api/content/{id}/publish`** - Publish content
+- **Response**: Published content with `published_at` timestamp
+- **Permissions**: Editor and Admin roles
+
+#### Security Management
+
+**`GET /api/security/status`** - Get comprehensive security status
+- **Response**: Tenant security overview including user counts and isolation mode
+- **Permissions**: Admin role only
+
+**`GET /api/security/verify`** - Verify RLS security implementation
+- **Response**: Array of security tests with PASS/FAIL status
+- **Permissions**: Admin role only
+
+**`GET /api/security/isolation`** - Get current tenant isolation mode
+- **Response**: `{ "mode": "collaborative|isolated|role_based" }`
+- **Permissions**: Admin and Editor roles
+
+**`POST /api/security/isolation`** - Set tenant isolation mode
+- **Request**: `{ "mode": "collaborative|isolated|role_based" }`
+- **Response**: Confirmation with old and new mode
+- **Permissions**: Admin role only
+
+**`GET /api/security/permissions`** - Get user's RBAC permissions
+- **Response**: Array of user permissions with resource, action, and tenant scope
+- **Permissions**: All authenticated users (own permissions)
 
 ### Web Builder APIs
 
@@ -1062,32 +1210,163 @@ Content-Type: application/json
 - `DELETE /api/domains/{id}` - Remove domain
 - `POST /api/domains/{id}/verify` - Verify domain ownership
 
-### Error Handling
+### API Response Format
 
-All API errors follow a consistent format:
+All QuillSpace API endpoints return responses in a standardized format for consistency and error handling.
+
+#### Success Response Format
 
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input data",
-    "details": {
-      "field": "email",
-      "reason": "Invalid email format"
-    },
-    "request_id": "req_123456789"
-  }
+  "success": true,
+  "data": {
+    // Response data (varies by endpoint)
+  },
+  "error": null,
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+#### Paginated Response Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      // Array of items
+    ],
+    "total": 150,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 8
+  },
+  "error": null,
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+#### Error Response Format
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Descriptive error message",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 }
 ```
 
 ### HTTP Status Codes
 
-| Code | Description |
-|------|-------------|
-| `200` | Success |
-| `201` | Created |
-| `400` | Bad Request |
-| `401` | Unauthorized |
+- **200 OK** - Successful request
+- **201 Created** - Resource created successfully
+- **400 Bad Request** - Invalid request data or parameters
+- **401 Unauthorized** - Authentication required or invalid token
+- **403 Forbidden** - Insufficient permissions (Casbin RBAC denial)
+- **404 Not Found** - Resource not found or not accessible
+- **409 Conflict** - Resource conflict (e.g., duplicate slug)
+- **422 Unprocessable Entity** - Validation errors
+- **500 Internal Server Error** - Server error
+
+### Error Handling Examples
+
+#### Authentication Error (401)
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid or expired JWT token",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+#### Permission Error (403)
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Insufficient permissions: admin role required",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+#### Validation Error (422)
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Validation failed: email field is required",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+### Rate Limiting
+
+- **Authentication endpoints**: 5 requests per minute per IP
+- **General API endpoints**: 1000 requests per hour per authenticated user
+- **Upload endpoints**: 10 requests per minute per user
+
+Rate limit headers are included in responses:
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200
+```
+
+### API Usage Examples
+
+#### JavaScript/TypeScript Client
+
+```typescript
+// Login example
+const loginResponse = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'user@example.com',
+    password: 'secure_password'
+  }),
+});
+
+const loginResult = await loginResponse.json();
+if (loginResult.success) {
+  const { token, user, tenant } = loginResult.data;
+  localStorage.setItem('auth_token', token);
+}
+
+// Authenticated request example
+const sitesResponse = await fetch('/api/sites', {
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+    'Content-Type': 'application/json',
+  },
+});
+
+const sitesResult = await sitesResponse.json();
+if (sitesResult.success) {
+  console.log('User sites:', sitesResult.data.items);
+}
+```
+
+#### cURL Examples
+
+```bash
+# Login
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "yasinkak@gmail.com", "password": "password123"}'
+
+# Get sites (authenticated)
+curl -X GET http://localhost:3001/api/sites \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Get security permissions
+curl -X GET http://localhost:3001/api/security/permissions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
 | `403` | Forbidden |
 | `404` | Not Found |
 | `409` | Conflict |

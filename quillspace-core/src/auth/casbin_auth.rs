@@ -130,7 +130,7 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act && (r.tenant == p.tenant
     }
 }
 
-/// Resource types for authorization
+/// Resource schemas for authorization
 pub enum Resource {
     Content,
     Users,
@@ -159,7 +159,7 @@ impl Resource {
     }
 }
 
-/// Action types for authorization
+/// Action schemas for authorization
 pub enum Action {
     Read,
     Write,

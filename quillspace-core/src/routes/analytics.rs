@@ -220,7 +220,7 @@ async fn get_user_activity(
     }
 }
 
-// Request/Response types
+// Request/Response schemas
 
 #[derive(Debug, Deserialize)]
 struct RecordEventRequest {
