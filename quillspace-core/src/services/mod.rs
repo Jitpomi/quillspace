@@ -3,6 +3,7 @@ pub mod asset;
 pub mod content;
 pub mod page;
 pub mod site;
+pub mod rls;
 pub mod tenant;
 pub mod user;
 pub mod template_engine;

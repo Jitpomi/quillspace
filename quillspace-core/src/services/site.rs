@@ -246,6 +246,44 @@ impl SiteService {
         Ok(sites)
     }
 
+    /// List sites using RLS policies (preferred method)
+    pub async fn list_sites_with_rls(
+        &self,
+        tenant_id: &TenantId,
+        user_id: &UserId,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Site>> {
+        let client = self.db.get().await
+            .context("Failed to get database connection")?;
+
+        // Set RLS context
+        client
+            .execute("SELECT set_tenant_context($1)", &[tenant_id.as_uuid()])
+            .await
+            .context("Failed to set tenant context")?;
+
+        client
+            .execute("SELECT set_user_context($1)", &[user_id.as_uuid()])
+            .await
+            .context("Failed to set user context")?;
+
+        let rows = client
+            .query(
+                "SELECT * FROM sites ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+                &[&limit, &offset],
+            )
+            .await
+            .context("Failed to list sites with RLS")?;
+
+        let mut sites = Vec::new();
+        for row in rows {
+            sites.push(row_to_site(&row)?);
+        }
+
+        Ok(sites)
+    }
+
     /// Update site
     pub async fn update_site(
         &self,
