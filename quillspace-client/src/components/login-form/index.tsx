@@ -185,92 +185,93 @@ export default  component$<LoginFormProps>((props) => {
     });
 
     return (
-        <div class="bg-[#F7F3E9] rounded-xl border border-[#E8E2D4] shadow-warm p-8 transition-gentle hover-lift">
-            
+        <div class="space-y-6">
             <Form onSubmit$={handleSubmit}>
-                <Field name="email">
-                    { (
-                        field: { value: FormDataEntryValue | null | undefined; error: string },
-                        props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
-                      ) => (
-                        <div>
-                            {/* Email Field */}
-                            <label for="email" class="block text-sm font-medium text-[#2D3748]">
-                                Email address
-                            </label>
-                            <div class="mt-1 relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <LuMail class="h-5 w-5 text-gray-400"/>
+                <div class="space-y-5">
+                    <Field name="email">
+                        { (
+                            field: { value: FormDataEntryValue | null | undefined; error: string },
+                            props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
+                          ) => (
+                            <div>
+                                {/* Email Field */}
+                                <label for="email" class="block text-sm font-medium text-white mb-2">
+                                    Email address
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <LuMail class="h-5 w-5 text-gray-300"/>
+                                    </div>
+                                    <input
+                                        {...props}
+                                        type="email"
+                                        class="block w-full pl-12 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl focus:outline-none focus:ring-0 focus:border-[#9CAF88] focus:bg-white/15 text-white placeholder-gray-300 transition-all duration-300 hover:bg-white/15"
+                                        placeholder="Enter your email"
+                                        value={field.value}
+                                    />
                                 </div>
-                                <input
-                                    {...props}
-                                    type="email"
-                                    class="block w-full pl-10 pr-3 py-2 border border-[#E8E2D4] rounded-lg focus:ring-2 focus:ring-[#9CAF88] focus:border-[#9CAF88] bg-[#FEFCF7]"
-                                    placeholder="Enter your email"
-                                    value={field.value}
-                                />
+                                {field.error && <div class="mt-2 text-sm text-red-300">{field.error}</div>}
                             </div>
-                            {field.error && <div class={'accent-red-400'}>{field.error}</div>}
-                        </div>
-                    )}
-                </Field>
-                <Field name="password">
-                    {(
-                        field: { value: FormDataEntryValue | null | undefined; error: string },
-                        props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
-                    ) => (
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-[#2D3748]">
-                                Password
-                            </label>
-                            <div class="mt-1 relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <LuLock class="h-5 w-5 text-gray-400"/>
+                        )}
+                    </Field>
+                    
+                    <Field name="password">
+                        {(
+                            field: { value: FormDataEntryValue | null | undefined; error: string },
+                            props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
+                        ) => (
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-white mb-2">
+                                    Password
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <LuLock class="h-5 w-5 text-gray-300"/>
+                                    </div>
+                                    <input
+                                        {...props}
+                                        type={showPassword.value ? 'text' : 'password'}
+                                        class="block w-full pl-12 pr-12 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl focus:outline-none focus:ring-0 focus:border-[#9CAF88] focus:bg-white/15 text-white placeholder-gray-300 transition-all duration-300 hover:bg-white/15"
+                                        placeholder="Enter your password"
+                                        value={field.value}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick$={togglePasswordVisibility}
+                                        class="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-white/10 rounded-r-xl transition-colors"
+                                    >
+                                        {showPassword.value ? (
+                                            <LuEyeOff class="h-5 w-5 text-gray-300 hover:text-white"/>
+                                        ) : (
+                                            <LuEye class="h-5 w-5 text-gray-300 hover:text-white"/>
+                                        )}
+                                    </button>
                                 </div>
-                                <input
-                                    {...props}
-                                    type={showPassword.value ? 'text' : 'password'}
-                                    class="block w-full pl-10 pr-10 py-2 border border-[#E8E2D4] rounded-lg focus:ring-2 focus:ring-[#9CAF88] focus:border-[#9CAF88] bg-[#FEFCF7]"
-                                    placeholder="Enter your password"
-                                    value={field.value}
-                                />
-                                <button
-                                    type="button"
-                                    onClick$={togglePasswordVisibility}
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                >
-                                    {showPassword.value ? (
-                                        <LuEyeOff class="h-5 w-5 text-gray-400 hover:text-[#2D3748]"/>
-                                    ) : (
-                                        <LuEye class="h-5 w-5 text-gray-400 hover:text-[#2D3748]"/>
-                                    )}
-                                </button>
+                                {field.error && <div class="mt-2 text-sm text-red-300">{field.error}</div>}
                             </div>
-                            {field.error && <div class={'accent-red-400'}>{field.error}</div>}
-                        </div>
-
-                        //
-                    )}
-                </Field>
+                        )}
+                    </Field>
+                </div>
                 
                 {/* Error Display */}
                 {error.value && (
-                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p class="text-sm text-red-600">{error.value}</p>
+                    <div class="mt-4 p-4 bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-xl">
+                        <p class="text-sm text-red-200">{error.value}</p>
                     </div>
                 )}
                 
                 <button 
                     type="submit" 
-                    class="w-full mt-6 bg-[#9CAF88] text-white py-2 px-4 rounded-lg hover:bg-[#8ba077] transition-colors font-medium"
+                    class="w-full mt-8 bg-[#9CAF88] text-white py-4 px-6 rounded-xl hover:bg-[#8ba077] transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     Sign In
                 </button>
             </Form>
+            
             {/* Demo Credentials */}
-            <div class="mt-6 p-4 bg-[#9CAF88]/10 rounded-lg border border-[#9CAF88]/20">
-                <h4 class="text-sm font-medium text-[#2D3748] mb-2">Demo Credentials:</h4>
-                <div class="text-xs text-gray-600 space-y-1">
+            <div class="mt-6 p-4 bg-[#9CAF88]/20 backdrop-blur-sm rounded-xl border border-[#9CAF88]/30">
+                <h4 class="text-sm font-medium text-white mb-2">Demo Credentials:</h4>
+                <div class="text-xs text-gray-300 space-y-1">
                     <div>Email: yasinkak@gmail.com</div>
                     <div>Password: secret</div>
                 </div>
