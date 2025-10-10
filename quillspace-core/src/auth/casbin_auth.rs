@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use axum::http::StatusCode;
 use crate::types::UserRole;
+use tracing::{info, warn};
 
 /// Casbin-based authorization manager
 #[derive(Clone)]
@@ -39,29 +40,41 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act && (r.tenant == p.tenant
         enforcer.add_grouping_policy(vec!["admin".to_string(), "editor".to_string()]).await?;
         enforcer.add_grouping_policy(vec!["editor".to_string(), "viewer".to_string()]).await?;
 
-        // Define permissions for each role with wildcard tenant (applies to user's own tenant)
-        // Viewer permissions
-        enforcer.add_policy(vec!["viewer".to_string(), "content".to_string(), "read".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["viewer".to_string(), "sites".to_string(), "read".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["viewer".to_string(), "pages".to_string(), "read".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["viewer".to_string(), "analytics".to_string(), "read".to_string(), "*".to_string()]).await?;
+        // Define comprehensive permissions for each role with wildcard tenant
+        // VIEWER PERMISSIONS (read-only access)
+        let viewer_permissions = vec![
+            ("content", "read"), ("sites", "read"), ("pages", "read"), 
+            ("templates", "read"), ("assets", "read"), ("analytics", "read")
+        ];
+        for (resource, action) in viewer_permissions {
+            enforcer.add_policy(vec!["viewer".to_string(), resource.to_string(), action.to_string(), "*".to_string()]).await?;
+        }
 
-        // Editor permissions (inherits viewer + write content)
-        enforcer.add_policy(vec!["editor".to_string(), "content".to_string(), "write".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "content".to_string(), "update".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "content".to_string(), "publish".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "sites".to_string(), "write".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "sites".to_string(), "update".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "pages".to_string(), "write".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["editor".to_string(), "pages".to_string(), "update".to_string(), "*".to_string()]).await?;
+        // EDITOR PERMISSIONS (inherits viewer + content creation/editing)
+        let editor_permissions = vec![
+            ("content", "write"), ("content", "update"), ("content", "publish"),
+            ("sites", "write"), ("sites", "update"), ("sites", "publish"),
+            ("pages", "write"), ("pages", "update"), ("pages", "publish"),
+            ("templates", "write"), ("templates", "update"),
+            ("assets", "write"), ("assets", "update")
+        ];
+        for (resource, action) in editor_permissions {
+            enforcer.add_policy(vec!["editor".to_string(), resource.to_string(), action.to_string(), "*".to_string()]).await?;
+        }
 
-        // Admin permissions (inherits editor + admin operations)
-        enforcer.add_policy(vec!["admin".to_string(), "users".to_string(), "write".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["admin".to_string(), "users".to_string(), "update".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["admin".to_string(), "users".to_string(), "delete".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["admin".to_string(), "sites".to_string(), "delete".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["admin".to_string(), "pages".to_string(), "delete".to_string(), "*".to_string()]).await?;
-        enforcer.add_policy(vec!["admin".to_string(), "content".to_string(), "delete".to_string(), "*".to_string()]).await?;
+        // ADMIN PERMISSIONS (inherits editor + administrative operations)
+        let admin_permissions = vec![
+            ("users", "read"), ("users", "write"), ("users", "update"), ("users", "delete"),
+            ("tenants", "read"), ("tenants", "update"), ("tenants", "configure"),
+            ("sites", "delete"), ("pages", "delete"), ("content", "delete"),
+            ("templates", "delete"), ("assets", "delete"),
+            ("analytics", "admin"), ("security", "admin")
+        ];
+        for (resource, action) in admin_permissions {
+            enforcer.add_policy(vec!["admin".to_string(), resource.to_string(), action.to_string(), "*".to_string()]).await?;
+        }
+
+        info!("Casbin authorizer initialized with comprehensive RBAC policies");
 
         Ok(Self {
             enforcer: Arc::new(RwLock::new(enforcer)),
@@ -125,6 +138,9 @@ pub enum Resource {
     Analytics,
     Sites,
     Pages,
+    Templates,
+    Assets,
+    Security,
 }
 
 impl Resource {
@@ -136,6 +152,9 @@ impl Resource {
             Resource::Analytics => "analytics",
             Resource::Sites => "sites",
             Resource::Pages => "pages",
+            Resource::Templates => "templates",
+            Resource::Assets => "assets",
+            Resource::Security => "security",
         }
     }
 }
@@ -148,6 +167,8 @@ pub enum Action {
     Delete,
     Publish,
     Archive,
+    Configure,
+    Admin,
 }
 
 impl Action {
@@ -159,6 +180,8 @@ impl Action {
             Action::Delete => "delete",
             Action::Publish => "publish",
             Action::Archive => "archive",
+            Action::Configure => "configure",
+            Action::Admin => "admin",
         }
     }
 }
@@ -170,21 +193,27 @@ mod tests {
     #[tokio::test]
     async fn test_casbin_permissions() {
         let auth = CasbinAuthorizer::new().await.expect("Failed to create Casbin authorizer");
+        let test_tenant = "11111111-1111-1111-1111-111111111111";
 
         // Test viewer permissions
-        assert!(auth.enforce(&UserRole::Viewer, "content", "read").await.expect("Viewer read test failed"));
-        assert!(!auth.enforce(&UserRole::Viewer, "content", "write").await.expect("Viewer write test failed"));
-        assert!(!auth.enforce(&UserRole::Viewer, "users", "write").await.expect("Viewer user write test failed"));
+        assert!(auth.enforce(&UserRole::Viewer, "content", "read", test_tenant).await.expect("Viewer read test failed"));
+        assert!(!auth.enforce(&UserRole::Viewer, "content", "write", test_tenant).await.expect("Viewer write test failed"));
+        assert!(!auth.enforce(&UserRole::Viewer, "users", "write", test_tenant).await.expect("Viewer user write test failed"));
 
         // Test editor permissions  
-        assert!(auth.enforce(&UserRole::Editor, "content", "read").await.expect("Editor read test failed"));
-        assert!(auth.enforce(&UserRole::Editor, "content", "write").await.expect("Editor write test failed"));
-        assert!(!auth.enforce(&UserRole::Editor, "users", "write").await.expect("Editor user write test failed"));
+        assert!(auth.enforce(&UserRole::Editor, "content", "read", test_tenant).await.expect("Editor read test failed"));
+        assert!(auth.enforce(&UserRole::Editor, "content", "write", test_tenant).await.expect("Editor write test failed"));
+        assert!(!auth.enforce(&UserRole::Editor, "users", "write", test_tenant).await.expect("Editor user write test failed"));
 
         // Test admin permissions
-        assert!(auth.enforce(&UserRole::Admin, "content", "read").await.expect("Admin content read test failed"));
-        assert!(auth.enforce(&UserRole::Admin, "content", "write").await.expect("Admin content write test failed"));
-        assert!(auth.enforce(&UserRole::Admin, "users", "write").await.expect("Admin user write test failed"));
-        assert!(auth.enforce(&UserRole::Admin, "tenants", "write").await.expect("Admin tenant write test failed"));
+        assert!(auth.enforce(&UserRole::Admin, "content", "read", test_tenant).await.expect("Admin content read test failed"));
+        assert!(auth.enforce(&UserRole::Admin, "content", "write", test_tenant).await.expect("Admin content write test failed"));
+        assert!(auth.enforce(&UserRole::Admin, "users", "write", test_tenant).await.expect("Admin user write test failed"));
+        assert!(auth.enforce(&UserRole::Admin, "security", "admin", test_tenant).await.expect("Admin security test failed"));
+
+        // Test new resources
+        assert!(auth.enforce(&UserRole::Editor, "templates", "write", test_tenant).await.expect("Editor templates test failed"));
+        assert!(auth.enforce(&UserRole::Admin, "templates", "delete", test_tenant).await.expect("Admin templates delete test failed"));
+        assert!(!auth.enforce(&UserRole::Viewer, "templates", "write", test_tenant).await.expect("Viewer templates write test failed"));
     }
 }

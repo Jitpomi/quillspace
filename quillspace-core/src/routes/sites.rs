@@ -80,11 +80,11 @@ pub async fn list_sites(
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
 
-    // TODO: Fix Casbin policies, temporarily disabled for RLS testing
-    // state.authorizer
-    //     .require_permission(&auth_context.user_role, "Sites", "read", &auth_context.tenant_id.to_string())
-    //     .await
-    //     .map_err(|_| StatusCode::FORBIDDEN)?;
+    // Casbin authorization check with proper Resource enum
+    state.authorizer
+        .require_permission(&auth_context.user_role, "sites", "read", &auth_context.tenant_id.to_string())
+        .await
+        .map_err(|_| StatusCode::FORBIDDEN)?;
 
     let limit = query.limit.unwrap_or(20).min(100);
     let offset = query.offset.unwrap_or(0);

@@ -128,7 +128,7 @@ mod tests {
     fn test_jwt_generation_and_verification() {
         let jwt_manager = JwtManager::new("test-secret-key", "quillspace");
         
-        let token = jwt_manager.create_token(
+        let token = jwt_manager.generate_token(
             "user-123",
             "test@example.com",
             "Test User",
@@ -150,7 +150,7 @@ mod tests {
     fn test_token_validation() {
         let jwt_manager = JwtManager::new("test-secret-key", "quillspace");
         
-        let token = jwt_manager.create_token(
+        let token = jwt_manager.generate_token(
             "user-123",
             "test@example.com",
             "Test User",
