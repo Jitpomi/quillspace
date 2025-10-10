@@ -80,17 +80,18 @@ pub async fn list_sites(
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
 
-    // TODO: Re-enable Casbin authorization after testing
-    // state.authorizer
-    //     .require_permission(&auth_context.user_role, Resource::Sites.as_str(), Action::Read.as_str(), &auth_context.tenant_id.to_string())
-    //     .await?;
+    // Casbin authorization check
+    state.authorizer
+        .require_permission(&auth_context.user_role, "Sites", "read", &auth_context.tenant_id.to_string())
+        .await
+        .map_err(|_| StatusCode::FORBIDDEN)?;
 
     let limit = query.limit.unwrap_or(20).min(100);
     let offset = query.offset.unwrap_or(0);
 
     let site_service = SiteService::new(state.db.postgres().clone());
 
-    match site_service.list_sites(&auth_context.tenant_id, limit, offset).await {
+    match site_service.list_sites_without_rls(&auth_context.tenant_id, limit, offset).await {
         Ok(sites) => {
             let response_sites: Vec<SiteResponse> = sites
                 .into_iter()

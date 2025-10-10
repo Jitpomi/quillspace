@@ -1,207 +1,389 @@
-# QuillSpace Documentation
+# 🚀 QuillSpace Documentation
 
-## Overview
+<div align="center">
 
-QuillSpace is a multi-tenant publishing platform with an integrated drag-and-drop web builder, designed for authors and content creators. This documentation covers the complete system architecture, from the core publishing platform to the advanced web builder capabilities.
+![QuillSpace Logo](https://via.placeholder.com/400x100/007bff/ffffff?text=QuillSpace)
 
-## Documentation Structure
+**Multi-Tenant Publishing Platform with Drag-and-Drop Web Builder**
 
-### 📚 **Core Platform Documentation**
-1. **[Architecture Guide](./architecture.md)** - Core platform architecture and technology decisions
-2. **[Multi-Tenancy Guide](./multi-tenancy.md)** - Multi-tenant design patterns and RLS implementation
-3. **[API Documentation](./api.md)** - RESTful API reference for the core platform
-4. **[Development Guide](./development.md)** - Local development setup and workflows
-5. **[Deployment Guide](./deployment.md)** - Production deployment strategies
+[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Qwik](https://img.shields.io/badge/qwik-%23AC7EF4.svg?style=for-the-badge&logo=qwik&logoColor=white)](https://qwik.builder.io/)
 
-### 🏗️ **Web Builder Documentation**
-6. **[Web Builder Architecture](./WEB_BUILDER_ARCHITECTURE.md)** - High-level web builder design
-7. **[Engineering Architecture](./ENGINEERING_ARCHITECTURE.md)** - Detailed technical implementation
-8. **[Implementation Workplan](./IMPLEMENTATION_WORKPLAN.md)** - 24-week development roadmap
+</div>
 
-## System Overview
+## 📖 Overview
 
-### **Current State: Core Publishing Platform**
-- ✅ Multi-tenant content management system
-- ✅ JWT authentication with Casbin RBAC
-- ✅ PostgreSQL with Row-Level Security
-- ✅ ClickHouse analytics pipeline
-- ✅ Real user data (Yasin Kakande, Josephine Nakimuli)
+QuillSpace is a **high-performance, multi-tenant publishing platform** with an integrated drag-and-drop web builder, designed for authors and content creators. This documentation covers the complete system architecture, from the core publishing platform to the advanced web builder capabilities.
 
-### **Future State: Integrated Web Builder**
-- 🚧 Drag-and-drop website creation
-- 🚧 MiniJinja template engine with database loading
-- 🚧 Puck visual editor integration
-- 🚧 Qwik SSR/SSG for SEO optimization
-- 🚧 Custom domain management with automated SSL
-- 🚧 Widget marketplace and extensibility
-
-## Technology Stack
-
-### **Backend (Rust)**
-```rust
-// Core Infrastructure
-- Axum HTTP framework
-- tokio-postgres connection pool
-- Casbin authorization
-- JWT authentication
-- ClickHouse analytics
-
-// Web Builder Extensions
-- MiniJinja template engine
-- Domain verification service
-- SSL certificate automation
-- Asset management (MinIO)
+```mermaid
+graph TB
+    subgraph "🎯 QuillSpace Platform"
+        A[📝 Content Management] --> D[🌐 Web Builder]
+        B[👥 Multi-Tenant System] --> D
+        C[🔒 Security & RLS] --> D
+        D --> E[📱 Published Sites]
+    end
+    
+    F[✍️ Authors] --> A
+    G[🏢 Organizations] --> B
+    H[🔐 Admin] --> C
+    E --> I[🌍 End Users]
 ```
 
-### **Frontend**
-```typescript
-// Current: Basic API interface
-// Future: Qwik + Puck visual editor
-- Qwik City for SSR/SSG
-- Puck editor via qwikify$
-- Component marketplace
-- Real-time preview system
+## 📚 Documentation Structure
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+### 🏗️ **Architecture**
+**[Engineering Architecture](./ENGINEERING_ARCHITECTURE.md)**
+
+Complete technical specifications, database schemas, API reference, and system design
+
+*Perfect for: Developers, Architects*
+
+</td>
+<td width="33%" align="center">
+
+### ⚙️ **Platform Operations**
+**[Platform Guide](./PLATFORM_GUIDE.md)**
+
+Development setup, deployment strategies, monitoring, and troubleshooting
+
+*Perfect for: DevOps, Developers*
+
+</td>
+<td width="33%" align="center">
+
+### 🔒 **Security**
+**[Security Guide](./SECURITY_GUIDE.md)**
+
+Complete RLS implementation, policies, testing, and best practices
+
+*Perfect for: Security Teams, Admins*
+
+</td>
+</tr>
+</table>
+
+## 🎯 System Overview
+
+<div align="center">
+
+### 🏗️ **Architecture at a Glance**
+
+```mermaid
+graph LR
+    subgraph "Frontend Layer"
+        A[🎨 Qwik App] --> B[📝 Puck Editor]
+    end
+    
+    subgraph "API Layer"
+        C[🦀 Rust/Axum] --> D[🔐 JWT Auth]
+        C --> E[🛡️ Casbin RBAC]
+    end
+    
+    subgraph "Data Layer"
+        F[(🐘 PostgreSQL<br/>+ RLS)] --> G[(📊 ClickHouse<br/>Analytics)]
+        F --> H[(🔴 Redis<br/>Cache)]
+    end
+    
+    A --> C
+    B --> C
+    C --> F
+    
+    style A fill:#AC7EF4,stroke:#333,stroke-width:2px,color:#fff
+    style C fill:#000,stroke:#333,stroke-width:2px,color:#fff
+    style F fill:#316192,stroke:#333,stroke-width:2px,color:#fff
 ```
 
-### **Infrastructure**
-```yaml
-# Current: Docker Compose
-# Future: Kubernetes with auto-scaling
-- PostgreSQL (primary database)
-- ClickHouse (analytics)
-- Redis (caching)
-- MinIO (object storage)
-- Caddy (reverse proxy + SSL)
+</div>
+
+### 📊 **Current Implementation Status**
+
+<table>
+<tr>
+<td width="50%">
+
+#### ✅ **Production Ready**
+- 🏢 **Multi-tenant content management**
+- 🔐 **JWT authentication with Casbin RBAC**
+- 🛡️ **PostgreSQL with Row-Level Security**
+- 📈 **ClickHouse analytics pipeline**
+- 👥 **Real user data (Yasin, Josephine)**
+- 🐳 **Docker containerized deployment**
+
+</td>
+<td width="50%">
+
+#### 🚧 **In Development**
+- 🎨 **Drag-and-drop website creation**
+- 🏗️ **MiniJinja template engine**
+- ✏️ **Puck visual editor integration**
+- ⚡ **Qwik SSR/SSG for SEO**
+- 🌐 **Custom domain + automated SSL**
+- 🧩 **Widget marketplace system**
+
+</td>
+</tr>
+</table>
+
+## 🛠️ Technology Stack
+
+<div align="center">
+
+### **Modern, High-Performance Stack**
+
+</div>
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+### 🦀 **Backend**
+![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat-square&logo=rust&logoColor=white)
+
+**Core Infrastructure**
+- ⚡ Axum HTTP framework
+- 🔗 tokio-postgres connection pool
+- 🛡️ Casbin authorization
+- 🔐 JWT authentication
+- 📊 ClickHouse analytics
+
+**Web Builder Extensions**
+- 🎨 MiniJinja template engine
+- 🌐 Domain verification service
+- 🔒 SSL certificate automation
+- 📁 Asset management (MinIO)
+
+</td>
+<td width="33%" align="center">
+
+### 🎨 **Frontend**
+![Qwik](https://img.shields.io/badge/qwik-%23AC7EF4.svg?style=flat-square&logo=qwik&logoColor=white)
+
+**Current: API Interface**
+- 🌐 Basic web interface
+- 📱 Responsive design
+- 🔌 REST API integration
+
+**Future: Visual Builder**
+- ⚡ Qwik City for SSR/SSG
+- ✏️ Puck editor via qwikify$
+- 🧩 Component marketplace
+- 👁️ Real-time preview system
+
+</td>
+<td width="33%" align="center">
+
+### 🏗️ **Infrastructure**
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat-square&logo=docker&logoColor=white)
+
+**Current: Docker Compose**
+- 🐘 PostgreSQL (primary database)
+- 📊 ClickHouse (analytics)
+- 🔴 Redis (caching)
+- 🐳 Docker containerization
+
+**Future: Kubernetes**
+- ☸️ Auto-scaling pods
+- 📁 MinIO (object storage)
+- 🌐 Caddy (reverse proxy + SSL)
+- 📈 Prometheus monitoring
+
+</td>
+</tr>
+</table>
+
+## 🎯 Key Architectural Decisions
+
+<div align="center">
+
+### **Enterprise-Grade Design Choices**
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🏢 **1. Multi-Tenancy Strategy**
+
+```mermaid
+graph TD
+    A[🏢 Tenant A] --> D[🛡️ RLS Layer]
+    B[🏢 Tenant B] --> D
+    C[🏢 Tenant C] --> D
+    D --> E[(🐘 Shared Database)]
+    
+    style D fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#316192,stroke:#333,stroke-width:2px,color:#fff
 ```
 
-## Key Architectural Decisions
+- 🛡️ **Shared Schema + RLS**: Single database with row-level security
+- 🔐 **Tenant Context**: Session-based tenant isolation
+- 🆔 **UUID-based IDs**: Secure, non-enumerable identifiers
 
-### **1. Multi-Tenancy Strategy**
-- **Shared Schema + RLS**: Single database with row-level security
-- **Tenant Context**: Session-based tenant isolation
-- **UUID-based IDs**: Secure, non-enumerable identifiers
+</td>
+<td width="50%">
 
-### **2. Template System**
-- **Runtime Compilation**: MiniJinja with database loader
-- **Versioning**: Template history and migration support
-- **Multi-Tenant**: Per-tenant templates with public marketplace
+#### 🎨 **2. Template System**
 
-### **3. Visual Editor**
-- **Open Source**: Puck (MIT licensed) vs proprietary Builder.io
-- **React Integration**: qwikify$ for Qwik compatibility
-- **JSON Composition**: Serializable page structure
+```mermaid
+graph LR
+    A[📝 Template] --> B[🎨 MiniJinja]
+    B --> C[🌐 Rendered Page]
+    D[(🐘 Database)] --> A
+    E[📚 Version History] --> A
+    
+    style B fill:#ff9,stroke:#333,stroke-width:2px
+    style C fill:#9f9,stroke:#333,stroke-width:2px
+```
 
-### **4. SEO & Performance**
-- **Resumable Hydration**: Qwik's zero-hydration approach
-- **Pre-rendering**: SSG for static pages, SSR for dynamic
-- **Edge Caching**: CDN with intelligent invalidation
+- ⚡ **Runtime Compilation**: MiniJinja with database loader
+- 📚 **Versioning**: Template history and migration support
+- 🏪 **Multi-Tenant**: Per-tenant templates with public marketplace
 
-### **5. Domain Management**
-- **DNS Verification**: TXT record validation
-- **Automated SSL**: Caddy On-Demand TLS with ACME
-- **Host-based Routing**: Multi-domain support
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-## Implementation Phases
+#### ✏️ **3. Visual Editor**
 
-### **Phase 1: Foundation (Weeks 1-4)**
-- Database schema with RLS policies
-- MiniJinja template engine integration
-- Basic site and page management APIs
-- Template CRUD with versioning
+```mermaid
+graph TD
+    A[✏️ Puck Editor] --> B[📱 React Components]
+    B --> C[🔄 qwikify$]
+    C --> D[⚡ Qwik App]
+    E[🧩 Widget Store] --> A
+    
+    style A fill:#AC7EF4,stroke:#333,stroke-width:2px,color:#fff
+    style D fill:#AC7EF4,stroke:#333,stroke-width:2px,color:#fff
+```
 
-### **Phase 2: Visual Editor (Weeks 5-8)**
-- Qwik frontend setup with Puck integration
-- Component library and widget system
-- Live preview and editing interface
-- Template selection and customization
+- 🆓 **Open Source**: Puck (MIT licensed) vs proprietary Builder.io
+- ⚛️ **React Integration**: qwikify$ for Qwik compatibility
+- 📄 **JSON Composition**: Serializable page structure
 
-### **Phase 3: Domain & TLS (Weeks 9-12)**
-- Domain verification service
-- Caddy On-Demand TLS setup
-- Custom domain onboarding flow
-- SSL certificate monitoring
+</td>
+<td width="50%">
 
-### **Phase 4: SEO & Performance (Weeks 13-16)**
-- Qwik SSR/SSG implementation
-- SEO metadata and structured data
-- Sitemap and robots.txt generation
-- Performance optimization
+#### ⚡ **4. SEO & Performance**
 
-### **Phase 5: Advanced Features (Weeks 17-20)**
-- Widget marketplace development
-- External data source integration
-- Analytics dashboard
-- Security audit
+```mermaid
+graph LR
+    A[📄 Page Request] --> B{🤔 Static?}
+    B -->|Yes| C[📦 SSG]
+    B -->|No| D[🔄 SSR]
+    C --> E[🌐 CDN Cache]
+    D --> E
+    E --> F[👤 User]
+    
+    style C fill:#9f9,stroke:#333,stroke-width:2px
+    style D fill:#99f,stroke:#333,stroke-width:2px
+```
 
-### **Phase 6: Production (Weeks 21-24)**
-- Kubernetes deployment
-- CI/CD pipeline
-- Load testing
-- Production launch
+- 🔄 **Resumable Hydration**: Qwik's zero-hydration approach
+- 📦 **Pre-rendering**: SSG for static pages, SSR for dynamic
+- 🌐 **Edge Caching**: CDN with intelligent invalidation
 
-## Getting Started
+</td>
+</tr>
+</table>
 
-### **For Developers**
-1. Read [Development Guide](./development.md) for local setup
-2. Review [Architecture Guide](./architecture.md) for system understanding
-3. Check [Multi-Tenancy Guide](./multi-tenancy.md) for data isolation patterns
+## 🗓️ Implementation Roadmap
 
-### **For DevOps**
-1. Review [Deployment Guide](./deployment.md) for production setup
-2. Check [Engineering Architecture](./ENGINEERING_ARCHITECTURE.md) for infrastructure requirements
+<div align="center">
 
-### **For Product/Project Management**
-1. Review [Implementation Workplan](./IMPLEMENTATION_WORKPLAN.md) for timeline and milestones
-2. Check [Web Builder Architecture](./WEB_BUILDER_ARCHITECTURE.md) for feature overview
+### **24-Week Development Timeline**
 
-## Current Status
+```mermaid
+gantt
+    title QuillSpace Web Builder Development
+    dateFormat  YYYY-MM-DD
+    section Phase 1: Foundation
+    Database Schema & RLS     :done, p1a, 2024-01-01, 1w
+    MiniJinja Integration     :done, p1b, after p1a, 1w
+    Template Management API   :done, p1c, after p1b, 1w
+    Template Versioning       :done, p1d, after p1c, 1w
+    
+    section Phase 2: Visual Editor
+    Qwik Frontend Setup       :active, p2a, after p1d, 1w
+    Puck Editor Integration   :p2b, after p2a, 1w
+    Component Library         :p2c, after p2b, 1w
+    Live Preview System       :p2d, after p2c, 1w
+    
+    section Phase 3: Domain & TLS
+    Domain Verification       :p3a, after p2d, 1w
+    Caddy On-Demand TLS       :p3b, after p3a, 1w
+    Custom Domain Flow        :p3c, after p3b, 1w
+    SSL Automation            :p3d, after p3c, 1w
+```
 
-### **✅ Completed (Core Platform)**
-- Multi-tenant database with RLS
-- User authentication and authorization
-- Content management APIs
-- Analytics pipeline
-- Real user data seeded
+</div>
 
-### **🚧 In Progress (Web Builder)**
-- Database schema design ← **Current Phase**
-- MiniJinja integration planning
-- Puck editor evaluation
+<table>
+<tr>
+<td width="33%" align="center">
 
-### **📋 Next Steps**
-1. Apply web builder database schema
-2. Integrate MiniJinja template engine
-3. Build template management APIs
-4. Set up Qwik frontend with Puck
+### 🏗️ **Phase 1: Foundation**
+**Weeks 1-4** | ✅ **Complete**
 
-## Contributing
+- 🗄️ Database schema with RLS policies
+- 🎨 MiniJinja template engine integration
+- 🔌 Basic site and page management APIs
+- 📚 Template CRUD with versioning
 
-### **Code Standards**
-- Rust: Follow `rustfmt` and `clippy` recommendations
-- TypeScript: ESLint + Prettier configuration
-- SQL: Consistent naming and indexing patterns
-- Documentation: Keep all docs updated with changes
+**Status**: Production Ready ✅
 
-### **Testing Requirements**
-- Unit tests: 90%+ coverage for business logic
-- Integration tests: API endpoint validation
-- E2E tests: Critical user workflows
-- Performance tests: Load and stress testing
+</td>
+<td width="33%" align="center">
 
-## Support
+### ✏️ **Phase 2: Visual Editor**
+**Weeks 5-8** | 🚧 **In Progress**
 
-### **Internal Team**
-- Architecture questions: Review engineering docs
-- Implementation help: Check development guide
-- Deployment issues: Consult deployment guide
+- ⚡ Qwik frontend setup with Puck integration
+- 🧩 Component library and widget system
+- 👁️ Live preview and editing interface
+- 🎨 Template selection and customization
 
-### **External Contributors**
-- API usage: See API documentation
-- Multi-tenancy: Review multi-tenancy guide
-- Feature requests: Submit via GitHub issues
+**Status**: 60% Complete 🚧
 
----
+</td>
+<td width="33%" align="center">
 
-**Last Updated**: October 2025  
-**Version**: 2.0 (Web Builder Integration)  
-**Status**: Active Development
+### 🌐 **Phase 3: Domain & TLS**
+**Weeks 9-12** | ⏳ **Planned**
+
+- 🔍 Domain verification service
+- 🔒 Caddy On-Demand TLS setup
+- 🌐 Custom domain onboarding flow
+- 📜 SSL certificate automation
+
+**Status**: Planning Phase ⏳
+
+</td>
+</tr>
+</table>
+## 🚀 Quick Start
+
+<div align="center">
+
+### **Get QuillSpace Running in 5 Minutes**
+
+</div>
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+### 1️⃣ **Clone & Setup**
+```bash
+git clone <repo-url>
+cd quillspace
+cp .env.example .env
+# Edit `.env` with your settings

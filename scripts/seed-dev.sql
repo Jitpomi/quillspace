@@ -1,77 +1,57 @@
 -- QuillSpace Database Seeding
 -- Real user data for Yasin Kakande and Josephine Nakimuli
 
--- Insert Yasin's tenant (Yasin Kakande's publishing space)
-INSERT INTO tenants (id, name, slug, settings)
+-- Insert Yasin Kakande (real user)
+INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role)
 VALUES (
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     '11111111-1111-1111-1111-111111111111',
-    'Yasin Kakande Publishing',
-    'yasin-kakande',
-    '{"theme": "professional", "features": {"analytics": true, "comments": true, "newsletter": true}}'
-) ON CONFLICT (slug) DO UPDATE SET
-    name = EXCLUDED.name,
-    settings = EXCLUDED.settings,
-    updated_at = NOW();
-
--- Insert Joey's tenant (Josephine Nakimuli's publishing space)
-INSERT INTO tenants (id, name, slug, settings)
-VALUES (
-    '22222222-2222-2222-2222-222222222222',
-    'Josephine Nakimuli Publishing',
-    'josephine-nakimuli',
-    '{"theme": "creative", "features": {"analytics": true, "comments": true, "newsletter": true}}'
-) ON CONFLICT (slug) DO UPDATE SET
-    name = EXCLUDED.name,
-    settings = EXCLUDED.settings,
-    updated_at = NOW();
-
--- Insert system tenant for admin
-INSERT INTO tenants (id, name, slug, settings)
-VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    'QuillSpace System',
-    'system-admin',
-    '{"theme": "admin", "features": {"analytics": true, "comments": true, "newsletter": true, "system_admin": true}}'
-) ON CONFLICT (slug) DO UPDATE SET
-    name = EXCLUDED.name,
-    settings = EXCLUDED.settings,
-    updated_at = NOW();
-
--- Insert users with proper bcrypt hashes (password: "secret")
-INSERT INTO users (id, tenant_id, email, name, password_hash, role)
-VALUES 
-    -- System Admin (can access all tenants)
-    (
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        '00000000-0000-0000-0000-000000000000',
-        'admin@quillspace.com',
-        'System Administrator',
-        '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', -- password: secret
-        'admin'
-    ),
-    -- Yasin Kakande (tenant admin)
-    (
-        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-        '11111111-1111-1111-1111-111111111111',
-        'yasinkak@gmail.com',
-        'Yasin Kakande',
-        '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', -- password: secret
-        'admin'
-    ),
-    -- Josephine Nakimuli (tenant admin)
-    (
-        'cccccccc-cccc-cccc-cccc-cccccccccccc',
-        '22222222-2222-2222-2222-222222222222',
-        'joeykigozi@yahoo.co.uk',
-        'Josephine Nakimuli',
-        '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', -- password: secret
-        'admin'
-    )
-ON CONFLICT (tenant_id, email) DO UPDATE SET
-    name = EXCLUDED.name,
+    'yasinkak@gmail.com',
+    'Yasin',
+    'Kakande',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/A5/jF/XZm', -- "secret"
+    'admin'
+) ON CONFLICT (tenant_id, email) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
     password_hash = EXCLUDED.password_hash,
     role = EXCLUDED.role,
     updated_at = NOW();
+
+-- Insert Josephine Nakimuli (real user)
+INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role)
+VALUES (
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '22222222-2222-2222-2222-222222222222',
+    'joeykigozi@yahoo.co.uk',
+    'Josephine',
+    'Nakimuli',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/A5/jF/XZm', -- "secret"
+    'admin'
+) ON CONFLICT (tenant_id, email) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    updated_at = NOW();
+
+-- Insert system admin user
+INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role)
+VALUES (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '00000000-0000-0000-0000-000000000000',
+    'admin@quillspace.com',
+    'System',
+    'Administrator',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/A5/jF/XZm', -- "secret"
+    'admin'
+) ON CONFLICT (tenant_id, email) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    updated_at = NOW();
+
 
 -- Insert content for Yasin Kakande
 INSERT INTO content (id, tenant_id, title, slug, body, status, author_id, published_at)

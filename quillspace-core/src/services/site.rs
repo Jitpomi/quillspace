@@ -67,11 +67,7 @@ impl SiteService {
         let client = self.db.get().await
             .context("Failed to get database connection")?;
 
-        // Set RLS context
-        client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
-            .await
-            .context("Failed to set RLS tenant context")?;
+        // No RLS context needed - using application-level filtering
 
         // Generate subdomain if not provided
         let subdomain = if let Some(subdomain) = request.subdomain {
@@ -132,7 +128,7 @@ impl SiteService {
         Ok(row_to_site(&row)?)
     }
 
-    /// Get site by ID
+    /// Get site by ID with tenant isolation
     pub async fn get_site(
         &self,
         tenant_id: &TenantId,
@@ -141,14 +137,9 @@ impl SiteService {
         let client = self.db.get().await
             .context("Failed to get database connection")?;
 
-        // Set RLS context
-        client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
-            .await
-            .context("Failed to set RLS tenant context")?;
-
+        // Use application-level filtering for tenant isolation
         let row = client
-            .query_opt("SELECT * FROM sites WHERE id = $1", &[&site_id])
+            .query_opt("SELECT * FROM sites WHERE id = $1 AND tenant_id = $2", &[&site_id, tenant_id.as_uuid()])
             .await
             .context("Failed to get site")?;
 

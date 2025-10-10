@@ -1,8 +1,10 @@
-# QuillSpace Multi-Tenant Web Builder: Engineering Architecture
+# QuillSpace Web Builder: Complete Engineering Architecture
 
 ## Executive Summary
 
-This document provides a comprehensive engineering architecture for implementing a scalable, multi-tenant drag-and-drop web builder within the existing QuillSpace platform. The architecture leverages modern technologies including Rust/Axum backend, Qwik resumable frontend, PostgreSQL Row-Level Security, and automated TLS management to deliver enterprise-grade performance and security.
+This document provides the definitive engineering architecture for QuillSpace's multi-tenant web builder platform. It consolidates all technical specifications, implementation details, and architectural decisions into a single comprehensive reference. The architecture leverages modern technologies including Rust/Axum backend, Qwik resumable frontend, PostgreSQL Row-Level Security, and automated TLS management to deliver enterprise-grade performance and security.
+
+**Consolidated from**: WEB_BUILDER_ARCHITECTURE.md, ENGINEERING_ARCHITECTURE.md, IMPLEMENTATION_WORKPLAN.md, architecture.md, multi-tenancy.md, and api.md
 
 ## Core Architecture Principles
 
@@ -939,8 +941,162 @@ spec:
 - **Page Views:** 100M+ monthly across all sites
 - **Uptime:** 99.95% availability
 
+## API Reference
+
+### Overview
+
+The QuillSpace API is a RESTful service built with Rust and Axum, designed for high-performance multi-tenant content management and web builder functionality. All API endpoints are tenant-scoped and require authentication.
+
+**Base URL**: `https://api.quillspace.com/v1`  
+**Authentication**: Bearer JWT tokens  
+**Content-Type**: `application/json`
+
+### API Modules
+
+1. **Core Platform APIs** - User management, content, analytics
+2. **Web Builder APIs** - Templates, sites, pages, domains
+3. **Widget Marketplace APIs** - Components, external integrations
+
+### Authentication
+
+#### Login
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "secure_password"
+}
+```
+
+**Response**:
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600,
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "user@example.com",
+    "role": "admin",
+    "tenant_id": "123e4567-e89b-12d3-a456-426614174001"
+  }
+}
+```
+
+### Core Platform APIs
+
+#### Authentication Endpoints
+- `POST /api/auth/login` - User login
+- `POST /api/auth/refresh` - Refresh JWT token
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/me` - Get current user info
+
+#### Tenant Management
+- `GET /api/tenant` - Get current tenant
+- `PATCH /api/tenant` - Update tenant settings
+
+#### User Management
+- `GET /api/users` - List users (with pagination)
+- `POST /api/users` - Create new user
+- `GET /api/users/{id}` - Get user details
+- `PUT /api/users/{id}` - Update user
+- `DELETE /api/users/{id}` - Delete user
+
+#### Content Management
+- `GET /api/content` - List content (with filters)
+- `POST /api/content` - Create new content
+- `GET /api/content/{id}` - Get content details
+- `PUT /api/content/{id}` - Update content
+- `DELETE /api/content/{id}` - Delete content
+- `POST /api/content/{id}/publish` - Publish content
+
+### Web Builder APIs
+
+#### Site Management
+- `GET /api/sites` - List user sites
+- `POST /api/sites` - Create new site
+- `GET /api/sites/{id}` - Get site details
+- `PUT /api/sites/{id}` - Update site
+- `DELETE /api/sites/{id}` - Delete site
+- `POST /api/sites/{id}/publish` - Publish site
+
+#### Page Management
+- `GET /api/sites/{site_id}/pages` - List site pages
+- `POST /api/sites/{site_id}/pages` - Create new page
+- `GET /api/pages/{id}` - Get page details
+- `PUT /api/pages/{id}` - Update page content
+- `DELETE /api/pages/{id}` - Delete page
+- `POST /api/pages/{id}/publish` - Publish page
+
+#### Template Management
+- `GET /api/templates` - List available templates
+- `POST /api/templates` - Create new template
+- `GET /api/templates/{id}` - Get template details
+- `PUT /api/templates/{id}` - Update template
+- `DELETE /api/templates/{id}` - Delete template
+- `GET /api/templates/{id}/versions` - Get template versions
+
+#### Asset Management
+- `GET /api/assets` - List assets
+- `POST /api/assets` - Upload new asset
+- `GET /api/assets/{id}` - Get asset details
+- `DELETE /api/assets/{id}` - Delete asset
+
+### Widget Marketplace APIs
+
+#### Widget Management
+- `GET /api/widgets` - List available widgets
+- `POST /api/widgets` - Create new widget
+- `GET /api/widgets/{id}` - Get widget details
+- `PUT /api/widgets/{id}` - Update widget
+- `DELETE /api/widgets/{id}` - Delete widget
+
+#### Domain Management
+- `GET /api/domains` - List custom domains
+- `POST /api/domains` - Add custom domain
+- `GET /api/domains/{id}` - Get domain details
+- `PUT /api/domains/{id}` - Update domain settings
+- `DELETE /api/domains/{id}` - Remove domain
+- `POST /api/domains/{id}/verify` - Verify domain ownership
+
+### Error Handling
+
+All API errors follow a consistent format:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": {
+      "field": "email",
+      "reason": "Invalid email format"
+    },
+    "request_id": "req_123456789"
+  }
+}
+```
+
+### HTTP Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad Request |
+| `401` | Unauthorized |
+| `403` | Forbidden |
+| `404` | Not Found |
+| `409` | Conflict |
+| `422` | Unprocessable Entity |
+| `429` | Too Many Requests |
+| `500` | Internal Server Error |
+
 ## Conclusion
 
-This engineering architecture provides a comprehensive blueprint for building a world-class multi-tenant web builder that leverages modern technologies while integrating seamlessly with the existing QuillSpace infrastructure. The emphasis on performance, security, and developer experience ensures the platform can scale to serve millions of users while maintaining excellent performance and reliability.
+This engineering architecture provides a comprehensive blueprint for building a world-class multi-tenant web builder that LEVERAGES modern technologies while integrating seamlessly with the existing QuillSpace infrastructure. The emphasis on performance, security, and developer experience ensures the platform can scale to serve millions of users while maintaining excellent performance and reliability.
 
 The phased implementation approach allows for iterative development and early user feedback, while the modular architecture supports future enhancements and integrations with the broader QuillSpace ecosystem.
