@@ -160,6 +160,7 @@ fn create_api_routes() -> Router<AppState> {
         .nest("/analytics", routes::analytics::create_routes())
         .nest("/users", routes::users::create_routes())
         .nest("/templates", routes::templates::templates_router())
+        .nest("/security", routes::security::security_router())
         // Web builder routes
         .nest("/sites", routes::sites::sites_router())
         .merge(routes::pages::pages_router())
