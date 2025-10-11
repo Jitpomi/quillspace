@@ -63,7 +63,7 @@ export default component$(() => {
             {/* Enhanced CTA Buttons */}
             <div class="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
               <a 
-                href="/login" 
+                href="/login"
                 class="group bg-[#9CAF88] text-white px-12 py-6 rounded-2xl font-bold text-xl hover:bg-[#8ba077] transition-all duration-300 shadow-2xl transform hover:scale-105 hover:shadow-[#9CAF88]/30 relative overflow-hidden"
               >
                 <span class="relative z-10 flex items-center gap-3">
@@ -198,7 +198,7 @@ export default component$(() => {
               </div>
               <div class="flex flex-col sm:flex-row gap-4">
                 <a 
-                  href="/login" 
+                  href="/login"
                   class="bg-[#9CAF88] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#8ba077] transition-all duration-300 inline-flex items-center justify-center shadow-lg"
                 >
                   Step Into the Quiet
@@ -628,7 +628,7 @@ export default component$(() => {
           
           <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <a 
-              href="/login" 
+              href="/login"
               class="bg-[#d4af37] text-[#2c1810] px-10 py-5 rounded-xl font-bold text-xl hover:bg-[#b8941f] transition-all duration-300 shadow-2xl transform hover:scale-105 hover:shadow-[#d4af37]/25"
             >
               Step Into the Quiet

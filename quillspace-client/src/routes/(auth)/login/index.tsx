@@ -11,12 +11,12 @@ export const useFormLoader = routeLoader$<InitialValues<LoginRequest>>(() => ({
 }));
 
 
-export const onGet: RequestHandler = async ({ cookie, json }) => {
-    let count = cookie.get('Qwik.demo.count')?.number() || 0;
-    count++;
-    cookie.set('Qwik.demo.count', count);
-    json(200, { count });
-};
+// export const onGet: RequestHandler = async ({ cookie, json }) => {
+//     let count = cookie.get('Qwik.demo.count')?.number() || 0;
+//     count++;
+//     cookie.set('Qwik.demo.count', count);
+//     json(200, { count });
+// };
 
 export default component$(() => {
 const login = useFormLoader();
@@ -78,7 +78,7 @@ const login = useFormLoader();
               
               {/* Back to Home Link */}
               <div class="text-center mt-4">
-                  <a href="/" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
+                  <a href="/quillspace-client/public" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
                       <LuHeart class="w-4 h-4" />
                       Back to sanctuary
                   </a>
