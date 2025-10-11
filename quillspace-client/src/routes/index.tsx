@@ -1,6 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { LuRocket, LuBookOpen, LuPenTool, LuUsers, LuTrendingUp, LuShield, LuArrowRight, LuCheck, LuStar, LuQuote, LuPlay, LuPhone, LuHeart, LuFeather, LuBarChart3, LuGlobe } from "@qwikest/icons/lucide";
+import { WrapBalancer } from "qwikjs-wrap-balancer";
 
 export default component$(() => {
   return (
@@ -35,27 +36,35 @@ export default component$(() => {
             
             {/* Main Headline with Better Typography */}
             <div class="mb-12">
-              <h2 class="text-6xl md:text-8xl font-bold mb-6 leading-none tracking-tight">
-                Your Writing
-                <br class="hidden sm:block" />
-                <span class="text-[#9CAF88] relative">
-                  Sanctuary
-                  <div class="absolute -bottom-2 left-0 right-0 h-1 bg-[#9CAF88]/30 rounded-full"></div>
-                </span>
-              </h2>
+              <WrapBalancer>
+                <h2 class="text-6xl md:text-8xl font-bold mb-6 leading-none tracking-tight">
+                  Your Writing
+                  <br class="hidden sm:block" />
+                  <span class="text-[#9CAF88] relative">
+                    Sanctuary
+                    <div class="absolute -bottom-2 left-0 right-0 h-1 bg-[#9CAF88]/30 rounded-full"></div>
+                  </span>
+                </h2>
+              </WrapBalancer>
               
               {/* Tagline with Better Emphasis */}
               <div class="max-w-4xl mx-auto">
-                <p class="text-2xl md:text-3xl font-light text-gray-100 mb-6 leading-relaxed">
-                  A quiet place to build your book, share your voice, and feel less alone on the way there.
-                </p>
-                <div class="relative">
-                  <p class="text-xl md:text-2xl text-gray-200 leading-relaxed italic">
-                    Here, writers shape their stories, follow their books into the world, and connect with readers who read with soul.
+                <WrapBalancer>
+                  <p class="text-2xl md:text-3xl font-light text-gray-100 mb-6 leading-relaxed">
+                    A quiet place to build your book, share your voice, and feel less alone on the way there.
                   </p>
-                  <div class="mt-6 text-2xl md:text-3xl font-medium text-[#9CAF88]">
-                    Where language matters, and stories are given the room to breathe.
-                  </div>
+                </WrapBalancer>
+                <div class="relative">
+                  <WrapBalancer>
+                    <p class="text-xl md:text-2xl text-gray-200 leading-relaxed italic">
+                      Here, writers shape their stories, follow their books into the world, and connect with readers who read with soul.
+                    </p>
+                  </WrapBalancer>
+                  <WrapBalancer>
+                    <div class="mt-6 text-2xl md:text-3xl font-medium text-[#9CAF88]">
+                      Where language matters, and stories are given the room to breathe.
+                    </div>
+                  </WrapBalancer>
                 </div>
               </div>
             </div>
@@ -83,7 +92,7 @@ export default component$(() => {
             
             {/* Trust Indicators */}
             <div class="mb-16">
-              <p class="text-gray-300 text-lg mb-4">You're not the only one trying to write something real. 2,847 others are here too.</p>
+              <p class="text-gray-300 text-lg mb-4">Something quiet is beginning here. A place for writers who take their work seriously.</p>
               <div class="flex justify-center items-center gap-8 text-gray-400">
                 <div class="flex items-center gap-2">
                   <div class="flex -space-x-2">
@@ -91,11 +100,11 @@ export default component$(() => {
                     <div class="w-8 h-8 bg-[#7a8c6f] rounded-full border-2 border-white"></div>
                     <div class="w-8 h-8 bg-[#9CAF88] rounded-full border-2 border-white"></div>
                   </div>
-                  <span class="text-sm">Writing together now</span>
+                  <span class="text-sm">Early writers gathering</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <LuStar class="w-5 h-5 text-[#9CAF88] fill-current" />
-                  <span class="text-sm">Loved by authors</span>
+                  <span class="text-sm">Built with care</span>
                 </div>
               </div>
             </div>
@@ -151,13 +160,17 @@ export default component$(() => {
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
             <div>
-              <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-8 leading-tight">
-                Where Stories Settle—
-                <span class="text-[#9CAF88]">and Begin to Grow</span>
-              </h2>
-              <p class="text-xl text-gray-700 mb-10 leading-relaxed">
-                This is where your stories take shape—slowly, honestly—and begin to find their way into the hands they were meant for. A quiet space to write deeply, share deliberately, and connect with readers who read like it matters.
-              </p>
+              <WrapBalancer>
+                <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-8 leading-tight">
+                  Where Stories Settle—
+                  <span class="text-[#9CAF88]">and Begin to Grow</span>
+                </h2>
+              </WrapBalancer>
+              <WrapBalancer>
+                <p class="text-xl text-gray-700 mb-10 leading-relaxed">
+                  This is where your stories take shape—slowly, honestly—and begin to find their way into the hands they were meant for. A quiet space to write deeply, share deliberately, and connect with readers who read like it matters.
+                </p>
+              </WrapBalancer>
               <div class="space-y-6 mb-10">
                 <div class="flex items-start gap-4">
                   <div class="w-8 h-8 bg-[#9CAF88]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
@@ -229,8 +242,8 @@ export default component$(() => {
                     <LuHeart class="w-6 h-6 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <div class="font-bold text-[#2D3748] text-lg">2,847</div>
-                    <div class="text-sm text-gray-600">Readers reached this month</div>
+                    <div class="font-bold text-[#2D3748] text-lg">Early Access</div>
+                    <div class="text-sm text-gray-600">Join the beginning</div>
                   </div>
                 </div>
               </div>
@@ -241,8 +254,8 @@ export default component$(() => {
                     <LuFeather class="w-6 h-6 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <div class="font-bold text-[#2D3748] text-lg">Chapter 12</div>
-                    <div class="text-sm text-gray-600">Currently writing</div>
+                    <div class="font-bold text-[#2D3748] text-lg">Your Story</div>
+                    <div class="text-sm text-gray-600">Starts here</div>
                   </div>
                 </div>
               </div>
@@ -255,12 +268,16 @@ export default component$(() => {
       <section id="features" class="py-20 bg-gray-50">
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-16">
-            <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-6">
-              Build something that lasts.
-            </h2>
-            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-              The tools and space you need to craft work that endures, connects, and matters.
-            </p>
+            <WrapBalancer>
+              <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-6">
+                Build something that lasts.
+              </h2>
+            </WrapBalancer>
+            <WrapBalancer>
+              <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                The tools and space you need to craft work that endures, connects, and matters.
+              </p>
+            </WrapBalancer>
           </div>
           
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -343,33 +360,45 @@ export default component$(() => {
         </div>
       </section>
 
-      {/* Stats Section - Writer Community */}
+      {/* Values Section - Writer Community */}
       <section class="py-20 bg-[#2D3748] text-white">
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold mb-4">A Quiet Community, Writing Loudly</h2>
-            <p class="text-xl text-gray-300">Where the blank page doesn't feel quite so blank.</p>
+            <WrapBalancer>
+              <h2 class="text-3xl md:text-4xl font-bold mb-4">Built for Writers Who Care About the Work</h2>
+            </WrapBalancer>
+            <WrapBalancer>
+              <p class="text-xl text-gray-300">Where the first words matter as much as the last.</p>
+            </WrapBalancer>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div class="group">
-              <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">2,847</div>
-              <div class="text-lg font-semibold text-gray-200">Writers Showing Up Daily</div>
-              <div class="text-sm text-gray-300 mt-1">Still shaping sentences. Still chasing something true.</div>
+              <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <LuFeather class="w-10 h-10 text-white" />
+              </div>
+              <div class="text-lg font-semibold text-gray-200">Craft-Focused</div>
+              <div class="text-sm text-gray-300 mt-1">Tools built for writers who take their work seriously.</div>
             </div>
             <div class="group">
-              <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">15,692</div>
-              <div class="text-lg font-semibold text-gray-200">Books in Progress</div>
-              <div class="text-sm text-gray-300 mt-1">Some simmering. Some sprinting. All unfolding.</div>
+              <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <LuHeart class="w-10 h-10 text-white" />
+              </div>
+              <div class="text-lg font-semibold text-gray-200">Reader Connection</div>
+              <div class="text-sm text-gray-300 mt-1">Find the readers who truly appreciate your voice.</div>
             </div>
             <div class="group">
-              <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">1.2M</div>
-              <div class="text-lg font-semibold text-gray-200">Reader Connections Made</div>
-              <div class="text-sm text-gray-300 mt-1">Real stories sent out—and read like they matter.</div>
+              <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <LuGlobe class="w-10 h-10 text-white" />
+              </div>
+              <div class="text-lg font-semibold text-gray-200">Beautiful Presence</div>
+              <div class="text-sm text-gray-300 mt-1">Author websites that honor the quality of your writing.</div>
             </div>
             <div class="group">
-              <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">98%</div>
-              <div class="text-lg font-semibold text-gray-200">Writers Who Stay</div>
-              <div class="text-sm text-gray-300 mt-1">Because it feels different to write here.</div>
+              <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <LuShield class="w-10 h-10 text-white" />
+              </div>
+              <div class="text-lg font-semibold text-gray-200">Privacy First</div>
+              <div class="text-sm text-gray-300 mt-1">Your work stays yours. No algorithms, no exploitation.</div>
             </div>
           </div>
         </div>
@@ -379,10 +408,14 @@ export default component$(() => {
       <section class="py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-16">
-            <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">What Happens When You Stay With the Work</h2>
-            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-              Writers who kept going—and found their rhythm, their readers, their voice.
-            </p>
+            <WrapBalancer>
+              <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">What's Possible When You Begin</h2>
+            </WrapBalancer>
+            <WrapBalancer>
+              <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Every finished story started exactly where you are now—with someone willing to begin.
+              </p>
+            </WrapBalancer>
           </div>
           
           <div class="grid md:grid-cols-2 gap-16 items-center mb-16">
@@ -425,9 +458,11 @@ export default component$(() => {
             <div>
               <div class="mb-8">
                 <LuQuote class="w-12 h-12 text-[#d4af37] mb-4" />
-                <blockquote class="text-2xl text-gray-700 font-light italic leading-relaxed mb-6">
-                  "I used to get lost between notebooks, drafts, and ideas I couldn't finish. QuillSpace helped me build a system that didn't feel like a system—just space to write, return, and stay with it long enough to finish. Now three books are done, and somehow 5,000 readers are waiting for the next."
-                </blockquote>
+                <WrapBalancer>
+                  <blockquote class="text-2xl text-gray-700 font-light italic leading-relaxed mb-6">
+                    "I used to get lost between notebooks, drafts, and ideas I couldn't finish. QuillSpace helped me build a system that didn't feel like a system—just space to write, return, and stay with it long enough to finish. Now three books are done, and somehow 5,000 readers are waiting for the next."
+                  </blockquote>
+                </WrapBalancer>
                 <div class="flex items-center gap-4">
                   <img 
                     src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
@@ -472,10 +507,14 @@ export default component$(() => {
       {/* Your Writing Journey Section */}
       <section class="py-20 bg-gradient-to-b from-amber-50 to-white">
         <div class="max-w-6xl mx-auto px-4 text-center">
-          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Start Where You Are. Stay With It.</h2>
-          <p class="text-xl text-gray-600 mb-16 max-w-3xl mx-auto">
-            From the first sentence to the final send, QuillSpace gives your writing a home.
-          </p>
+          <WrapBalancer>
+            <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Start Where You Are. Stay With It.</h2>
+          </WrapBalancer>
+          <WrapBalancer>
+            <p class="text-xl text-gray-600 mb-16 max-w-3xl mx-auto">
+              From the first sentence to the final send, QuillSpace gives your writing a home.
+            </p>
+          </WrapBalancer>
           
           <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div class="text-center group">
@@ -524,7 +563,7 @@ export default component$(() => {
       {/* Writer Testimonials Section */}
       <section class="py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4 text-center">
-          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Why They Stayed</h2>
+          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">What Writers Need</h2>
           <p class="text-xl text-gray-600 mb-16 max-w-3xl mx-auto">
             It's not just the tools. It's what happens when writing stops feeling so alone.
           </p>
@@ -615,16 +654,20 @@ export default component$(() => {
             <LuFeather class="w-16 h-16 text-[#d4af37] mx-auto mb-6" />
           </div>
           
-          <h2 class="text-4xl md:text-6xl font-bold mb-8 leading-tight">
-            The Writing's Yours.
-            <span class="text-[#d4af37]"> The Space Is Ours.</span>
-          </h2>
+          <WrapBalancer>
+            <h2 class="text-4xl md:text-6xl font-bold mb-8 leading-tight">
+              The Writing's Yours.
+              <span class="text-[#d4af37]"> The Space Is Ours.</span>
+            </h2>
+          </WrapBalancer>
           
-          <p class="text-xl md:text-2xl text-amber-200/90 mb-12 leading-relaxed max-w-4xl mx-auto">
-            Some are just starting. Others are nearly done. All of them are still writing—right here.
-            <br class="hidden md:block"/>
-            <span class="text-[#d4af37] font-medium">Where words find warmth, and stories find their voice.</span>
-          </p>
+          <WrapBalancer>
+            <p class="text-xl md:text-2xl text-amber-200/90 mb-12 leading-relaxed max-w-4xl mx-auto">
+              Some are just starting. Others are nearly done. All of them are still writing—right here.
+              <br class="hidden md:block"/>
+              <span class="text-[#d4af37] font-medium">Where words find warmth, and stories find their voice.</span>
+            </p>
+          </WrapBalancer>
           
           <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <a 
@@ -643,7 +686,7 @@ export default component$(() => {
           </div>
           
           <div class="mt-12 text-amber-200/70">
-            <p class="text-lg">2,847 writers are already here—writing.</p>
+            <p class="text-lg">Early access is open. Join the writers who are starting something real.</p>
           </div>
         </div>
       </section>
