@@ -1,6 +1,6 @@
 import { component$ } from "@builder.io/qwik";
 import {LuFeather, LuHeart} from "@qwikest/icons/lucide";
-import {RequestHandler, routeLoader$} from "@builder.io/qwik-city";
+import {routeLoader$} from "@builder.io/qwik-city";
 import {InitialValues} from "@modular-forms/qwik";
 import {LoginRequest} from "~/api/schema";
 import LoginForm from "~/components/login-form";
@@ -78,7 +78,7 @@ const login = useFormLoader();
               
               {/* Back to Home Link */}
               <div class="text-center mt-4">
-                  <a href="/quillspace-client/public" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
+                  <a href="/" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
                       <LuHeart class="w-4 h-4" />
                       Back to sanctuary
                   </a>
