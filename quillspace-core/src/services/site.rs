@@ -99,7 +99,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -197,7 +197,7 @@ impl SiteService {
 
         // Set RLS context within transaction
         transaction
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -296,7 +296,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -379,7 +379,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -402,7 +402,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -432,7 +432,7 @@ impl SiteService {
 
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 
@@ -457,7 +457,7 @@ impl SiteService {
             .context("Failed to get database connection")?;
         // Set RLS context
         client
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
 

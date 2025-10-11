@@ -11,7 +11,7 @@ impl RlsHelper {
     pub async fn set_tenant_context(client: &Client, tenant_id: &Uuid) -> Result<()> {
         client
             .execute(
-                "SELECT set_config('app.current_tenant_id', $1, true)",
+                "SELECT set_config('quillspace.tenant_id', $1, true)",
                 &[&tenant_id.to_string()],
             )
             .await
@@ -45,7 +45,7 @@ impl RlsHelper {
     /// Clear all RLS context (useful for cleanup or global operations)
     pub async fn clear_context(client: &Client) -> Result<()> {
         client
-            .execute("SELECT set_config('app.current_tenant_id', NULL, true)", &[])
+            .execute("SELECT set_config('quillspace.tenant_id', NULL, true)", &[])
             .await
             .context("Failed to clear RLS tenant context")?;
         
@@ -60,7 +60,7 @@ impl RlsHelper {
     /// Get current tenant context (for debugging)
     pub async fn get_tenant_context(client: &Client) -> Result<Option<String>> {
         let row = client
-            .query_opt("SELECT current_setting('app.current_tenant_id', true)", &[])
+            .query_opt("SELECT current_setting('quillspace.tenant_id', true)", &[])
             .await
             .context("Failed to get current tenant context")?;
 

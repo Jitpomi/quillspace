@@ -57,8 +57,8 @@ pub async fn setup_rls(pool: &Pool) -> Result<()> {
                 DROP POLICY IF EXISTS tenant_isolation_users ON users;
                 CREATE POLICY tenant_isolation_users ON users
                 FOR ALL
-                USING (tenant_id = current_setting('app.current_tenant_id')::uuid)
-                WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::uuid);
+                USING (tenant_id = current_setting('quillspace.tenant_id')::uuid)
+                WITH CHECK (tenant_id = current_setting('quillspace.tenant_id')::uuid);
             END IF;
         END $$;
         "#,
@@ -72,7 +72,7 @@ pub async fn setup_rls(pool: &Pool) -> Result<()> {
                 DROP POLICY IF EXISTS tenant_isolation_tenants ON tenants;
                 CREATE POLICY tenant_isolation_tenants ON tenants
                 FOR ALL
-                USING (id = current_setting('app.current_tenant_id')::uuid);
+                USING (id = current_setting('quillspace.tenant_id')::uuid);
             END IF;
         END $$;
         "#,
@@ -92,7 +92,7 @@ pub async fn setup_rls(pool: &Pool) -> Result<()> {
 pub async fn set_tenant_context(pool: &Pool, tenant_id: uuid::Uuid) -> Result<()> {
     let client = pool.get().await?;
     client.execute(
-        "SELECT set_config('app.current_tenant_id', $1, true)",
+        "SELECT set_config('quillspace.tenant_id', $1, true)",
         &[&tenant_id.to_string()]
     ).await?;
     

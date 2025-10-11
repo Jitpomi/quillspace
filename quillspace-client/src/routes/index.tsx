@@ -47,14 +47,14 @@ export default component$(() => {
               {/* Tagline with Better Emphasis */}
               <div class="max-w-4xl mx-auto">
                 <p class="text-2xl md:text-3xl font-light text-gray-100 mb-6 leading-relaxed">
-                  Your personal library, but filled with fellow writers instead of loiterers
+                  A quiet place to build your book, share your voice, and feel less alone on the way there.
                 </p>
                 <div class="relative">
                   <p class="text-xl md:text-2xl text-gray-200 leading-relaxed italic">
-                    Where writers manage their novels, track book performance, and connect with readers who truly understand the craft.
+                    Here, writers shape their stories, follow their books into the world, and connect with readers who read with soul.
                   </p>
                   <div class="mt-6 text-2xl md:text-3xl font-medium text-[#9CAF88]">
-                    Where words find warmth and stories find their voice.
+                    Where language matters, and stories are given the room to breathe.
                   </div>
                 </div>
               </div>
@@ -67,7 +67,7 @@ export default component$(() => {
                 class="group bg-[#9CAF88] text-white px-12 py-6 rounded-2xl font-bold text-xl hover:bg-[#8ba077] transition-all duration-300 shadow-2xl transform hover:scale-105 hover:shadow-[#9CAF88]/30 relative overflow-hidden"
               >
                 <span class="relative z-10 flex items-center gap-3">
-                  Enter Your Sanctuary
+                  Step Inside
                   <LuArrowRight class="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </span>
                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -77,13 +77,13 @@ export default component$(() => {
                 class="group border-2 border-[#9CAF88] text-[#9CAF88] px-12 py-6 rounded-2xl font-semibold text-xl hover:bg-[#9CAF88] hover:text-white transition-all duration-300 flex items-center gap-3 backdrop-blur-sm"
               >
                 <LuHeart class="w-6 h-6 group-hover:scale-110 transition-transform" />
-                Discover the Magic
+                Take a Look Around
               </a>
             </div>
             
             {/* Trust Indicators */}
             <div class="mb-16">
-              <p class="text-gray-300 text-lg mb-4">Join 2,847+ writers in their creative sanctuary</p>
+              <p class="text-gray-300 text-lg mb-4">You're not the only one trying to write something real. 2,847 others are here too.</p>
               <div class="flex justify-center items-center gap-8 text-gray-400">
                 <div class="flex items-center gap-2">
                   <div class="flex -space-x-2">
@@ -152,12 +152,11 @@ export default component$(() => {
             {/* Left Content */}
             <div>
               <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-8 leading-tight">
-                Where Every Story
-                <span class="text-[#9CAF88]"> Finds Its Home</span>
+                Where Stories Settle—
+                <span class="text-[#9CAF88]">and Begin to Grow</span>
               </h2>
               <p class="text-xl text-gray-700 mb-10 leading-relaxed">
-                This is where thoughts become stories, and stories find the hearts they're meant to touch. 
-                Your personal sanctuary to nurture your novels, celebrate your successes, and build lasting connections with readers who cherish your words.
+                This is where your stories take shape—slowly, honestly—and begin to find their way into the hands they were meant for. A quiet space to write deeply, share deliberately, and connect with readers who read like it matters.
               </p>
               <div class="space-y-6 mb-10">
                 <div class="flex items-start gap-4">
@@ -165,8 +164,8 @@ export default component$(() => {
                     <LuFeather class="w-5 h-5 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <h4 class="font-semibold text-[#2D3748] mb-1">Organize Your Literary Universe</h4>
-                    <p class="text-gray-600">Keep all your novels, characters, and plot threads beautifully organized in one inspiring space</p>
+                    <h4 class="font-semibold text-[#2D3748] mb-1">Keep Your Worlds in One Place</h4>
+                    <p class="text-gray-600">All your stories, characters, and tangled threads—gathered, clear, and close at hand.</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-4">
@@ -174,8 +173,8 @@ export default component$(() => {
                     <LuBarChart3 class="w-5 h-5 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <h4 class="font-semibold text-[#2D3748] mb-1">Celebrate Your Impact</h4>
-                    <p class="text-gray-600">Watch as your books touch hearts and inspire minds with meaningful performance insights</p>
+                    <h4 class="font-semibold text-[#2D3748] mb-1">See Where Your Stories Land</h4>
+                    <p class="text-gray-600">Follow your book's quiet ripple—who it's reaching, and how it's being held.</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-4">
@@ -183,8 +182,8 @@ export default component$(() => {
                     <LuGlobe class="w-5 h-5 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <h4 class="font-semibold text-[#2D3748] mb-1">Share Your Author Voice</h4>
-                    <p class="text-gray-600">Build a beautiful author website that showcases your unique voice and literary journey</p>
+                    <h4 class="font-semibold text-[#2D3748] mb-1">Build the Home Your Voice Deserves</h4>
+                    <p class="text-gray-600">A space that reflects the shape of your writing life—clear, beautiful, unmistakably yours.</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-4">
@@ -192,8 +191,8 @@ export default component$(() => {
                     <LuHeart class="w-5 h-5 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <h4 class="font-semibold text-[#2D3748] mb-1">Connect with Your Readers</h4>
-                    <p class="text-gray-600">Build meaningful relationships with readers who love your stories and eagerly await your next book</p>
+                    <h4 class="font-semibold text-[#2D3748] mb-1">Find the Readers Who Feel What You Wrote</h4>
+                    <p class="text-gray-600">The ones who linger on your language. The ones who wait for what's next.</p>
                   </div>
                 </div>
               </div>
@@ -202,14 +201,14 @@ export default component$(() => {
                   href="/login" 
                   class="bg-[#9CAF88] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#8ba077] transition-all duration-300 inline-flex items-center justify-center shadow-lg"
                 >
-                  Begin Your Journey
+                  Step Into the Quiet
                   <LuArrowRight class="w-5 h-5 ml-2" />
                 </a>
                 <a 
                   href="#features" 
                   class="border-2 border-[#9CAF88] text-[#9CAF88] px-8 py-4 rounded-xl font-semibold hover:bg-[#9CAF88] hover:text-white transition-all duration-300 inline-flex items-center justify-center"
                 >
-                  Explore Features
+                  See What's Here
                 </a>
               </div>
             </div>
@@ -257,10 +256,10 @@ export default component$(() => {
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-16">
             <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-6">
-              Everything You Need to Flourish as a Writer
+              Build something that lasts.
             </h2>
             <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-              From organizing your first draft to celebrating bestseller status, QuillSpace provides the tools and insights to support your entire writing journey
+              The tools and space you need to craft work that endures, connects, and matters.
             </p>
           </div>
           
@@ -271,10 +270,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuFeather class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Novel Organization</h3>
+              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Craft Your Novel</h3>
               <p class="text-gray-600 leading-relaxed mb-6">
-                Keep your manuscripts, character profiles, plot outlines, and research notes beautifully organized. 
-                Never lose track of your literary universe again.
+                A canvas made for deep work—without distraction, with everything you need to shape the story only you can tell.
               </p>
               <div class="text-[#9CAF88] font-semibold">Organize • Plan • Create</div>
             </div>
@@ -284,10 +282,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuBarChart3 class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Book Performance Insights</h3>
+              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Track Your Book's Path</h3>
               <p class="text-gray-600 leading-relaxed mb-6">
-                Track how your books are performing with meaningful analytics. See reader engagement, 
-                sales trends, and discover what resonates most with your audience.
+                See where your work has been, and where readers are finding it. Understand what moves them, what keeps them reading.
               </p>
               <div class="text-[#9CAF88] font-semibold">Track • Analyze • Grow</div>
             </div>
@@ -297,10 +294,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#9CAF88] to-[#7a8c6f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuHeart class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Reader Community</h3>
+              <h3 class="text-2xl font-bold text-[#2D3748] mb-4">Grow Your Circle</h3>
               <p class="text-gray-600 leading-relaxed mb-6">
-                Build meaningful connections with readers who love your work. 
-                Engage with your audience and create a loyal community around your stories.
+                Connect with readers and writers who care about story, not noise. Build relationships that matter.
               </p>
               <div class="text-[#9CAF88] font-semibold">Connect • Engage • Inspire</div>
             </div>
@@ -351,29 +347,29 @@ export default component$(() => {
       <section class="py-20 bg-[#2D3748] text-white">
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold mb-4">Join a Thriving Community of Writers</h2>
-            <p class="text-xl text-gray-300">Where stories come to life and writers find their voice</p>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">A Quiet Community, Writing Loudly</h2>
+            <p class="text-xl text-gray-300">Where the blank page doesn't feel quite so blank.</p>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div class="group">
               <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">2,847</div>
-              <div class="text-lg font-semibold text-gray-200">Active Writers</div>
-              <div class="text-sm text-gray-300 mt-1">Creating daily</div>
+              <div class="text-lg font-semibold text-gray-200">Writers Showing Up Daily</div>
+              <div class="text-sm text-gray-300 mt-1">Still shaping sentences. Still chasing something true.</div>
             </div>
             <div class="group">
               <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">15,692</div>
-              <div class="text-lg font-semibold text-gray-200">Novels Managed</div>
-              <div class="text-sm text-gray-300 mt-1">Stories in progress</div>
+              <div class="text-lg font-semibold text-gray-200">Books in Progress</div>
+              <div class="text-sm text-gray-300 mt-1">Some simmering. Some sprinting. All unfolding.</div>
             </div>
             <div class="group">
               <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">1.2M</div>
-              <div class="text-lg font-semibold text-gray-200">Reader Connections</div>
-              <div class="text-sm text-gray-300 mt-1">Hearts touched</div>
+              <div class="text-lg font-semibold text-gray-200">Reader Connections Made</div>
+              <div class="text-sm text-gray-300 mt-1">Real stories sent out—and read like they matter.</div>
             </div>
             <div class="group">
               <div class="text-4xl md:text-5xl font-bold text-[#9CAF88] mb-2 group-hover:scale-110 transition-transform">98%</div>
-              <div class="text-lg font-semibold text-gray-200">Writer Satisfaction</div>
-              <div class="text-sm text-gray-300 mt-1">Love their sanctuary</div>
+              <div class="text-lg font-semibold text-gray-200">Writers Who Stay</div>
+              <div class="text-sm text-gray-300 mt-1">Because it feels different to write here.</div>
             </div>
           </div>
         </div>
@@ -383,9 +379,9 @@ export default component$(() => {
       <section class="py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4">
           <div class="text-center mb-16">
-            <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Stories of Success</h2>
+            <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">What Happens When You Stay With the Work</h2>
             <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real writers sharing how QuillSpace became their creative sanctuary and helped them achieve their dreams
+              Writers who kept going—and found their rhythm, their readers, their voice.
             </p>
           </div>
           
@@ -406,8 +402,8 @@ export default component$(() => {
                     <LuTrendingUp class="w-5 h-5 text-[#d4af37]" />
                   </div>
                   <div>
-                    <div class="font-bold text-[#2c1810]">+347%</div>
-                    <div class="text-xs text-gray-600">Reader growth</div>
+                    <div class="font-bold text-[#2c1810]">5,000</div>
+                    <div class="text-xs text-gray-600">Readers who stayed</div>
                   </div>
                 </div>
               </div>
@@ -418,8 +414,8 @@ export default component$(() => {
                     <LuBookOpen class="w-5 h-5 text-[#d4af37]" />
                   </div>
                   <div>
-                    <div class="font-bold text-[#2c1810]">3 Novels</div>
-                    <div class="text-xs text-gray-600">Completed</div>
+                    <div class="font-bold text-[#2c1810]">3 Books</div>
+                    <div class="text-xs text-gray-600">Finished</div>
                   </div>
                 </div>
               </div>
@@ -430,12 +426,11 @@ export default component$(() => {
               <div class="mb-8">
                 <LuQuote class="w-12 h-12 text-[#d4af37] mb-4" />
                 <blockquote class="text-2xl text-gray-700 font-light italic leading-relaxed mb-6">
-                  "QuillSpace transformed my chaotic writing process into an organized, inspiring journey. 
-                  I went from struggling to finish one chapter to completing three novels and building a community of 5,000 devoted readers."
+                  "I used to get lost between notebooks, drafts, and ideas I couldn't finish. QuillSpace helped me build a system that didn't feel like a system—just space to write, return, and stay with it long enough to finish. Now three books are done, and somehow 5,000 readers are waiting for the next."
                 </blockquote>
                 <div class="flex items-center gap-4">
                   <img 
-                    src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
+                    src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                     alt="Sarah Chen, Romance Author" 
                     class="w-16 h-16 rounded-full object-cover"
                   />
@@ -450,22 +445,22 @@ export default component$(() => {
                 <div class="flex items-start gap-3">
                   <LuHeart class="w-6 h-6 text-[#d4af37] flex-shrink-0 mt-1" />
                   <div>
-                    <h4 class="font-semibold text-[#2c1810] mb-1">From Scattered Notes to Bestseller</h4>
-                    <p class="text-gray-600">Organized 15 years of story ideas into a coherent writing system</p>
+                    <h4 class="font-semibold text-[#2c1810] mb-1">From Chaos to Completion</h4>
+                    <p class="text-gray-600">Turned years of stuck drafts into three finished novels.</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-3">
                   <LuUsers class="w-6 h-6 text-[#d4af37] flex-shrink-0 mt-1" />
                   <div>
-                    <h4 class="font-semibold text-[#2c1810] mb-1">Built a Loyal Reader Community</h4>
-                    <p class="text-gray-600">Connected with readers who eagerly await each new release</p>
+                    <h4 class="font-semibold text-[#2c1810] mb-1">Readers Who Stay</h4>
+                    <p class="text-gray-600">Found a loyal audience who actually read—and return.</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-3">
                   <LuTrendingUp class="w-6 h-6 text-[#d4af37] flex-shrink-0 mt-1" />
                   <div>
-                    <h4 class="font-semibold text-[#2c1810] mb-1">Tracked Success & Growth</h4>
-                    <p class="text-gray-600">Watched her books climb the charts with real-time insights</p>
+                    <h4 class="font-semibold text-[#2c1810] mb-1">Progress That Feels Real</h4>
+                    <p class="text-gray-600">Watched her words take root, reader by reader.</p>
                   </div>
                 </div>
               </div>
@@ -477,9 +472,9 @@ export default component$(() => {
       {/* Your Writing Journey Section */}
       <section class="py-20 bg-gradient-to-b from-amber-50 to-white">
         <div class="max-w-6xl mx-auto px-4 text-center">
-          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Your Writing Journey Starts Here</h2>
+          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Start Where You Are. Stay With It.</h2>
           <p class="text-xl text-gray-600 mb-16 max-w-3xl mx-auto">
-            From that first spark of inspiration to celebrating with your readers, QuillSpace supports every step of your creative journey
+            From the first sentence to the final send, QuillSpace gives your writing a home.
           </p>
           
           <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -487,10 +482,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#d4af37] to-[#b8941f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuFeather class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Organize Your Ideas</h3>
+              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Gather the Threads</h3>
               <p class="text-gray-600 leading-relaxed">
-                Capture every character, plot twist, and world-building detail in your personal literary sanctuary. 
-                Never lose a brilliant idea again.
+                All your characters, arcs, and ideas—kept close, clear, and ready to return to.
               </p>
             </div>
             
@@ -498,10 +492,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#d4af37] to-[#b8941f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuPenTool class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Write & Track Progress</h3>
+              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Write at Your Pace. Return When You're Ready.</h3>
               <p class="text-gray-600 leading-relaxed">
-                Set writing goals, track your daily progress, and celebrate milestones as you bring your stories to life, 
-                one chapter at a time.
+                Set a rhythm that feels real—and stay close to the work without burning out.
               </p>
             </div>
             
@@ -509,10 +502,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#d4af37] to-[#b8941f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuGlobe class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Share Your Voice</h3>
+              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Make a Place for Your Voice</h3>
               <p class="text-gray-600 leading-relaxed">
-                Build a beautiful author website that showcases your unique voice and helps readers discover the magic 
-                you've created.
+                Create an author site that sounds like you—and gives your words somewhere to live.
               </p>
             </div>
             
@@ -520,10 +512,9 @@ export default component$(() => {
               <div class="w-20 h-20 bg-gradient-to-br from-[#d4af37] to-[#b8941f] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <LuHeart class="w-10 h-10 text-white" />
               </div>
-              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Connect & Celebrate</h3>
+              <h3 class="text-xl font-bold text-[#2c1810] mb-3">Find the Readers Who Feel It Too</h3>
               <p class="text-gray-600 leading-relaxed">
-                Watch your books find their audience, track your success, and build meaningful relationships with readers 
-                who love your stories.
+                Connect with the ones who linger on your lines—and wait for what's next.
               </p>
             </div>
           </div>
@@ -533,9 +524,9 @@ export default component$(() => {
       {/* Writer Testimonials Section */}
       <section class="py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4 text-center">
-          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Writers Love Their Sanctuary</h2>
+          <h2 class="text-4xl md:text-5xl font-bold text-[#2c1810] mb-6">Why They Stayed</h2>
           <p class="text-xl text-gray-600 mb-16 max-w-3xl mx-auto">
-            Hear from writers who found their creative home in QuillSpace and transformed their literary dreams into reality
+            It's not just the tools. It's what happens when writing stops feeling so alone.
           </p>
           
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -546,12 +537,11 @@ export default component$(() => {
                 ))}
               </div>
               <p class="text-gray-700 mb-6 italic text-lg leading-relaxed">
-                "QuillSpace became my creative sanctuary. I went from scattered notes to three published novels. 
-                The organization tools and reader insights changed everything."
+                "Before QuillSpace, I had fifteen years of scattered notes—and no finished story. Now I've published three novels, and the readers keep showing up. I don't know what changed exactly—only that I finally stayed with the writing long enough to finish."
               </p>
               <div class="flex items-center gap-3">
                 <img 
-                  src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
+                  src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                   alt="Sarah Chen" 
                   class="w-12 h-12 rounded-full object-cover"
                 />
@@ -569,8 +559,7 @@ export default component$(() => {
                 ))}
               </div>
               <p class="text-gray-700 mb-6 italic text-lg leading-relaxed">
-                "The performance insights helped me understand my readers better. I can see which chapters resonate most 
-                and connect with my audience like never before."
+                "I used to write into the void—not knowing what landed or who was reading. Now I can see what chapters hit hardest. It's not just data—it's a quiet way to feel the echo."
               </p>
               <div class="flex items-center gap-3">
                 <img 
@@ -592,8 +581,7 @@ export default component$(() => {
                 ))}
               </div>
               <p class="text-gray-700 mb-6 italic text-lg leading-relaxed">
-                "Building my author website was so easy! Now readers can discover all my books in one beautiful place. 
-                My fan community has grown by 400%."
+                "All my work used to be scattered—some on social, some on sales pages. Now it lives in one place that actually feels like me. And my readers? They're not just finding the books—they're staying."
               </p>
               <div class="flex items-center gap-3">
                 <img 
@@ -628,14 +616,14 @@ export default component$(() => {
           </div>
           
           <h2 class="text-4xl md:text-6xl font-bold mb-8 leading-tight">
-            Your Stories Are Waiting
-            <span class="text-[#d4af37]"> to Be Told</span>
+            The Writing's Yours.
+            <span class="text-[#d4af37]"> The Space Is Ours.</span>
           </h2>
           
           <p class="text-xl md:text-2xl text-amber-200/90 mb-12 leading-relaxed max-w-4xl mx-auto">
-            Join thousands of writers who have found their creative sanctuary in QuillSpace. 
+            Some are just starting. Others are nearly done. All of them are still writing—right here.
             <br class="hidden md:block"/>
-            <span class="text-[#d4af37] font-medium">Where words find warmth and stories find their voice.</span>
+            <span class="text-[#d4af37] font-medium">Where words find warmth, and stories find their voice.</span>
           </p>
           
           <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -643,19 +631,19 @@ export default component$(() => {
               href="/login" 
               class="bg-[#d4af37] text-[#2c1810] px-10 py-5 rounded-xl font-bold text-xl hover:bg-[#b8941f] transition-all duration-300 shadow-2xl transform hover:scale-105 hover:shadow-[#d4af37]/25"
             >
-              Enter Your Sanctuary
+              Step Into the Quiet
             </a>
             <a 
               href="#features" 
               class="border-2 border-[#d4af37] text-[#d4af37] px-10 py-5 rounded-xl font-semibold text-xl hover:bg-[#d4af37] hover:text-[#2c1810] transition-all duration-300 flex items-center gap-3"
             >
               <LuHeart class="w-6 h-6" />
-              Discover Your Home
+              Take a Look Around
             </a>
           </div>
           
           <div class="mt-12 text-amber-200/70">
-            <p class="text-lg">Join 2,847+ writers in their creative sanctuary</p>
+            <p class="text-lg">2,847 writers are already here—writing.</p>
           </div>
         </div>
       </section>
@@ -680,11 +668,11 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: "QuillSpace - Your Writing Sanctuary | Where Stories Find Their Voice",
+  title: "QuillSpace - Your Writing Sanctuary | Where Language Matters",
   meta: [
     {
       name: "description",
-      content: "Your personal writing sanctuary where you manage novels, track book performance, and connect with readers. Organize your thoughts, build your author website, and watch your stories touch hearts. Where words find warmth and stories find their voice.",
+      content: "A quiet place to build your book, share your voice, and feel less alone on the way there. Where writers shape their stories, follow their books into the world, and connect with readers who read with soul.",
     },
     {
       name: "keywords",
@@ -692,11 +680,11 @@ export const head: DocumentHead = {
     },
     {
       property: "og:title",
-      content: "QuillSpace - Your Writing Sanctuary | Where Stories Find Their Voice",
+      content: "QuillSpace - Your Writing Sanctuary | Where Language Matters",
     },
     {
       property: "og:description", 
-      content: "Your personal writing sanctuary where you manage novels, track book performance, and connect with readers. Where words find warmth and stories find their voice.",
+      content: "A quiet place to build your book, share your voice, and feel less alone on the way there. Where language matters, and stories are given the room to breathe.",
     },
     {
       property: "og:image",
@@ -716,7 +704,7 @@ export const head: DocumentHead = {
     },
     {
       name: "twitter:description",
-      content: "Your personal writing sanctuary where you manage novels, track book performance, and connect with readers. Where words find warmth and stories find their voice.",
+      content: "A quiet place to build your book, share your voice, and feel less alone on the way there. Where language matters, and stories are given the room to breathe.",
     },
   ],
 };

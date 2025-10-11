@@ -58,7 +58,7 @@ async fn login(
         }
     };
 
-    let query = "SELECT id, tenant_id, email, first_name, last_name, role::text as role, password_hash, active, created_at, updated_at FROM users WHERE email = $1 AND active = true ORDER BY created_at ASC LIMIT 1";
+    let query = "SELECT * FROM authenticate_user($1)";
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {

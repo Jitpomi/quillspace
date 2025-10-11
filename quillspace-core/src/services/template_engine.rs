@@ -252,7 +252,7 @@ impl TemplateEngine {
         // Set RLS context for tenant isolation within transaction
         info!("Setting RLS context for tenant: {}", tenant_id);
         transaction
-            .execute("SELECT set_config('app.current_tenant_id', $1, true)", &[&tenant_id.to_string()])
+            .execute("SELECT set_config('quillspace.tenant_id', $1, true)", &[&tenant_id.to_string()])
             .await
             .context("Failed to set RLS tenant context")?;
         

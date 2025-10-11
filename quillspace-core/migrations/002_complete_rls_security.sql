@@ -11,7 +11,7 @@
 CREATE OR REPLACE FUNCTION current_tenant_id()
 RETURNS UUID AS $$
 BEGIN
-    RETURN current_setting('app.current_tenant_id', true)::UUID;
+    RETURN current_setting('quillspace.tenant_id', true)::UUID;
 EXCEPTION
     WHEN OTHERS THEN
         RETURN NULL;
