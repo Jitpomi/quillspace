@@ -1,6 +1,6 @@
 import { component$ } from "@builder.io/qwik";
 import {LuFeather, LuHeart} from "@qwikest/icons/lucide";
-import {routeLoader$} from "@builder.io/qwik-city";
+import {RequestHandler, routeLoader$} from "@builder.io/qwik-city";
 import {InitialValues} from "@modular-forms/qwik";
 import {LoginRequest} from "~/api/schema";
 import LoginForm from "~/components/login-form";
@@ -9,6 +9,14 @@ export const useFormLoader = routeLoader$<InitialValues<LoginRequest>>(() => ({
     email: '',
     password: '',
 }));
+
+
+export const onGet: RequestHandler = async ({ cookie, json }) => {
+    let count = cookie.get('Qwik.demo.count')?.number() || 0;
+    count++;
+    cookie.set('Qwik.demo.count', count);
+    json(200, { count });
+};
 
 export default component$(() => {
 const login = useFormLoader();
