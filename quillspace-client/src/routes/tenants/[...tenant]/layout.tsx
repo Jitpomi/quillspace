@@ -2,7 +2,7 @@ import {component$, Slot, useSignal} from '@builder.io/qwik';
 import {RequestEvent, routeLoader$} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
 import { isAuthenticated } from '~/utils/auth';
-import {LuFeather, LuBookOpen, LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuPenTool, LuHome, LuBarChart3, LuFileText, LuRocket} from "@qwikest/icons/lucide";
+import {LuFeather, LuBookOpen, LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuPenTool, LuHome, LuBarChart3, LuFileText, LuRocket, LuHeart} from "@qwikest/icons/lucide";
 
 // Route guard function to check authentication and redirect if needed
 const requireAuthentication: RequestHandler = async ({ cookie, redirect }) => {
@@ -85,13 +85,13 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'content'
+                                pageTitle.value === 'writers-circle'
                                     ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
                             }`}
                         >
-                            <LuFileText class="w-5 h-5"/>
-                            <span>My Writing</span>
+                            <LuHeart class="w-5 h-5"/>
+                            <span>Writers Circle</span>
                         </button>
 
                         <button
@@ -195,13 +195,13 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'content'
+                                pageTitle.value === 'writers-circle'
                                     ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
                             }`}
                         >
-                            <LuFileText class="w-5 h-5"/>
-                            <span>My Writing</span>
+                            <LuHeart class="w-5 h-5"/>
+                            <span>Writers Circle</span>
                         </button>
 
                         <button
