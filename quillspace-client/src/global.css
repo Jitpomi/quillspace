@@ -1,3 +1,39 @@
 @import "tailwindcss";
 
+/* Prevent CLS from text balancer */
+[data-qwik-wrap-balancer] {
+  text-wrap: balance;
+  /* Fallback for browsers that don't support text-wrap: balance */
+  text-rendering: optimizeSpeed;
+}
 
+/* Ensure smooth transitions for WrapBalancer */
+.qwik-wrap-balancer {
+  transition: none !important;
+  will-change: auto;
+}
+
+/* Prevent layout shift during hydration */
+[data-qwik-wrap-balancer]:not([data-qwik-wrap-balancer-ready]) {
+  opacity: 0;
+  transform: none;
+}
+
+[data-qwik-wrap-balancer][data-qwik-wrap-balancer-ready] {
+  opacity: 1;
+  transition: opacity 0.1s ease-in;
+}
+
+/* Force stable layout for hero text */
+.hero-text-container {
+  contain: layout style;
+  min-height: var(--min-height, auto);
+}
+
+/* Prevent text reflow CLS */
+.stable-text {
+  text-wrap: balance;
+  word-break: normal;
+  hyphens: none;
+  overflow-wrap: break-word;
+}

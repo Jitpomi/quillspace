@@ -35,9 +35,9 @@ export default component$(() => {
             </div>
             
             {/* Main Headline with Better Typography */}
-            <div class="mb-12">
-              <WrapBalancer>
-                <h2 class="text-6xl md:text-8xl font-bold mb-6 leading-none tracking-tight">
+            <div class="mb-12 text-center">
+              <div style="min-height: 240px;" class="hero-text-container flex flex-col justify-center items-center">
+                <h2 class="stable-text text-6xl md:text-8xl font-bold mb-6 leading-none tracking-tight">
                   Your Writing
                   <br class="hidden sm:block" />
                   <span class="text-[#9CAF88] relative">
@@ -45,26 +45,26 @@ export default component$(() => {
                     <div class="absolute -bottom-2 left-0 right-0 h-1 bg-[#9CAF88]/30 rounded-full"></div>
                   </span>
                 </h2>
-              </WrapBalancer>
+              </div>
               
               {/* Tagline with Better Emphasis */}
-              <div class="max-w-4xl mx-auto">
-                <WrapBalancer>
+              <div class="max-w-4xl mx-auto text-center">
+                <div style="min-height: 100px; text-wrap: balance;" class="flex flex-col justify-center items-center">
                   <p class="text-2xl md:text-3xl font-light text-gray-100 mb-6 leading-relaxed">
                     A quiet place to build your book, share your voice, and feel less alone on the way there.
                   </p>
-                </WrapBalancer>
+                </div>
                 <div class="relative">
-                  <WrapBalancer>
+                  <div style="min-height: 70px; text-wrap: balance;" class="flex flex-col justify-center items-center">
                     <p class="text-xl md:text-2xl text-gray-200 leading-relaxed italic">
                       Here, writers shape their stories, follow their books into the world, and connect with readers who read with soul.
                     </p>
-                  </WrapBalancer>
-                  <WrapBalancer>
+                  </div>
+                  <div style="min-height: 70px; text-wrap: balance;" class="flex flex-col justify-center items-center">
                     <div class="mt-6 text-2xl md:text-3xl font-medium text-[#9CAF88]">
                       Where language matters, and stories are given the room to breathe.
                     </div>
-                  </WrapBalancer>
+                  </div>
                 </div>
               </div>
             </div>
@@ -160,17 +160,19 @@ export default component$(() => {
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
             <div>
-              <WrapBalancer>
-                <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-8 leading-tight">
-                  Where Stories Settle—
-                  <span class="text-[#9CAF88]">and Begin to Grow</span>
-                </h2>
-              </WrapBalancer>
-              <WrapBalancer>
+              <div style="min-height: 120px;" class="flex flex-col justify-center">
+                <WrapBalancer>
+                  <h2 class="text-4xl md:text-5xl font-bold text-[#2D3748] mb-8 leading-tight">
+                    Where Stories Settle—
+                    <span class="text-[#9CAF88]">and Begin to Grow</span>
+                  </h2>
+                </WrapBalancer>
+              </div>
+              <div style="min-height: 100px; text-wrap: balance;" class="flex flex-col justify-center">
                 <p class="text-xl text-gray-700 mb-10 leading-relaxed">
                   This is where your stories take shape—slowly, honestly—and begin to find their way into the hands they were meant for. A quiet space to write deeply, share deliberately, and connect with readers who read like it matters.
                 </p>
-              </WrapBalancer>
+              </div>
               <div class="space-y-6 mb-10">
                 <div class="flex items-start gap-4">
                   <div class="w-8 h-8 bg-[#9CAF88]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
