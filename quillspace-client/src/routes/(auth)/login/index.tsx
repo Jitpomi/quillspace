@@ -67,7 +67,7 @@ const login = useFormLoader();
               </div>
               
               {/* Footer */}
-              <div class="text-center mt-6">
+              <div class="text-center mt-6 cursor-pointer">
                   <p class="text-sm text-gray-300">
                       Don't have an account?{' '}
                       <a href="#" class="font-medium text-[#9CAF88] hover:text-[#8ba077] transition-colors">
@@ -78,7 +78,7 @@ const login = useFormLoader();
               
               {/* Back to Home Link */}
               <div class="text-center mt-4">
-                  <a href="/" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
+                  <a href="/" class="inline-flex cursor-pointer items-center gap-2 text-sm text-gray-400 hover:text-[#9CAF88] transition-colors">
                       <LuHeart class="w-4 h-4" />
                       Back to sanctuary
                   </a>

@@ -1,5 +1,5 @@
 import {component$, Slot, useSignal, useContextProvider} from '@builder.io/qwik';
-import {RequestEvent, routeLoader$, Link, routeAction$, Form, useNavigate} from '@builder.io/qwik-city';
+import {RequestEvent, routeLoader$, Link, routeAction$, Form, useNavigate, useLocation} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
 import {getTenantInfo, getUserInfo, isAuthenticated, logout} from '~/utils/auth';
 import { LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuHome, LuBarChart3, LuRocket, LuHeart} from "@qwikest/icons/lucide";
@@ -40,7 +40,7 @@ export const onDelete: RequestHandler = requireAuthentication;
 // Route loader to fetch user and tenant data for context
 export const useAuthLoader = routeLoader$(async (requestEvent) => {
     const { cookie } = requestEvent;
-    
+
     const user = await getUserInfo(cookie);
     const tenant = await getTenantInfo(cookie);
     
@@ -68,7 +68,7 @@ export const useLogoutAction = routeAction$(async (data, { cookie, redirect }) =
 export default component$(() => {
     const authData = useAuthLoader();
     const logoutAction = useLogoutAction();
-    const pageTitle = useSignal('dashboard');
+    const location = useLocation();
     const sidebarOpen = useSignal(false);
     const nav = useNavigate();
     
@@ -107,7 +107,7 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
-                                pageTitle.value === 'dashboard'
+                                location.url.pathname=== `${userPath}/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -122,7 +122,7 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'writers-circle'
+                                location.url.pathname === `${userPath}/writers` || location.url.pathname === `${userPath}/writers/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -137,7 +137,7 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === "(website-builder)-builder"
+                                location.url.pathname.includes('websites')
                                     ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30"
                                     : "text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
                             }`}
@@ -152,7 +152,7 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'users'
+                                location.url.pathname.includes('readers')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -167,7 +167,7 @@ export default component$(() => {
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'settings'
+                                location.url.pathname.includes('settings')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -202,7 +202,11 @@ export default component$(() => {
                 class={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r border-gray-300 transform transition-transform duration-300 ease-in-out lg:hidden ${
                     sidebarOpen.value ? 'translate-x-0' : '-translate-x-full'
                 }`}>
-                <div class="flex cursor-pointer items-center justify-center h-16 border-b border-gray-300 bg-white">
+                <button
+                    onClick$={async () => {
+                        await nav(`/`);
+                    }}
+                    class="flex cursor-pointer items-center justify-center h-16 border-b border-gray-300 bg-white">
                     <div class="flex items-center gap-3">
                         <div class="relative">
                             <LuRocket class="w-7 h-7 text-[#2D3748]"/>
@@ -210,17 +214,18 @@ export default component$(() => {
                         </div>
                         <span class="text-xl font-semibold text-[#2D3748] tracking-wide">QuillSpace</span>
                     </div>
-                </div>
+                </button>
                 
                 {/* Mobile navigation - same as desktop */}
                 <nav class="mt-8 px-4 pb-24">
                     <div class="space-y-2">
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/`);
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'dashboard'
+                                location.url.pathname === `${userPath}/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -230,11 +235,12 @@ export default component$(() => {
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/writers`);
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'writers-circle'
+                                location.url.pathname === `${userPath}/writers` || location.url.pathname === `${userPath}/writers/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -243,27 +249,28 @@ export default component$(() => {
                             <span>Writers Circle</span>
                         </button>
 
-                        <Link
-                            href={`${userPath}/websites`}
-                            onClick$={() => {
+                        <button
+                            onClick$={async () => {
+                                await nav(`${userPath}/websites`);
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === "(website-builder)-builder"
+                                location.url.pathname.includes('websites')
                                     ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30"
                                     : "text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
                             }`}
                         >
                             <LuGlobe class="w-5 h-5"/>
-                            <span>My Website</span>
-                        </Link>
+                            <span>My Websites</span>
+                        </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/readers`);
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'users'
+                                location.url.pathname.includes('readers')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
@@ -273,11 +280,12 @@ export default component$(() => {
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/settings`);
                                 sidebarOpen.value = false;
                             }}
                             class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === 'settings'
+                                location.url.pathname.includes('settings')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}

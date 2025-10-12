@@ -238,7 +238,7 @@ export default  component$<LoginFormProps>((props) => {
                                     <button
                                         type="button"
                                         onClick$={togglePasswordVisibility}
-                                        class="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-white/10 rounded-r-xl transition-colors"
+                                        class="absolute cursor-pointer inset-y-0 right-0 pr-4 flex items-center hover:bg-white/10 rounded-r-xl transition-colors"
                                     >
                                         {showPassword.value ? (
                                             <LuEyeOff class="h-5 w-5 text-gray-300 hover:text-white"/>
@@ -262,7 +262,7 @@ export default  component$<LoginFormProps>((props) => {
                 
                 <button 
                     type="submit" 
-                    class="w-full mt-8 bg-[#9CAF88] text-white py-4 px-6 rounded-xl hover:bg-[#8ba077] transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                    class="w-full cursor-pointer mt-8 bg-[#9CAF88] text-white py-4 px-6 rounded-xl hover:bg-[#8ba077] transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     Sign In
                 </button>
