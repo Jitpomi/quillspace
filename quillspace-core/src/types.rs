@@ -94,11 +94,37 @@ pub struct User {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub email: String,
-    pub name: String,
+    pub first_name: String,
+    pub last_name: String,
     pub role: UserRole,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub is_active: bool,
+}
+
+impl User {
+    /// Create User from database row
+    pub fn from_row(row: &tokio_postgres::Row) -> Result<Self, Box<dyn std::error::Error>> {
+        let role_str: String = row.try_get("role")?;
+        let role = match role_str.as_str() {
+            "admin" => UserRole::Admin,
+            "editor" => UserRole::Editor,
+            "viewer" => UserRole::Viewer,
+            _ => UserRole::Viewer, // Default fallback
+        };
+
+        Ok(User {
+            id: row.try_get("id")?,
+            tenant_id: row.try_get("tenant_id")?,
+            email: row.try_get("email")?,
+            first_name: row.try_get("first_name")?,
+            last_name: row.try_get("last_name")?,
+            role,
+            is_active: row.try_get("active")?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+        })
+    }
 }
 
 /// User roles for RBAC

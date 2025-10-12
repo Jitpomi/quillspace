@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use minijinja::Environment;
+use minijinja::{Environment, context};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -39,11 +39,12 @@ pub struct Template {
 pub struct TemplateContext {
     pub site: SiteContext,
     pub page: PageContext,
+    pub puck_data: Option<Value>,
     pub puck_content: String,
     pub user: Option<UserContext>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SiteContext {
     pub id: Uuid,
     pub name: String,
@@ -53,7 +54,7 @@ pub struct SiteContext {
     pub seo_settings: Value,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageContext {
     pub id: Uuid,
     pub slug: String,
@@ -96,7 +97,18 @@ impl TemplateEngine {
         env.add_function("url", url_function);
         
         // Add global variables
-        env.add_global("now", minijinja::Value::from_serialize(&chrono::Utc::now()));
+        // Add global variables - skip the now variable for now to avoid compilation issues
+        // env.add_global("now", minijinja::Value::from_serialize(&chrono::Utc::now()).unwrap());
+        
+        // Set up database loader
+        let db_clone = Arc::clone(&db);
+        env.set_loader(move |name: &str| {
+            // This is a synchronous closure, so we need to handle async database calls differently
+            // For now, we'll return None and handle template loading in the render methods
+            // In production, you might want to use a runtime like tokio::runtime::Handle::current()
+            // to block on the async database call, but that's not recommended
+            Ok(None)
+        });
         
         Ok(Self {
             env,
@@ -157,22 +169,118 @@ impl TemplateEngine {
         tenant_id: Uuid,
         context: &TemplateContext,
     ) -> Result<String> {
-        // Load template source
+        // Load template source from database
         let template_source = self.load_template(template_name, tenant_id).await?;
         
         // Create a new environment for this render to avoid lifetime issues
         let mut env = Environment::new();
-        env.add_template(template_name, &template_source)
+        
+        // Configure the environment with the same settings as the main one
+        env.set_auto_escape_callback(|name| {
+            if name.ends_with(".html") || name.ends_with(".htm") {
+                minijinja::AutoEscape::Html
+            } else {
+                minijinja::AutoEscape::None
+            }
+        });
+        
+        // Add the template using add_template_owned to avoid lifetime issues
+        env.add_template_owned(template_name.to_string(), template_source)
             .context("Failed to add template to environment")?;
         
         // Get template and render
         let template = env.get_template(template_name)
             .context("Failed to get template from environment")?;
         
-        let rendered = template.render(context)
-            .context("Failed to render template")?;
+        let rendered = template.render(context! {
+            site => context.site,
+            page => context.page,
+            puck_data => context.puck_data,
+            puck_content => context.puck_content,
+            user => context.user,
+        }).context("Failed to render template")?;
         
         Ok(rendered)
+    }
+    
+    /// Render Puck data to HTML using a base template
+    pub async fn render_puck_page(
+        &self,
+        puck_data: &Value,
+        site_context: &SiteContext,
+        page_context: &PageContext,
+        tenant_id: Uuid,
+    ) -> Result<String> {
+        // Create context with Puck data
+        let context = TemplateContext {
+            site: site_context.clone(),
+            page: page_context.clone(),
+            puck_data: Some(puck_data.clone()),
+            puck_content: serde_json::to_string_pretty(puck_data)
+                .context("Failed to serialize Puck data")?,
+            user: None,
+        };
+        
+        // Use a base template that can render Puck data
+        // This template should include the Puck renderer component
+        self.render_template("puck-base", tenant_id, &context).await
+    }
+    
+    /// Generate static HTML from Puck data for SEO and performance
+    pub async fn generate_static_html(
+        &self,
+        puck_data: &Value,
+        site_context: &SiteContext,
+        page_context: &PageContext,
+    ) -> Result<String> {
+        // This would integrate with a headless renderer (like Puppeteer or Playwright)
+        // to generate static HTML from the Puck components
+        // For now, we'll return a basic HTML structure
+        
+        let title = page_context.title.clone();
+        let meta_description = page_context.meta_description
+            .as_ref()
+            .unwrap_or(&"".to_string())
+            .clone();
+        
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{}</title>
+    <meta name="description" content="{}">
+    <meta property="og:title" content="{}">
+    <meta property="og:description" content="{}">
+    <meta property="og:site_name" content="{}">
+    <link rel="canonical" href="https://{}.quillspace.app{}">
+</head>
+<body>
+    <div id="puck-root" data-puck='{}'>
+        <!-- Puck content will be rendered here -->
+        <noscript>
+            <p>This (website-builder) requires JavaScript to display properly.</p>
+        </noscript>
+    </div>
+    <script>
+        // Initialize Puck renderer on the client side
+        window.puckData = {};
+    </script>
+</body>
+</html>"#,
+            title,
+            meta_description,
+            title,
+            meta_description,
+            site_context.name,
+            site_context.subdomain,
+            page_context.slug,
+            serde_json::to_string(puck_data).unwrap_or_default(),
+            serde_json::to_string(puck_data).unwrap_or_default()
+        );
+        
+        Ok(html)
     }
     
     /// Get template by name and tenant

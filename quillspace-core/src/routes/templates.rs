@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     routing::{delete, get, post, put},
     Json, Router,
 };
@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     auth::jwt_helpers::extract_auth_context,
-    services::template_engine::{Template, TemplateEngine},
+    services::template_engine::{Template, TemplateEngine, SiteContext, PageContext},
     types::ApiResponse,
     AppState,
 };
@@ -80,6 +80,8 @@ pub fn templates_router() -> Router<AppState> {
         .route("/", get(list_templates).post(create_template))
         .route("/:template_id", get(get_template).put(update_template).delete(delete_template))
         .route("/:template_id/render", post(render_template))
+        .route("/render-puck", post(render_puck_page))
+        .route("/generate-static", post(generate_static_html))
 }
 
 /// List templates
@@ -401,6 +403,7 @@ pub async fn render_template(
             is_published: true,
             published_at: Some(chrono::Utc::now()),
         },
+        puck_data: Some(serde_json::json!({})),
         puck_content: request.puck_content,
         user: None,
     };
@@ -422,6 +425,84 @@ pub async fn render_template(
             } else {
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
+        }
+    }
+}
+
+/// Request for rendering Puck page
+#[derive(Debug, Deserialize)]
+pub struct RenderPuckPageRequest {
+    pub puck_data: Value,
+    pub site: SiteContext,
+    pub page: PageContext,
+}
+
+/// Request for generating static HTML
+#[derive(Debug, Deserialize)]
+pub struct GenerateStaticHtmlRequest {
+    pub puck_data: Value,
+    pub site: SiteContext,
+    pub page: PageContext,
+}
+
+/// Render Puck page using template engine
+pub async fn render_puck_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(request): Json<RenderPuckPageRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    let request_id = uuid::Uuid::new_v4();
+    info!("Rendering Puck page for tenant: {}", tenant_id);
+
+    // Render the Puck page using the template engine
+    match state.template_engine.render_puck_page(
+        &request.puck_data,
+        &request.site,
+        &request.page,
+        tenant_id.into(),
+    ).await {
+        Ok(rendered_html) => {
+            let response = ApiResponse::success(serde_json::json!({
+                "rendered_html": rendered_html,
+                "site": request.site,
+                "page": request.page
+            }), request_id);
+            Ok((StatusCode::OK, Json(response)))
+        }
+        Err(e) => {
+            error!("Failed to render Puck page: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Generate static HTML from Puck data
+pub async fn generate_static_html(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(request): Json<GenerateStaticHtmlRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (_tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    info!("Generating static HTML for site: {}", request.site.name);
+
+    // Generate static HTML using the template engine
+    match state.template_engine.generate_static_html(
+        &request.puck_data,
+        &request.site,
+        &request.page,
+    ).await {
+        Ok(static_html) => {
+            // Return HTML directly for static serving
+            Ok((StatusCode::OK, Html(static_html)))
+        }
+        Err(e) => {
+            error!("Failed to generate static HTML: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }

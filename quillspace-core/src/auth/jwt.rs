@@ -12,7 +12,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct Claims {
     pub sub: String,        // Subject (user ID)
     pub email: String,      // User email
-    pub name: String,       // User name
+    pub first_name: String, // User first name
+    pub last_name: String,  // User last name
     pub role: String,       // User role
     pub tenant_id: String,  // Tenant ID
     pub exp: i64,          // Expiration time
@@ -33,14 +34,15 @@ impl JwtManager {
         }
     }
 
-    pub fn generate_token(&self, user_id: &str, email: &str, name: &str, role: &str, tenant_id: &str) -> Result<String, JoseError> {
+    pub fn generate_token(&self, user_id: &str, email: &str, first_name: &str, last_name: &str, role: &str, tenant_id: &str) -> Result<String, JoseError> {
         let now = Utc::now();
         let exp = now + Duration::hours(24 * 7); // 7 days
 
         let mut payload = JwtPayload::new();
         payload.set_subject(user_id);
         payload.set_claim("email", Some(serde_json::Value::String(email.to_string())))?;
-        payload.set_claim("name", Some(serde_json::Value::String(name.to_string())))?;
+        payload.set_claim("first_name", Some(serde_json::Value::String(first_name.to_string())))?;
+        payload.set_claim("last_name", Some(serde_json::Value::String(last_name.to_string())))?;
         payload.set_claim("role", Some(serde_json::Value::String(role.to_string())))?;
         payload.set_claim("tenant_id", Some(serde_json::Value::String(tenant_id.to_string())))?;
         
@@ -70,9 +72,13 @@ impl JwtManager {
             .and_then(|v| v.as_str())
             .ok_or_else(|| JoseError::InvalidJwtFormat(anyhow!("Missing email")))?;
         
-        let name = payload.claim("name")
+        let first_name = payload.claim("first_name")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| JoseError::InvalidJwtFormat(anyhow!("Missing name")))?;
+            .ok_or_else(|| JoseError::InvalidJwtFormat(anyhow!("Missing first_name")))?;
+        
+        let last_name = payload.claim("last_name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| JoseError::InvalidJwtFormat(anyhow!("Missing last_name")))?;
         
         let role = payload.claim("role")
             .and_then(|v| v.as_str())
@@ -100,7 +106,8 @@ impl JwtManager {
         Ok(Claims {
             sub: sub.to_string(),
             email: email.to_string(),
-            name: name.to_string(),
+            first_name: first_name.to_string(),
+            last_name: last_name.to_string(),
             role: role.to_string(),
             tenant_id: tenant_id.to_string(),
             exp,
@@ -131,7 +138,8 @@ mod tests {
         let token = jwt_manager.generate_token(
             "user-123",
             "test@example.com",
-            "Test User",
+            "Test",
+            "User",
             "admin",
             "tenant-456"
         ).expect("Failed to create test token");
@@ -140,7 +148,8 @@ mod tests {
         
         assert_eq!(claims.sub, "user-123");
         assert_eq!(claims.email, "test@example.com");
-        assert_eq!(claims.name, "Test User");
+        assert_eq!(claims.first_name, "Test");
+        assert_eq!(claims.last_name, "User");
         assert_eq!(claims.role, "admin");
         assert_eq!(claims.tenant_id, "tenant-456");
         assert_eq!(claims.iss, "quillspace");
@@ -153,7 +162,8 @@ mod tests {
         let token = jwt_manager.generate_token(
             "user-123",
             "test@example.com",
-            "Test User",
+            "Test",
+            "User",
             "admin",
             "tenant-456"
         ).expect("Failed to create test token");

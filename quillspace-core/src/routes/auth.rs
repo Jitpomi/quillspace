@@ -16,15 +16,6 @@ use uuid::Uuid;
 
 // Using Claims from auth::jwt module
 
-/// Helper function to convert database role string to UserRole enum
-fn parse_user_role(role_str: &str) -> UserRole {
-    match role_str {
-        "admin" => UserRole::Admin,
-        "editor" => UserRole::Editor,
-        "viewer" => UserRole::Viewer,
-        _ => UserRole::Viewer, // Default fallback
-    }
-}
 
 /// Create authentication routes
 pub fn create_routes() -> Router<AppState> {
@@ -43,43 +34,14 @@ async fn login(
     let request_id = Uuid::new_v4(); // Generate request ID
     info!("Login attempt for email: {}", login_request.email);
 
-    // In a real implementation, you would:
-    // 1. Validate password hash
-    // 2. Check account status
-    // 3. Implement rate limiting
-    // 4. Log security events
-
-    // For demo purposes, we'll do a simple email lookup
-    let client = match state.db.postgres().get().await {
-        Ok(client) => client,
-        Err(e) => {
-            error!("Failed to get database connection: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
+    // Authenticate user with email and password
+    let client = get_db_client(&state).await?;
 
     let query = "SELECT * FROM authenticate_user($1)";
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {
-            // Construct User from database row
-            let role_str: String = row.try_get("role").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let role = parse_user_role(&role_str);
-
-            let first_name: String = row.try_get("first_name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let last_name: String = row.try_get("last_name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let full_name = format!("{} {}", first_name, last_name);
-
-            let user = User {
-                id: row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                tenant_id: row.try_get("tenant_id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                email: row.try_get("email").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                name: full_name,
-                role,
-                is_active: row.try_get("active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                created_at: row.try_get("created_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-            };
+            let user = User::from_row(&row).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             // Verify password hash
             let password_hash: String = row.try_get("password_hash")
@@ -92,7 +54,7 @@ async fn login(
             }
 
             // Fetch tenant information
-            let tenant_query = "SELECT id, name, slug FROM tenants WHERE id = $1";
+            let tenant_query = "SELECT * FROM tenants WHERE id = $1";
             let tenant_row = match client.query_one(tenant_query, &[&user.tenant_id]).await {
                 Ok(row) => row,
                 Err(e) => {
@@ -101,54 +63,26 @@ async fn login(
                 }
             };
 
-            let tenant = TenantInfo {
-                id: tenant_row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                name: tenant_row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                slug: tenant_row.try_get("slug").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-            };
+            let tenant = TenantInfo::from_row(&tenant_row).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             info!("Creating JWT token for user: {}", user.id);
             
-            let role_str = match user.role {
-                UserRole::Admin => "admin",
-                UserRole::Editor => "editor", 
-                UserRole::Viewer => "viewer",
+            let token = generate_jwt_token(&state.jwt_manager, &user)?;
+            
+            info!(
+                user_id = %user.id,
+                tenant_id = %user.tenant_id,
+                "User logged in successfully"
+            );
+
+            let response_data = LoginResponse {
+                token,
+                user: UserInfo::from_user(&user),
+                tenant,
             };
 
-            match state.jwt_manager.generate_token(
-                &user.id.to_string(),
-                &user.email,
-                &user.name,
-                role_str,
-                &user.tenant_id.to_string()
-            ) {
-                Ok(token) => {
-                    info!(
-                        user_id = %user.id,
-                        tenant_id = %user.tenant_id,
-                        "User logged in successfully"
-                    );
-
-                    let response_data = LoginResponse {
-                        token,
-                        user: UserInfo {
-                            id: user.id,
-                            email: user.email,
-                            name: user.name,
-                            role: user.role,
-                            tenant_id: user.tenant_id,
-                        },
-                        tenant,
-                    };
-
-                    let response = ApiResponse::success(response_data, request_id);
-                    Ok(Json(response))
-                }
-                Err(e) => {
-                    error!("Failed to generate JWT token: {}", e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                }
-            }
+            let response = ApiResponse::success(response_data, request_id);
+            Ok(Json(response))
         }
         Ok(None) => {
             // Don't reveal whether user exists or not
@@ -169,13 +103,7 @@ async fn refresh_token(
 ) -> Result<impl IntoResponse, StatusCode> {
     let request_id = Uuid::new_v4(); // Generate request ID
 
-    // In a real implementation, you would:
-    // 1. Validate the refresh token
-    // 2. Check if it's been revoked
-    // 3. Generate new access token
-    // 4. Optionally rotate refresh token
-
-    // For demo purposes, we'll decode the existing token and issue a new one
+    // Validate refresh token and issue new access token
     match state.jwt_manager.verify_token(&refresh_request.refresh_token) {
         Ok(old_claims) => {
             
@@ -183,63 +111,20 @@ async fn refresh_token(
             let user_id = Uuid::parse_str(&old_claims.sub)
                 .map_err(|_| StatusCode::BAD_REQUEST)?;
 
-            let client = match state.db.postgres().get().await {
-                Ok(client) => client,
-                Err(e) => {
-                    error!("Failed to get database connection: {}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
+            let client = get_db_client(&state).await?;
+            let user = fetch_user_by_id(&client, user_id).await?;
+
+            // Generate new JWT token
+            let token = generate_jwt_token(&state.jwt_manager, &user)?;
+            
+            let response_data = RefreshTokenResponse {
+                access_token: token,
+                token_type: "Bearer".to_string(),
+                expires_in: state.config.auth.jwt_expiration,
             };
 
-            let query = "SELECT id, tenant_id, email, name, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true";
-            
-            match client.query_opt(query, &[&user_id]).await {
-                Ok(Some(row)) => {
-                    // Construct User from database row
-                    let role_str: String = row.get("role");
-                    let role = parse_user_role(&role_str);
-
-                    let user = User {
-                        id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        email: row.get("email"),
-                        name: row.get("name"),
-                        role,
-                        is_active: row.get("is_active"),
-                        created_at: row.get("created_at"),
-                        updated_at: row.get("updated_at"),
-                    };
-
-                    // Generate new JWT token using our JWT manager
-                    match state.jwt_manager.generate_token(
-                        &user.id.to_string(),
-                        &user.email,
-                        &user.name,
-                        &user.role.to_string(),
-                        &user.tenant_id.to_string(),
-                    ) {
-                        Ok(token) => {
-                            let response_data = RefreshTokenResponse {
-                                access_token: token,
-                                token_type: "Bearer".to_string(),
-                                expires_in: state.config.auth.jwt_expiration,
-                            };
-
-                            let response = ApiResponse::success(response_data, request_id);
-                            Ok(Json(response))
-                        }
-                        Err(e) => {
-                            error!("Failed to generate new JWT token: {}", e);
-                            Err(StatusCode::INTERNAL_SERVER_ERROR)
-                        }
-                    }
-                }
-                Ok(None) => Err(StatusCode::UNAUTHORIZED),
-                Err(e) => {
-                    error!("Database error during token refresh: {}", e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                }
-            }
+            let response = ApiResponse::success(response_data, request_id);
+            Ok(Json(response))
         }
         Err(_) => Err(StatusCode::UNAUTHORIZED),
     }
@@ -283,14 +168,7 @@ async fn logout(
         None
     };
 
-    // In a real implementation, you would:
-    // 1. Add the token to a blacklist/Redis cache
-    // 2. Revoke refresh tokens from database
-    // 3. Log the logout event with user context
-    // 4. Clear any server-side sessions
-    // 5. Invalidate related tokens
-
-    // For now, we'll log the logout event
+    // Log the logout event
     if let Some(user_id) = user_id {
         info!(
             user_id = %user_id,
@@ -343,44 +221,13 @@ async fn get_current_user(
         Err(_) => return Err(StatusCode::UNAUTHORIZED),
     };
     
-    // Get database connection
-    let client = match state.db.postgres().get().await {
-        Ok(client) => client,
-        Err(e) => {
-            error!("Failed to get database connection: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
-    
-    // Fetch user from database using the user ID from JWT claims
+    // Get database connection and fetch user
+    let client = get_db_client(&state).await?;
     let user_id: Uuid = claims.sub.parse().map_err(|_| StatusCode::UNAUTHORIZED)?;
-    let query = "SELECT id, tenant_id, email, name, role::text as role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true";
+    let user = fetch_user_by_id(&client, user_id).await?;
     
-    match client.query_opt(query, &[&user_id]).await {
-        Ok(Some(row)) => {
-            let role_str: String = row.try_get("role").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let role = parse_user_role(&role_str);
-            
-            let user = User {
-                id: row.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                tenant_id: row.try_get("tenant_id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                email: row.try_get("email").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                name: row.try_get("name").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                role,
-                is_active: row.try_get("is_active").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                created_at: row.try_get("created_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-                updated_at: row.try_get("updated_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-            };
-            
-            let response = ApiResponse::success(user, request_id);
-            Ok(Json(response))
-        }
-        Ok(None) => Err(StatusCode::UNAUTHORIZED),
-        Err(e) => {
-            error!("Database error during user lookup: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let response = ApiResponse::success(user, request_id);
+    Ok(Json(response))
 }
 
 // Request/Response schemas
@@ -401,9 +248,82 @@ struct LoginResponse {
 struct UserInfo {
     id: Uuid,
     email: String,
-    name: String,
+    first_name: String,
+    last_name: String,
     role: UserRole,
     tenant_id: Uuid,
+}
+
+impl UserInfo {
+    /// Create UserInfo from User
+    pub fn from_user(user: &User) -> Self {
+        UserInfo {
+            id: user.id,
+            email: user.email.clone(),
+            first_name: user.first_name.clone(),
+            last_name: user.last_name.clone(),
+            role: user.role.clone(),
+            tenant_id: user.tenant_id,
+        }
+    }
+}
+
+/// Helper function to convert UserRole to string
+fn role_to_string(role: &UserRole) -> &'static str {
+    match role {
+        UserRole::Admin => "admin",
+        UserRole::Editor => "editor", 
+        UserRole::Viewer => "viewer",
+    }
+}
+
+/// Helper function to format full name
+fn format_full_name(user: &User) -> String {
+    format!("{} {}", user.first_name, user.last_name)
+}
+
+/// Helper function to get database connection
+async fn get_db_client(state: &AppState) -> Result<deadpool_postgres::Client, StatusCode> {
+    state.db.postgres().get().await.map_err(|e| {
+        error!("Failed to get database connection: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
+}
+
+/// Helper function to fetch user by ID
+async fn fetch_user_by_id(client: &deadpool_postgres::Client, user_id: Uuid) -> Result<User, StatusCode> {
+    let query = "SELECT * FROM users WHERE id = $1 AND active = true";
+    
+    match client.query_opt(query, &[&user_id]).await {
+        Ok(Some(row)) => {
+            User::from_row(&row).map_err(|_| {
+                error!("Failed to parse user from database row");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })
+        }
+        Ok(None) => Err(StatusCode::UNAUTHORIZED),
+        Err(e) => {
+            error!("Database error during user lookup: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Helper function to generate JWT token
+fn generate_jwt_token(jwt_manager: &JwtManager, user: &User) -> Result<String, StatusCode> {
+    let role_str = role_to_string(&user.role);
+    
+    jwt_manager.generate_token(
+        &user.id.to_string(),
+        &user.email,
+        &user.first_name,
+        &user.last_name,
+        role_str,
+        &user.tenant_id.to_string()
+    ).map_err(|e| {
+        error!("Failed to generate JWT token: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -411,6 +331,17 @@ struct TenantInfo {
     id: Uuid,
     name: String,
     slug: String,
+}
+
+impl TenantInfo {
+    /// Create TenantInfo from database row
+    pub fn from_row(row: &tokio_postgres::Row) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(TenantInfo {
+            id: row.try_get("id")?,
+            name: row.try_get("name")?,
+            slug: row.try_get("slug")?,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -425,12 +356,6 @@ struct RefreshTokenResponse {
     expires_in: i64,
 }
 
-// LogoutRequest is no longer needed since we extract token from Authorization header
-// Keeping for backward compatibility if needed
-#[derive(Debug, Deserialize)]
-struct LogoutRequest {
-    token: Option<String>,
-}
 
 #[derive(Debug, Serialize)]
 struct LogoutResponse {

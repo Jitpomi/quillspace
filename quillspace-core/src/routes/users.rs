@@ -21,7 +21,8 @@ fn row_to_user(row: &Row) -> Result<User, PgError> {
         id: row.try_get("id")?,
         tenant_id: row.try_get("tenant_id")?,
         email: row.try_get("email")?,
-        name: row.try_get("name")?,
+        first_name: row.try_get("first_name")?,
+        last_name: row.try_get("last_name")?,
         role: match row.try_get::<_, String>("role")?.as_str() {
             "admin" => UserRole::Admin,
             "editor" => UserRole::Editor,

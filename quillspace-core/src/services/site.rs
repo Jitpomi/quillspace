@@ -6,7 +6,7 @@ use serde_json::Value;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-/// Site entity representing an author's website
+/// Site entity representing an author's (website-builder)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Site {
     pub id: Uuid,
@@ -48,7 +48,7 @@ pub struct UpdateSiteRequest {
     pub is_published: Option<bool>,
 }
 
-/// Site service for managing author websites
+/// Site service for managing author (website-builder)
 pub struct SiteService {
     db: Pool,
 }

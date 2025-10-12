@@ -33,7 +33,7 @@ CREATE TABLE template_versions (
     UNIQUE(template_id, version)
 );
 
--- Author websites/sites
+-- Author (website-builder)/sites
 CREATE TABLE sites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
@@ -577,7 +577,7 @@ INSERT INTO widgets (name, display_name, description, category, component_config
 );
 
 COMMENT ON TABLE templates IS 'MiniJinja templates for site rendering with versioning support';
-COMMENT ON TABLE sites IS 'Author websites with custom domains and publishing settings';
+COMMENT ON TABLE sites IS 'Author (website-builder) with custom domains and publishing settings';
 COMMENT ON TABLE pages IS 'Individual pages with Puck composition data and SEO metadata';
 COMMENT ON TABLE domains IS 'Custom domain management with DNS verification and SSL status';
 COMMENT ON TABLE widgets IS 'Reusable components for the visual editor marketplace';
