@@ -2,7 +2,18 @@ import {component$, Slot, useSignal, useContextProvider} from '@builder.io/qwik'
 import {RequestEvent, routeLoader$,  routeAction$, Form, useNavigate, useLocation} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
 import {getTenantInfo, getUserInfo, isAuthenticated, logout} from '~/utils/auth';
-import { LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuHome, LuBarChart3, LuRocket, LuHeart} from "@qwikest/icons/lucide";
+import {
+    LuGlobe,
+    LuLogOut,
+    LuMenu,
+    LuUsers,
+    LuSettings,
+    LuHome,
+    LuBarChart3,
+    LuRocket,
+    LuHeart,
+    LuFeather
+} from "@qwikest/icons/lucide";
 import { AuthContextId, type AuthContext } from '~/contexts/auth';
 import { useAuth } from '~/hooks/useAuth';
 
@@ -92,7 +103,7 @@ export default component$(() => {
                         await nav('/')
                     }} class="flex items-center gap-3">
                         <div class="relative">
-                            <LuRocket class="w-7 h-7 text-[#2D3748]"/>
+                            <LuFeather class="w-8 h-8 text-[#9CAF88] drop-shadow-lg" />
                             <div class="absolute -inset-1 bg-[#9CAF88]/10 rounded-full blur-sm"></div>
                         </div>
                         <span class="text-xl font-semibold text-[#2D3748] tracking-wide">QuillSpace</span>
