@@ -1,6 +1,6 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { LuRocket, LuBookOpen, LuPenTool, LuUsers, LuTrendingUp, LuShield, LuArrowRight, LuCheck, LuStar, LuQuote, LuPlay, LuPhone, LuHeart, LuFeather, LuBarChart3, LuGlobe } from "@qwikest/icons/lucide";
+import { LuBookOpen, LuPenTool, LuUsers, LuTrendingUp, LuShield, LuArrowRight, LuStar, LuQuote, LuHeart, LuFeather, LuBarChart3, LuGlobe } from "@qwikest/icons/lucide";
 import { WrapBalancer } from "qwikjs-wrap-balancer";
 
 export default component$(() => {
@@ -721,7 +721,7 @@ export const head: DocumentHead = {
     },
     {
       name: "keywords",
-      content: "writing sanctuary, novel management, author platform, book performance tracking, reader connection, writing organization, author website builder, creative writing tools, manuscript management, writer community",
+      content: "writing sanctuary, novel management, author platform, book performance tracking, reader connection, writing organization, author (website-builder) builder, creative writing tools, manuscript management, writer community",
     },
     {
       property: "og:title",
@@ -737,7 +737,7 @@ export const head: DocumentHead = {
     },
     {
       property: "og:type",
-      content: "website",
+      content: "(website-builder)",
     },
     {
       name: "twitter:card",

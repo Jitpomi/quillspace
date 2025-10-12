@@ -1,7 +1,14 @@
 import { component$ } from "@builder.io/qwik";
+import { Link } from "@builder.io/qwik-city";
 import {LuBarChart3, LuFileText, LuUsers} from "@qwikest/icons/lucide";
+import { useAuth } from "~/hooks/useAuth";
+
+
+
 
 export default component$(() => {
+    const { userPath } = useAuth();
+
     return (
         <div class="max-w-6xl mx-auto space-y-8">
               {/* Writing Desk Welcome */}
@@ -10,7 +17,7 @@ export default component$(() => {
                 <p class="text-lg font-sans text-gray-600 leading-relaxed max-w-2xl mx-auto">Your creative command center. See your progress, manage your work, and connect with your readers.</p>
               </div>
 
-              {/* Quick Actions - Ultra Clean */}
+              {/* Quick Actions - Spotless */}
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div 
                   class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group"
@@ -23,14 +30,14 @@ export default component$(() => {
                   <div class="text-[#9CAF88] font-medium font-sans">Open Writing →</div>
                 </div>
 
-                <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group">
+                <Link href={`${userPath}/websites`} class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group block">
                   <div class="w-16 h-16 bg-[#7C9CBF]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#7C9CBF]/30 transition-soft">
                     <LuUsers class="w-8 h-8 text-[#2D3748] group-hover:scale-110 transition-soft" />
                   </div>
-                  <h3 class="text-xl font-serif font-semibold text-[#2D3748] mb-2">My Website</h3>
+                  <h3 class="text-xl font-serif font-semibold text-[#2D3748] mb-2">My Websites</h3>
                   <p class="font-sans text-gray-600 mb-4 leading-relaxed">Build and customize your author platform. Share your voice with the world.</p>
                   <div class="text-[#7C9CBF] font-medium font-sans">Manage Site →</div>
-                </div>
+                </Link>
 
                 <div class="bg-[#FEFCF7] rounded-xl border border-[#E8E2D4] p-8 text-center shadow-warm hover-lift transition-gentle cursor-pointer group">
                   <div class="w-16 h-16 bg-[#B8A9C9]/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#B8A9C9]/30 transition-soft">
@@ -70,6 +77,5 @@ export default component$(() => {
                 </div>
               </div>
             </div>
-          
     );
 });

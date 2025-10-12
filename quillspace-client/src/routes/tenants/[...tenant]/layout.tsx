@@ -1,8 +1,10 @@
-import {component$, Slot, useSignal} from '@builder.io/qwik';
-import {RequestEvent, routeLoader$} from '@builder.io/qwik-city';
+import {component$, Slot, useSignal, useContextProvider} from '@builder.io/qwik';
+import {RequestEvent, routeLoader$, Link, routeAction$, Form, useNavigate} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
-import { isAuthenticated } from '~/utils/auth';
-import {LuFeather, LuBookOpen, LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuPenTool, LuHome, LuBarChart3, LuFileText, LuRocket, LuHeart} from "@qwikest/icons/lucide";
+import {getTenantInfo, getUserInfo, isAuthenticated, logout} from '~/utils/auth';
+import { LuGlobe, LuLogOut, LuMenu, LuUsers, LuSettings, LuHome, LuBarChart3, LuRocket, LuHeart} from "@qwikest/icons/lucide";
+import { AuthContextId, type AuthContext } from '~/contexts/auth';
+import { useAuth } from '~/hooks/useAuth';
 
 // Route guard function to check authentication and redirect if needed
 const requireAuthentication: RequestHandler = async ({ cookie, redirect }) => {
@@ -19,17 +21,14 @@ export const onGet: RequestHandler = async ( requestEvent: RequestEvent) => {
     // Control caching for this request for best performance and to reduce hosting costs:
     // https://qwik.builder.io/docs/caching/
     cacheControl({
-        // Always serve a cached response by default, up to a week stale
-        staleWhileRevalidate: 60 * 60 * 24 * 7,
-        // Max once every 5 seconds, revalidate on the server to get a fresh version of this page
-        maxAge: 5,
+        // In development, disable aggressive caching to prevent stale content
+        staleWhileRevalidate: env.get('NODE_ENV') === 'production' ? 60 * 60 * 24 * 7 : 0,
+        maxAge: env.get('NODE_ENV') === 'production' ? 5 : 0,
     });
     console.log(url)
 
     const VITE_API_BASE_URL = env.get('VITE_API_BASE_URL');
     console.log('VITE_API_BASE_URL', VITE_API_BASE_URL);
-
-    // json(200, { hello: 'world' });
 };
 
 // Apply route guard to all HTTP methods
@@ -38,42 +37,79 @@ export const onPut: RequestHandler = requireAuthentication;
 export const onPatch: RequestHandler = requireAuthentication;
 export const onDelete: RequestHandler = requireAuthentication;
 
+// Route loader to fetch user and tenant data for context
+export const useAuthLoader = routeLoader$(async (requestEvent) => {
+    const { cookie } = requestEvent;
+    
+    const user = await getUserInfo(cookie);
+    const tenant = await getTenantInfo(cookie);
+    
+    return {
+        user,
+        tenant
+    };
+});
+
 export const useServerTimeLoader = routeLoader$(() => {
     return {
         date: new Date().toISOString(),
     };
 });
 
+// Logout action
+export const useLogoutAction = routeAction$(async (data, { cookie, redirect }) => {
+    // Clear all auth cookies
+    logout(cookie);
+    
+    // Redirect to login page
+    throw redirect(302, '/login');
+});
+
 export default component$(() => {
-    const currentUser = useSignal({name: 'test'});
+    const authData = useAuthLoader();
+    const logoutAction = useLogoutAction();
     const pageTitle = useSignal('dashboard');
     const sidebarOpen = useSignal(false);
+    const nav = useNavigate();
+    
+    // Provide auth context to all child components
+    const authContext: AuthContext = {
+        user: authData.value.user,
+        tenant: authData.value.tenant
+    };
+    useContextProvider(AuthContextId, authContext);
+    // Use the enhanced auth hook for navigation
+    const { userPath } = useAuth();
+
     return (
-        <div class="min-h-screen bg-gradient-to-br from-green-50 via-sage-50 to-green-100" style="background-image: url('https://www.transparenttextures.com/patterns/subtle-white-feathers.png');">
+        <div class="min-h-screen bg-gradient-to-br from-green-50 via-sage-50 to-green-100" style="background-image: url('/feathers.png');">
             {/* Sidebar - Literary sanctuary feel */}
             <div
-                class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-slate-800 via-slate-700 to-slate-800 shadow-2xl border-r border-[#9CAF88]/30 hidden lg:block">
+                class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r border-gray-300 hidden lg:block">
                 {/* Literary Header */}
-                <div class="flex items-center justify-center h-16 border-b border-[#9CAF88]/30 bg-slate-800">
-                    <div class="flex items-center gap-3">
+                <div class="flex cursor-pointer items-center justify-center h-16 border-b border-gray-300 bg-white">
+                    <button onClick$={async () => {
+                        await nav('/')
+                    }} class="flex items-center gap-3">
                         <div class="relative">
-                            <LuFeather class="w-8 h-8 text-[#9CAF88] drop-shadow-lg"/>
-                            <div class="absolute -inset-2 bg-[#9CAF88]/20 rounded-full blur-md"></div>
+                            <LuRocket class="w-7 h-7 text-[#2D3748]"/>
+                            <div class="absolute -inset-1 bg-[#9CAF88]/10 rounded-full blur-sm"></div>
                         </div>
-                        <span class="text-xl font-bold text-white tracking-wide">Your Sanctuary</span>
-                    </div>
+                        <span class="text-xl font-semibold text-[#2D3748] tracking-wide">QuillSpace</span>
+                    </button>
                 </div>
 
                 <nav class="mt-8 px-4">
                     <div class="space-y-2">
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
                                 pageTitle.value === 'dashboard'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-lg border border-[#9CAF88]/40'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuHome class="w-5 h-5"/>
@@ -81,13 +117,14 @@ export default component$(() => {
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/writers`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'writers-circle'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuHeart class="w-5 h-5"/>
@@ -95,27 +132,29 @@ export default component$(() => {
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/websites`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === "website-builder"
-                                    ? "bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30"
-                                    : "text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white"
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                                pageTitle.value === "(website-builder)-builder"
+                                    ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30"
+                                    : "text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
                             }`}
                         >
                             <LuGlobe class="w-5 h-5"/>
-                            <span>My Website</span>
+                            <span>Websites</span>
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/readers`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'users'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuUsers class="w-5 h-5"/>
@@ -123,13 +162,14 @@ export default component$(() => {
                         </button>
 
                         <button
-                            onClick$={() => {
+                            onClick$={async () => {
+                                await nav(`${userPath}/settings`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'settings'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuSettings class="w-5 h-5"/>
@@ -138,21 +178,20 @@ export default component$(() => {
                     </div>
                     
                     {/* Literary bottom section */}
-                    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#9CAF88]/30 bg-slate-800">
-                        <button
-                            class="w-full bg-[#9CAF88] hover:bg-[#8a9e7a] text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl mb-3">
-                            Begin Writing
-                        </button>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-300 bg-white">
+
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-300">{currentUser.value?.name}</span>
-                            <button
-                                // onClick$={handleLogout}
-                                class="flex items-center gap-1 text-[#9CAF88] hover:text-white transition-colors"
-                                title="Leave sanctuary"
-                            >
-                                <LuLogOut class="w-4 h-4"/>
-                                <span>Leave</span>
-                            </button>
+                            <span class="text-gray-600">{authContext.user ? `${authContext.user.first_name} ${authContext.user.last_name}` : 'User'}</span>
+                            <Form action={logoutAction}>
+                                <button
+                                    type="submit"
+                                    class="flex cursor-pointer items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+                                    title="Sign out"
+                                >
+                                    <LuLogOut class="w-4 h-4"/>
+                                    <span>Sign out</span>
+                                </button>
+                            </Form>
                         </div>
                     </div>
                 </nav>
@@ -160,10 +199,10 @@ export default component$(() => {
 
             {/* Mobile Sidebar - Toggleable */}
             <div
-                class={`fixed inset-y-0 left-0 z-50 w-64 bg-white/95 backdrop-blur-md shadow-xl border-r border-[#E8E2D4] transform transition-transform duration-300 ease-in-out lg:hidden ${
+                class={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r border-gray-300 transform transition-transform duration-300 ease-in-out lg:hidden ${
                     sidebarOpen.value ? 'translate-x-0' : '-translate-x-full'
-                }`} style="background-image: url('https://www.transparenttextures.com/patterns/subtle-white-feathers.png'); background-blend-mode: overlay;">
-                <div class="flex items-center justify-center h-16 border-b border-[#E8E2D4] bg-white/80">
+                }`}>
+                <div class="flex cursor-pointer items-center justify-center h-16 border-b border-gray-300 bg-white">
                     <div class="flex items-center gap-3">
                         <div class="relative">
                             <LuRocket class="w-7 h-7 text-[#2D3748]"/>
@@ -180,10 +219,10 @@ export default component$(() => {
                             onClick$={() => {
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'dashboard'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuBarChart3 class="w-5 h-5"/>
@@ -194,38 +233,39 @@ export default component$(() => {
                             onClick$={() => {
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'writers-circle'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuHeart class="w-5 h-5"/>
                             <span>Writers Circle</span>
                         </button>
 
-                        <button
+                        <Link
+                            href={`${userPath}/websites`}
                             onClick$={() => {
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                pageTitle.value === "website-builder"
-                                    ? "bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30"
-                                    : "text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white"
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                                pageTitle.value === "(website-builder)-builder"
+                                    ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30"
+                                    : "text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
                             }`}
                         >
                             <LuGlobe class="w-5 h-5"/>
                             <span>My Website</span>
-                        </button>
+                        </Link>
 
                         <button
                             onClick$={() => {
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'users'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuUsers class="w-5 h-5"/>
@@ -236,10 +276,10 @@ export default component$(() => {
                             onClick$={() => {
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                 pageTitle.value === 'settings'
-                                    ? 'bg-[#9CAF88]/20 text-white font-medium shadow-sm border border-[#9CAF88]/30'
-                                    : 'text-gray-300 hover:bg-[#9CAF88]/10 hover:text-white'
+                                    ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
+                                    : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
                             }`}
                         >
                             <LuSettings class="w-5 h-5"/>
@@ -248,21 +288,19 @@ export default component$(() => {
                     </div>
                     
                     {/* Mobile clean bottom section */}
-                    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#E8E2D4] bg-white/90">
-                        <button
-                            class="w-full bg-[#9CAF88] hover:bg-[#8a9e7a] text-white px-4 py-2.5 rounded-lg font-medium transition-colors mb-3">
-                            Create
-                        </button>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-300 bg-white">
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600">{currentUser.value?.name}</span>
-                            <button
-                                // onClick$={handleLogout}
-                                class="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
-                                title="Sign out"
-                            >
-                                <LuLogOut class="w-4 h-4"/>
-                                <span>Sign out</span>
-                            </button>
+                            <span class="text-gray-600">{authContext.user ? `${authContext.user.first_name} ${authContext.user.last_name}` : 'User'}</span>
+                            <Form action={logoutAction}>
+                                <button
+                                    type="submit"
+                                    class="flex cursor-pointer items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+                                    title="Sign out"
+                                >
+                                    <LuLogOut class="w-4 h-4"/>
+                                    <span>Sign out</span>
+                                </button>
+                            </Form>
                         </div>
                     </div>
                 </nav>

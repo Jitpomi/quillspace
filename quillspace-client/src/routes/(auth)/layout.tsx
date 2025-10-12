@@ -10,17 +10,16 @@ const checkAuthAndRedirect: RequestHandler = async ({ cookie, redirect }) => {
   }
 };
 
-export const onGet: RequestHandler = async ({ cacheControl, cookie, redirect }) => {
+export const onGet: RequestHandler = async ({ cacheControl, cookie, redirect, env }) => {
   // Route guard: Redirect authenticated users away from auth pages
   await checkAuthAndRedirect({ cookie, redirect } as any);
 
   // Control caching for this request for best performance and to reduce hosting costs:
   // https://qwik.builder.io/docs/caching/
   cacheControl({
-    // Always serve a cached response by default, up to a week stale
-    staleWhileRevalidate: 60 * 60 * 24 * 7,
-    // Max once every 5 seconds, revalidate on the server to get a fresh version of this page
-    maxAge: 5,
+    // In development, disable aggressive caching to prevent stale content
+    staleWhileRevalidate: env?.get('NODE_ENV') === 'production' ? 60 * 60 * 24 * 7 : 0,
+    maxAge: env?.get('NODE_ENV') === 'production' ? 5 : 0,
   });
 };
 

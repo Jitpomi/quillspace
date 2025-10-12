@@ -84,7 +84,7 @@ export function getAuthenticatedUserPath(cookie: Cookie): string {
   const tenantInfo = getTenantInfo(cookie);
   
   if (userInfo && tenantInfo) {
-    return `/tenants/${tenantInfo.slug}/users/${userInfo.id}`;
+    return `/tenants/${tenantInfo.slug}/users/${userInfo.first_name}`;
   }
   
   // Fallback to home page if user/tenant info is not available
@@ -96,6 +96,16 @@ export function getAuthenticatedUserPath(cookie: Cookie): string {
  */
 export function clearAuthToken(cookie: Cookie): void {
   cookie.delete('auth_token', { path: '/' });
+}
+
+/**
+ * Complete logout - clear all auth-related cookies and redirect
+ */
+export function logout(cookie: Cookie): void {
+  // Clear all authentication-related cookies
+  cookie.delete('auth_token', { path: '/' });
+  cookie.delete('user_info', { path: '/' });
+  cookie.delete('tenant_info', { path: '/' });
 }
 
 /**

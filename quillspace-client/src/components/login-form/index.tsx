@@ -63,7 +63,7 @@ export type FormFieldProps = {
 }
 
 export const useLogin = globalAction$(async (data, requestEvent) => {
-    const {env, cookie, redirect} = requestEvent;
+    const {env, cookie} = requestEvent;
     const API_BASE_URL = env.get('VITE_API_BASE_URL');
     
     try {
@@ -112,8 +112,8 @@ export const useLogin = globalAction$(async (data, requestEvent) => {
             });
             
             const tenantSlug = result.data.tenant.slug;
-            const userId = result.data.user.id;
-            const redirectPath = `/tenants/${tenantSlug}/users/${userId}`;
+            const firstName = result.data.user.first_name;
+            const redirectPath = `/tenants/${tenantSlug}/users/${firstName}`;
             console.log('Attempting redirect to:', redirectPath);
             
             // Return success and let client handle redirect
