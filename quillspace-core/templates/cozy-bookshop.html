@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - {{ site.name }}</title>
+    
+    <!-- SEO Meta Tags -->
+    {% if page.meta_description %}
+    <meta name="description" content="{{ page.meta_description }}">
+    {% endif %}
+    <meta property="og:title" content="{{ page.title }} - {{ site.name }}">
+    {% if page.meta_description %}
+    <meta property="og:description" content="{{ page.meta_description }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    {% if site.custom_domain %}
+    <link rel="canonical" href="https://{{ site.custom_domain }}/{{ page.slug }}">
+    {% else %}
+    <link rel="canonical" href="https://{{ site.subdomain }}.quillspace.app/{{ page.slug }}">
+    {% endif %}
+    
+    <!-- Cozy Bookshop Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Open+Sans:wght@300;400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['Merriweather', 'serif'],
+                        'sans': ['Open Sans', 'sans-serif'],
+                        'script': ['Dancing Script', 'cursive'],
+                    },
+                    colors: {
+                        'cozy': {
+                            brown: '#8b4513',
+                            warmBrown: '#a0522d',
+                            cream: '#faf7f2',
+                            orange: '#ff8c42',
+                            softOrange: '#ffb380',
+                            sage: '#87a96b',
+                            gold: '#daa520',
+                            coffee: '#6f4e37',
+                            parchment: '#f4f1e8',
+                        }
+                    },
+                    backgroundImage: {
+                        'wood-texture': "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><pattern id=\"wood\" width=\"100\" height=\"20\" patternUnits=\"userSpaceOnUse\"><rect width=\"100\" height=\"20\" fill=\"%23a0522d\"/><path d=\"M0 10 Q25 5 50 10 T100 10\" stroke=\"%238b4513\" stroke-width=\"1\" fill=\"none\" opacity=\"0.3\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23wood)\"/></svg>')",
+                        'paper-texture': "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><filter id=\"paper\"><feTurbulence baseFrequency=\"0.04\" numOctaves=\"5\" result=\"noise\" seed=\"1\"/><feDiffuseLighting in=\"noise\" lighting-color=\"white\" surfaceScale=\"1\"><feDistantLight azimuth=\"45\" elevation=\"60\"/></feDiffuseLighting></filter></defs><rect width=\"100\" height=\"100\" fill=\"%23faf7f2\" filter=\"url(%23paper)\"/></svg>')",
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.7;
+            background: #faf7f2;
+        }
+        
+        .font-serif {
+            font-family: 'Merriweather', serif;
+        }
+        
+        .font-script {
+            font-family: 'Dancing Script', cursive;
+        }
+        
+        /* Cozy Bookshop Styles */
+        .cozy-hero {
+            background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #6f4e37 100%);
+            position: relative;
+        }
+        
+        .cozy-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="1" fill="%23ffb380" opacity="0.3"/><circle cx="80" cy="40" r="0.5" fill="%23daa520" opacity="0.4"/><circle cx="60" cy="80" r="1.5" fill="%23ff8c42" opacity="0.2"/><circle cx="30" cy="70" r="0.8" fill="%2387a96b" opacity="0.3"/></svg>') repeat;
+            opacity: 0.6;
+        }
+        
+        .bookshelf-card {
+            background: #f4f1e8;
+            border: 2px solid #daa520;
+            border-radius: 12px;
+            box-shadow: 
+                0 4px 6px rgba(139, 69, 19, 0.1),
+                inset 0 1px 0 rgba(218, 165, 32, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .bookshelf-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #daa520, #ff8c42, #87a96b);
+            border-radius: 12px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .bookshelf-card:hover::before {
+            opacity: 1;
+        }
+        
+        .bookshelf-card:hover {
+            transform: translateY(-4px) rotate(1deg);
+            box-shadow: 
+                0 12px 24px rgba(139, 69, 19, 0.15),
+                inset 0 1px 0 rgba(218, 165, 32, 0.3);
+        }
+        
+        .btn-cozy {
+            background: linear-gradient(135deg, #ff8c42 0%, #daa520 100%);
+            color: #6f4e37;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 140, 66, 0.3);
+            font-family: 'Open Sans', sans-serif;
+        }
+        
+        .btn-cozy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 140, 66, 0.4);
+            background: linear-gradient(135deg, #ffb380 0%, #ff8c42 100%);
+        }
+        
+        .btn-outline-cozy {
+            background: transparent;
+            color: #ff8c42;
+            border: 2px solid #ff8c42;
+            padding: 0.875rem 1.875rem;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-cozy:hover {
+            background: #ff8c42;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 140, 66, 0.3);
+        }
+        
+        /* Warm glow effect */
+        .warm-glow {
+            box-shadow: 0 0 30px rgba(255, 140, 66, 0.2);
+        }
+        
+        /* Reading nook styles */
+        .reading-nook {
+            background: linear-gradient(135deg, #f4f1e8 0%, #faf7f2 100%);
+            border-radius: 20px;
+            position: relative;
+        }
+        
+        .reading-nook::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px dashed #daa520;
+            border-radius: 15px;
+            opacity: 0.3;
+        }
+        
+        /* Cozy typography */
+        .drop-cap-cozy::first-letter {
+            float: left;
+            font-family: 'Dancing Script', cursive;
+            font-size: 4.5rem;
+            line-height: 3.5rem;
+            padding-right: 0.5rem;
+            padding-top: 0.25rem;
+            color: #ff8c42;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
+        }
+        
+        /* Book spine effect */
+        .book-spine {
+            background: linear-gradient(90deg, #8b4513 0%, #a0522d 50%, #6f4e37 100%);
+            width: 8px;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-radius: 4px 0 0 4px;
+        }
+    </style>
+</head>
+<body class="bg-cozy-cream text-cozy-coffee">
+    <!-- Puck Content Container -->
+    <div id="puck-root">
+        {% if puck_data %}
+            <div data-puck-data="{{ puck_content | escape }}">
+                <!-- Fallback Cozy Bookshop Layout -->
+                
+                <!-- Warm Welcome Header -->
+                <div class="cozy-hero min-h-screen flex items-center justify-center text-white relative z-10">
+                    <div class="text-center max-w-5xl mx-auto px-6">
+                        <h1 class="text-5xl md:text-7xl font-script font-bold mb-6 leading-tight text-cozy-softOrange">
+                            {{ page.title | default("Welcome to My Reading Nook") }}
+                        </h1>
+                        {% if page.meta_description %}
+                        <p class="text-xl md:text-2xl mb-8 text-cozy-cream font-serif leading-relaxed max-w-4xl mx-auto">
+                            {{ page.meta_description }}
+                        </p>
+                        {% endif %}
+                        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                            <a href="#books" class="btn-cozy">Browse My Books</a>
+                            <a href="#about" class="btn-outline-cozy">Meet the Author</a>
+                        </div>
+                        <div class="mt-12 text-cozy-softOrange font-script text-lg">
+                            ✨ Curl up with a good story ✨
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bookshelf Section -->
+                <section id="books" class="py-20 bg-cozy-parchment">
+                    <div class="max-w-7xl mx-auto px-6">
+                        <div class="text-center mb-16">
+                            <h2 class="text-4xl md:text-5xl font-script font-bold text-cozy-brown mb-6">My Bookshelf</h2>
+                            <p class="text-xl text-cozy-coffee max-w-3xl mx-auto font-serif leading-relaxed">
+                                Each book is a doorway to a new world, carefully crafted with love and attention to detail. 
+                                Find your next favorite story here.
+                            </p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <!-- Book cards would be rendered by Puck components -->
+                            <div class="bookshelf-card p-8 relative">
+                                <div class="book-spine"></div>
+                                <div class="ml-4">
+                                    <div class="aspect-[3/4] bg-cozy-brown rounded-lg mb-6 flex items-center justify-center warm-glow">
+                                        <span class="text-cozy-cream font-script text-xl">Book Cover</span>
+                                    </div>
+                                    <h3 class="text-2xl font-serif font-bold text-cozy-brown mb-3">Cozy Mystery Title</h3>
+                                    <p class="text-cozy-coffee mb-4 leading-relaxed">
+                                        A heartwarming tale that will make you want to brew a cup of tea and settle in by the fireplace...
+                                    </p>
+                                    <div class="flex items-center justify-between">
+                                        <a href="#" class="text-cozy-orange font-semibold hover:text-cozy-brown transition-colors">Read More →</a>
+                                        <div class="flex text-cozy-gold">
+                                            ★★★★★
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-12">
+                            <a href="#" class="btn-cozy">View All Books</a>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Reading Nook About Section -->
+                <section id="about" class="py-20 bg-white">
+                    <div class="max-w-6xl mx-auto px-6">
+                        <div class="reading-nook p-12">
+                            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                                <div>
+                                    <h2 class="text-4xl md:text-5xl font-script font-bold text-cozy-brown mb-8">About {{ site.name | default("the Author") }}</h2>
+                                    <div class="prose prose-lg max-w-none">
+                                        <p class="drop-cap-cozy font-serif text-cozy-coffee leading-relaxed mb-6">
+                                            Welcome to my little corner of the literary world! I believe that the best stories are like warm hugs – 
+                                            they comfort you, make you feel at home, and leave you with a smile on your face.
+                                        </p>
+                                        <p class="font-serif text-cozy-coffee leading-relaxed mb-6">
+                                            When I'm not writing, you'll find me curled up in my favorite reading chair with a steaming mug of cocoa, 
+                                            a soft blanket, and a good book. I love stories that celebrate friendship, community, and the magic 
+                                            that can be found in everyday moments.
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-col sm:flex-row gap-4 mt-8">
+                                        <a href="#contact" class="btn-cozy">Let's Chat</a>
+                                        <a href="#newsletter" class="btn-outline-cozy">Join My Reading Circle</a>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <div class="aspect-square bg-cozy-parchment rounded-2xl flex items-center justify-center warm-glow">
+                                        <span class="text-cozy-coffee font-script text-2xl">Author Photo</span>
+                                    </div>
+                                    <div class="absolute -top-4 -right-4 w-16 h-16 bg-cozy-orange rounded-full flex items-center justify-center">
+                                        <span class="text-white font-script text-2xl">📚</span>
+                                    </div>
+                                    <div class="absolute -bottom-4 -left-4 w-12 h-12 bg-cozy-sage rounded-full flex items-center justify-center">
+                                        <span class="text-white text-xl">☕</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Cozy Newsletter Section -->
+                <section id="newsletter" class="py-20 bg-cozy-brown text-white">
+                    <div class="max-w-4xl mx-auto px-6 text-center">
+                        <h2 class="text-4xl font-script font-bold mb-6 text-cozy-softOrange">Join My Reading Circle</h2>
+                        <p class="text-xl mb-8 text-cozy-cream font-serif leading-relaxed">
+                            Get cozy book recommendations, behind-the-scenes writing stories, and be the first to know about new releases. 
+                            Plus, I'll share my favorite tea recipes! ☕
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+                            <input type="email" placeholder="Your email address" 
+                                   class="px-4 py-3 rounded-full text-cozy-coffee flex-1 focus:outline-none focus:ring-2 focus:ring-cozy-orange">
+                            <button class="btn-cozy whitespace-nowrap">Join the Circle</button>
+                        </div>
+                        <p class="text-sm text-cozy-softOrange mt-4 font-serif">
+                            No spam, just cozy book talk. Unsubscribe anytime. 💝
+                        </p>
+                    </div>
+                </section>
+            </div>
+        {% else %}
+            <!-- Default Cozy Bookshop Content -->
+            <div class="cozy-hero min-h-screen flex items-center justify-center text-white">
+                <div class="text-center max-w-4xl mx-auto px-6">
+                    <h1 class="text-6xl font-script font-bold mb-6 text-cozy-softOrange">{{ page.title }}</h1>
+                    {% if page.meta_description %}
+                    <p class="text-xl mb-8 text-cozy-cream font-serif">{{ page.meta_description }}</p>
+                    {% endif %}
+                    <p class="text-cozy-softOrange font-serif">Your cozy reading nook is being prepared with love and care.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Analytics -->
+    {% if site.seo_settings.google_analytics %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.seo_settings.google_analytics }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ site.seo_settings.google_analytics }}');
+    </script>
+    {% endif %}
+    
+    <!-- Puck Renderer -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const puckDataElement = document.querySelector('[data-puck-data]');
+            if (puckDataElement) {
+                try {
+                    const puckData = JSON.parse(puckDataElement.getAttribute('data-puck-data'));
+                    console.log('Cozy Bookshop template - Puck data loaded:', puckData);
+                    
+                    // Initialize Puck renderer with Cozy Bookshop components
+                    if (window.PuckRenderer) {
+                        window.PuckRenderer.render(puckData, {
+                            theme: 'cozy-bookshop',
+                            components: ['CozyHero', 'BookshelfGrid', 'ReadingNook', 'Newsletter', 'Testimonials']
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to parse Puck data:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

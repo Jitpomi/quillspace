@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - {{ site.name }}</title>
+    
+    <!-- SEO Meta Tags -->
+    {% if page.meta_description %}
+    <meta name="description" content="{{ page.meta_description }}">
+    {% endif %}
+    {% if page.meta_keywords %}
+    <meta name="keywords" content="{{ page.meta_keywords }}">
+    {% endif %}
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ page.title }} - {{ site.name }}">
+    {% if page.meta_description %}
+    <meta property="og:description" content="{{ page.meta_description }}">
+    {% endif %}
+    <meta property="og:site_name" content="{{ site.name }}">
+    <meta property="og:type" content="website">
+    
+    <!-- Canonical URL -->
+    {% if site.custom_domain %}
+    <link rel="canonical" href="https://{{ site.custom_domain }}/{{ page.slug }}">
+    {% else %}
+    <link rel="canonical" href="https://{{ site.subdomain }}.quillspace.app/{{ page.slug }}">
+    {% endif %}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['Crimson Text', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2D3748',
+                        accent: '#9CAF88',
+                        cream: '#FEFCF7',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- React and Puck for client-side rendering -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+        
+        .font-serif {
+            font-family: 'Crimson Text', serif;
+        }
+        
+        /* Custom styles for author (website-builder) */
+        .prose {
+            max-width: none;
+        }
+        
+        .prose h1, .prose h2, .prose h3 {
+            font-family: 'Crimson Text', serif;
+        }
+        
+        /* Smooth transitions */
+        * {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Custom button styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #9CAF88 0%, #8a9e7a 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(156, 175, 136, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-cream text-primary">
+    <!-- Puck Content Container -->
+    <div id="puck-root">
+        {% if puck_data %}
+            <!-- Puck data will be rendered here by client-side JavaScript -->
+            <div data-puck-data="{{ puck_content | escape }}">
+                <!-- Fallback content for SEO and no-JS users -->
+                <main class="min-h-screen">
+                    <div class="max-w-6xl mx-auto px-6 py-12">
+                        <h1 class="text-4xl font-serif font-bold mb-6">{{ page.title }}</h1>
+                        <div class="prose prose-lg">
+                            <p>Welcome to {{ site.name }}. This page was built with QuillSpace's visual editor.</p>
+                            {% if page.meta_description %}
+                            <p>{{ page.meta_description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </main>
+            </div>
+        {% else %}
+            <!-- Default content when no Puck data is available -->
+            <main class="min-h-screen flex items-center justify-center">
+                <div class="text-center max-w-2xl mx-auto px-6">
+                    <h1 class="text-5xl font-serif font-bold mb-6">{{ page.title }}</h1>
+                    {% if page.meta_description %}
+                    <p class="text-xl text-gray-600 mb-8">{{ page.meta_description }}</p>
+                    {% endif %}
+                    <p class="text-gray-500">This page is being built with QuillSpace's visual editor.</p>
+                </div>
+            </main>
+        {% endif %}
+    </div>
+    
+    <!-- Analytics and tracking (placeholder) -->
+    {% if site.seo_settings.google_analytics %}
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.seo_settings.google_analytics }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ site.seo_settings.google_analytics }}');
+    </script>
+    {% endif %}
+    
+    <!-- Puck Client-Side Renderer -->
+    <script>
+        // This would be replaced with actual Puck renderer in production
+        document.addEventListener('DOMContentLoaded', function() {
+            const puckDataElement = document.querySelector('[data-puck-data]');
+            if (puckDataElement) {
+                try {
+                    const puckData = JSON.parse(puckDataElement.getAttribute('data-puck-data'));
+                    console.log('Puck data loaded:', puckData);
+                    
+                    // Here we would initialize the Puck renderer
+                    // For now, we'll just log the data
+                    if (puckData.content && puckData.content.length > 0) {
+                        console.log('Puck components to render:', puckData.content.length);
+                    }
+                } catch (error) {
+                    console.error('Failed to parse Puck data:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

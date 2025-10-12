@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - {{ site.name }}</title>
+    
+    <!-- SEO Meta Tags -->
+    {% if page.meta_description %}
+    <meta name="description" content="{{ page.meta_description }}">
+    {% endif %}
+    <meta property="og:title" content="{{ page.title }} - {{ site.name }}">
+    {% if page.meta_description %}
+    <meta property="og:description" content="{{ page.meta_description }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    {% if site.custom_domain %}
+    <link rel="canonical" href="https://{{ site.custom_domain }}/{{ page.slug }}">
+    {% else %}
+    <link rel="canonical" href="https://{{ site.subdomain }}.quillspace.app/{{ page.slug }}">
+    {% endif %}
+    
+    <!-- Literary Classic Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Serif+Pro:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'Crimson Text', 'serif'],
+                        'body': ['Source Serif Pro', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'literary': {
+                            navy: '#1e293b',
+                            gold: '#d4af37',
+                            cream: '#fefdf8',
+                            parchment: '#f7f3e9',
+                            ink: '#374151',
+                        }
+                    },
+                    typography: {
+                        'literary': {
+                            css: {
+                                '--tw-prose-body': '#374151',
+                                '--tw-prose-headings': '#1e293b',
+                                '--tw-prose-lead': '#4b5563',
+                                '--tw-prose-links': '#d4af37',
+                                '--tw-prose-bold': '#1e293b',
+                                '--tw-prose-counters': '#6b7280',
+                                '--tw-prose-bullets': '#d1d5db',
+                                '--tw-prose-hr': '#e5e7eb',
+                                '--tw-prose-quotes': '#1e293b',
+                                '--tw-prose-quote-borders': '#d4af37',
+                                '--tw-prose-captions': '#6b7280',
+                                '--tw-prose-code': '#1e293b',
+                                '--tw-prose-pre-code': '#e5e7eb',
+                                '--tw-prose-pre-bg': '#1f2937',
+                                '--tw-prose-th-borders': '#d1d5db',
+                                '--tw-prose-td-borders': '#e5e7eb',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Source Serif Pro', serif;
+            line-height: 1.7;
+        }
+        
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        /* Literary Classic Styles */
+        .literary-hero {
+            background: linear-gradient(135deg, #1e293b 0%, #374151 100%);
+            position: relative;
+        }
+        
+        .literary-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="0.5" fill="%23ffffff" opacity="0.1"/><circle cx="75" cy="75" r="0.3" fill="%23ffffff" opacity="0.1"/><circle cx="50" cy="10" r="0.4" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+        
+        .literary-card {
+            background: #fefdf8;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .literary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .gold-accent {
+            color: #d4af37;
+        }
+        
+        .btn-literary {
+            background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+            color: #1e293b;
+            font-weight: 600;
+            padding: 0.875rem 2rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            font-family: 'Source Serif Pro', serif;
+        }
+        
+        .btn-literary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
+        }
+        
+        /* Elegant typography */
+        .drop-cap::first-letter {
+            float: left;
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            line-height: 3rem;
+            padding-right: 0.5rem;
+            padding-top: 0.25rem;
+            color: #d4af37;
+        }
+    </style>
+</head>
+<body class="bg-literary-cream text-literary-ink">
+    <!-- Puck Content Container -->
+    <div id="puck-root">
+        {% if puck_data %}
+            <div data-puck-data="{{ puck_content | escape }}">
+                <!-- Fallback Literary Classic Layout -->
+                <div class="literary-hero min-h-screen flex items-center justify-center text-white relative z-10">
+                    <div class="text-center max-w-4xl mx-auto px-6">
+                        <h1 class="text-6xl md:text-7xl font-serif font-bold mb-6 leading-tight">
+                            {{ page.title | default("Literary Excellence") }}
+                        </h1>
+                        {% if page.meta_description %}
+                        <p class="text-xl md:text-2xl mb-8 text-gray-200 font-body leading-relaxed">
+                            {{ page.meta_description }}
+                        </p>
+                        {% endif %}
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="#books" class="btn-literary">Explore My Works</a>
+                            <a href="#about" class="border border-literary-gold text-literary-gold px-8 py-3 rounded-md hover:bg-literary-gold hover:text-literary-navy transition-all duration-300">About the Author</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Featured Books Section -->
+                <section id="books" class="py-20 bg-literary-parchment">
+                    <div class="max-w-7xl mx-auto px-6">
+                        <div class="text-center mb-16">
+                            <h2 class="text-4xl md:text-5xl font-serif font-bold text-literary-navy mb-6">Featured Works</h2>
+                            <p class="text-xl text-literary-ink max-w-3xl mx-auto font-body">
+                                Discover stories that transport you to different worlds, crafted with literary precision and emotional depth.
+                            </p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <!-- Book cards would be rendered by Puck components -->
+                            <div class="literary-card p-8 rounded-lg">
+                                <div class="aspect-[3/4] bg-literary-navy rounded-md mb-6 flex items-center justify-center">
+                                    <span class="text-literary-gold font-serif text-lg">Book Cover</span>
+                                </div>
+                                <h3 class="text-2xl font-serif font-bold text-literary-navy mb-3">Sample Title</h3>
+                                <p class="text-literary-ink mb-4 font-body">A compelling description that draws readers into the world you've created...</p>
+                                <a href="#" class="gold-accent font-semibold hover:underline">Read More →</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- About Section -->
+                <section id="about" class="py-20 bg-white">
+                    <div class="max-w-6xl mx-auto px-6">
+                        <div class="grid lg:grid-cols-2 gap-12 items-center">
+                            <div>
+                                <h2 class="text-4xl md:text-5xl font-serif font-bold text-literary-navy mb-8">About {{ site.name | default("the Author") }}</h2>
+                                <div class="prose prose-literary prose-lg">
+                                    <p class="drop-cap">
+                                        Every story begins with a single word, a moment of inspiration that grows into something larger than life. 
+                                        As an author, I believe in the power of literature to transform, inspire, and connect us across time and space.
+                                    </p>
+                                    <p>
+                                        My work explores the depths of human experience, weaving together themes of love, loss, redemption, 
+                                        and the eternal search for meaning in our complex world.
+                                    </p>
+                                </div>
+                                <div class="mt-8">
+                                    <a href="#contact" class="btn-literary">Get in Touch</a>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <div class="aspect-square bg-literary-parchment rounded-lg flex items-center justify-center">
+                                    <span class="text-literary-ink font-serif text-lg">Author Photo</span>
+                                </div>
+                                <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-literary-gold rounded-full flex items-center justify-center">
+                                    <span class="text-literary-navy font-serif text-2xl">"</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        {% else %}
+            <!-- Default Literary Classic Content -->
+            <div class="literary-hero min-h-screen flex items-center justify-center text-white">
+                <div class="text-center max-w-4xl mx-auto px-6">
+                    <h1 class="text-6xl font-serif font-bold mb-6">{{ page.title }}</h1>
+                    {% if page.meta_description %}
+                    <p class="text-xl mb-8 text-gray-200">{{ page.meta_description }}</p>
+                    {% endif %}
+                    <p class="text-gray-300">This literary masterpiece is being crafted with QuillSpace's visual editor.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Analytics -->
+    {% if site.seo_settings.google_analytics %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.seo_settings.google_analytics }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ site.seo_settings.google_analytics }}');
+    </script>
+    {% endif %}
+    
+    <!-- Puck Renderer -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const puckDataElement = document.querySelector('[data-puck-data]');
+            if (puckDataElement) {
+                try {
+                    const puckData = JSON.parse(puckDataElement.getAttribute('data-puck-data'));
+                    console.log('Literary Classic template - Puck data loaded:', puckData);
+                    
+                    // Initialize Puck renderer with Literary Classic components
+                    if (window.PuckRenderer) {
+                        window.PuckRenderer.render(puckData, {
+                            theme: 'literary-classic',
+                            components: ['Hero', 'BookCard', 'AuthorBio', 'Testimonial', 'Newsletter']
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to parse Puck data:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

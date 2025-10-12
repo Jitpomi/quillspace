@@ -113,7 +113,7 @@ CREATE TABLE templates (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Author websites
+-- Author (website-builder)
 CREATE TABLE sites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID REFERENCES tenants(id),
