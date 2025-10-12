@@ -18,16 +18,16 @@ VALUES (
     role = EXCLUDED.role,
     updated_at = NOW();
 
--- Insert Josephine Nakimuli (real user)
+-- Insert Josephine Nakimuli (real user) - Now part of Black Writers Ink
 INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role)
 VALUES (
     'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
     'joeykigozi@yahoo.co.uk',
     'Josephine',
     'Nakimuli',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/A5/jF/XZm', -- "secret"
-    'admin'
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', -- "secret"
+    'editor'
 ) ON CONFLICT (tenant_id, email) DO UPDATE SET
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
@@ -76,10 +76,10 @@ VALUES
         'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         NOW() - INTERVAL '3 days'
     ),
-    -- Insert content for Josephine Nakimuli
+    -- Insert content for Josephine Nakimuli (now in Black Writers Ink)
     (
         'bbbbb001-cccc-dddd-eeee-ffffffffffff',
-        '22222222-2222-2222-2222-222222222222',
+        '11111111-1111-1111-1111-111111111111',
         'Creative Expression in the Digital Age',
         'creative-expression-digital',
         'As Josephine Nakimuli, I believe creativity knows no bounds. This digital space allows me to explore various forms of expression, from written word to multimedia storytelling.',
@@ -89,7 +89,7 @@ VALUES
     ),
     (
         'bbbbb002-cccc-dddd-eeee-ffffffffffff',
-        '22222222-2222-2222-2222-222222222222',
+        '11111111-1111-1111-1111-111111111111',
         'Building Authentic Connections',
         'authentic-connections',
         'In our interconnected world, authentic connections matter more than ever. Through this platform, I hope to build meaningful relationships with readers who resonate with my work.',
@@ -99,7 +99,7 @@ VALUES
     ),
     (
         'bbbbb003-cccc-dddd-eeee-ffffffffffff',
-        '22222222-2222-2222-2222-222222222222',
+        '11111111-1111-1111-1111-111111111111',
         'Work in Progress: Future Vision',
         'future-vision-draft',
         'This is a draft exploring my vision for the future of digital creativity and community building. Still developing these ideas...',
@@ -128,8 +128,8 @@ DECLARE
 BEGIN
     SELECT COUNT(*) INTO tenant_count FROM tenants;
     SELECT COUNT(*) INTO user_count FROM users;
-    SELECT COUNT(*) INTO yasin_content FROM content WHERE tenant_id = '11111111-1111-1111-1111-111111111111';
-    SELECT COUNT(*) INTO joey_content FROM content WHERE tenant_id = '22222222-2222-2222-2222-222222222222';
+    SELECT COUNT(*) INTO yasin_content FROM content WHERE tenant_id = '11111111-1111-1111-1111-111111111111' AND author_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    SELECT COUNT(*) INTO joey_content FROM content WHERE tenant_id = '11111111-1111-1111-1111-111111111111' AND author_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
     SELECT COUNT(*) INTO total_content FROM content;
     SELECT COUNT(*) INTO published_count FROM content WHERE status = 'published';
     SELECT COUNT(*) INTO draft_count FROM content WHERE status = 'draft';
@@ -146,14 +146,13 @@ BEGIN
     RAISE NOTICE '   • Draft Articles: %', draft_count;
     RAISE NOTICE '';
     RAISE NOTICE '🔑 User Credentials (password: secret):';
-    RAISE NOTICE '   • System Admin: admin@quillspace.com';
-    RAISE NOTICE '   • Yasin Kakande: yasinkak@gmail.com';
-    RAISE NOTICE '   • Josephine Nakimuli: joeykigozi@yahoo.co.uk';
+    RAISE NOTICE '   • System Admin: admin@quillspace.com (JITPOMI)';
+    RAISE NOTICE '   • Yasin Kakande (Admin): yasinkak@gmail.com (Black Writers Ink)';
+    RAISE NOTICE '   • Josephine Nakimuli (Editor): joeykigozi@yahoo.co.uk (Black Writers Ink)';
     RAISE NOTICE '';
     RAISE NOTICE '🏢 Tenants:';
-    RAISE NOTICE '   • System Admin: system-admin';
-    RAISE NOTICE '   • Yasin Kakande: yasin-kakande';
-    RAISE NOTICE '   • Josephine Nakimuli: josephine-nakimuli';
+    RAISE NOTICE '   • JITPOMI (System): jitpomi';
+    RAISE NOTICE '   • Black Writers Ink: black-writers-ink (Yasin & Josephine)';
     RAISE NOTICE '';
     RAISE NOTICE '🚀 Ready for production use!';
 END
