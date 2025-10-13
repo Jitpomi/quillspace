@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::{
     auth::jwt_helpers::extract_auth_context,
     services::page::{CreatePageRequest, PageService, PublishPageRequest, UpdatePageRequest},
+    services::pages::{PageService as PuckPageService, SavePageDraftRequest, SwitchTemplateRequest},
     types::ApiResponse,
     AppState,
 };
@@ -75,6 +76,11 @@ pub fn pages_router() -> Router<AppState> {
         .route("/pages/:page_id", get(get_page).put(update_page).delete(delete_page))
         .route("/pages/:page_id/publish", post(publish_page))
         .route("/pages/:page_id/unpublish", post(unpublish_page))
+        // New Puck/MiniJinja endpoints
+        .route("/pages/:page_id/draft", put(save_page_draft))
+        .route("/pages/:page_id/template", put(switch_page_template))
+        .route("/pages/:page_id/preview-link", post(generate_preview_link))
+        .route("/preview/:token", get(render_preview_page))
 }
 
 /// List pages for a site
@@ -399,6 +405,187 @@ pub async fn reorder_pages(
         Err(e) => {
             error!("Failed to reorder pages: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Save page draft (Puck composition JSON)
+pub async fn save_page_draft(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(page_id): Path<Uuid>,
+    Json(request): Json<SavePageDraftRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let request_id = Uuid::new_v4();
+
+    // Create Puck page service with template cache
+    let template_cache = state.template_cache.clone();
+    let render_defaults = state.render_defaults.clone();
+    let puck_service = PuckPageService::new(
+        state.db.postgres().clone(),
+        template_cache,
+        render_defaults,
+    );
+
+    match puck_service.save_draft(page_id, tenant_id, request).await {
+        Ok(page) => {
+            info!("Saved draft for page {} tenant {}", page_id, tenant_id);
+
+            let response_page = PageDetailResponse {
+                id: page.id,
+                site_id: page.site_id,
+                slug: page.slug,
+                title: page.title,
+                meta_description: None, // TODO: Extract from composition
+                meta_keywords: None,
+                puck_data: serde_json::to_value(&page.draft_composition).unwrap_or_default(),
+                is_published: page.is_published,
+                published_at: None, // TODO: Add published_at to new Page struct
+                sort_order: 0, // TODO: Add sort_order to new Page struct
+                created_at: page.created_at,
+                updated_at: page.updated_at,
+            };
+
+            let response = ApiResponse::success(response_page, request_id);
+            Ok((StatusCode::OK, Json(response)))
+        }
+        Err(e) => {
+            error!("Failed to save page draft: {}", e);
+            match e {
+                crate::services::pages::PageServiceError::PageNotFound(_) => Err(StatusCode::NOT_FOUND),
+                crate::services::pages::PageServiceError::TemplateNotFound(_) => Err(StatusCode::BAD_REQUEST),
+                _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
+    }
+}
+
+/// Switch page template
+pub async fn switch_page_template(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(page_id): Path<Uuid>,
+    Json(request): Json<SwitchTemplateRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let request_id = Uuid::new_v4();
+
+    let template_cache = state.template_cache.clone();
+    let render_defaults = state.render_defaults.clone();
+    let puck_service = PuckPageService::new(
+        state.db.postgres().clone(),
+        template_cache,
+        render_defaults,
+    );
+
+    match puck_service.switch_template(page_id, tenant_id, request).await {
+        Ok(page) => {
+            info!("Switched template for page {} tenant {}", page_id, tenant_id);
+
+            let response_page = PageDetailResponse {
+                id: page.id,
+                site_id: page.site_id,
+                slug: page.slug,
+                title: page.title,
+                meta_description: None,
+                meta_keywords: None,
+                puck_data: serde_json::to_value(&page.draft_composition).unwrap_or_default(),
+                is_published: page.is_published,
+                published_at: None,
+                sort_order: 0,
+                created_at: page.created_at,
+                updated_at: page.updated_at,
+            };
+
+            let response = ApiResponse::success(response_page, request_id);
+            Ok((StatusCode::OK, Json(response)))
+        }
+        Err(e) => {
+            error!("Failed to switch page template: {}", e);
+            match e {
+                crate::services::pages::PageServiceError::PageNotFound(_) => Err(StatusCode::NOT_FOUND),
+                crate::services::pages::PageServiceError::TemplateNotFound(_) => Err(StatusCode::BAD_REQUEST),
+                _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
+    }
+}
+
+/// Generate preview link for page
+pub async fn generate_preview_link(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(page_id): Path<Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let (tenant_id, _user_id) = extract_auth_context(&headers, &state.jwt_manager)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let request_id = Uuid::new_v4();
+
+    let template_cache = state.template_cache.clone();
+    let render_defaults = state.render_defaults.clone();
+    let puck_service = PuckPageService::new(
+        state.db.postgres().clone(),
+        template_cache,
+        render_defaults,
+    );
+
+    let base_url = state.config.base_url.as_deref().unwrap_or("http://localhost:3000");
+
+    match puck_service.generate_preview_link(page_id, tenant_id, base_url).await {
+        Ok(preview_response) => {
+            let response = ApiResponse::success(preview_response, request_id);
+            Ok((StatusCode::OK, Json(response)))
+        }
+        Err(e) => {
+            error!("Failed to generate preview link: {}", e);
+            match e {
+                crate::services::pages::PageServiceError::PageNotFound(_) => Err(StatusCode::NOT_FOUND),
+                _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
+    }
+}
+
+/// Render preview page from token
+pub async fn render_preview_page(
+    State(state): State<AppState>,
+    Path(token): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let template_cache = state.template_cache.clone();
+    let render_defaults = state.render_defaults.clone();
+    let puck_service = PuckPageService::new(
+        state.db.postgres().clone(),
+        template_cache,
+        render_defaults,
+    );
+
+    // Parse token to get tenant_id and page_id
+    let (tenant_id, page_id, _expires_at) = match puck_service.parse_preview_token(&token) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            error!("Invalid preview token: {}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    // Render preview HTML
+    match puck_service.render_preview(page_id, tenant_id, None).await {
+        Ok(html) => {
+            let headers = [
+                ("content-type", "text/html; charset=utf-8"),
+                ("cache-control", "no-cache, no-store, must-revalidate"),
+            ];
+            Ok((StatusCode::OK, headers, html))
+        }
+        Err(e) => {
+            error!("Failed to render preview: {}", e);
+            match e {
+                crate::services::pages::PageServiceError::PageNotFound(_) => Err(StatusCode::NOT_FOUND),
+                _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
         }
     }
 }
