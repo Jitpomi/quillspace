@@ -1,9 +1,10 @@
 import { component$ } from "@builder.io/qwik";
-import type { DocumentHead } from "@builder.io/qwik-city";
+import {DocumentHead, useNavigate} from "@builder.io/qwik-city";
 import { LuBookOpen, LuPenTool, LuUsers, LuTrendingUp, LuShield, LuArrowRight, LuStar, LuQuote, LuHeart, LuFeather, LuBarChart3, LuGlobe } from "@qwikest/icons/lucide";
 import { WrapBalancer } from "qwikjs-wrap-balancer";
 
 export default component$(() => {
+  const nav = useNavigate();
   return (
     <>
       {/* Hero Section - Writer's Sanctuary */}
@@ -26,7 +27,7 @@ export default component$(() => {
         <div class="relative z-10 max-w-7xl mx-auto px-4 py-20">
           <div class="text-center">
             {/* Logo with Animation */}
-            <div class="flex justify-center items-center gap-4 mb-12 animate-fade-in">
+            <div class="flex cursor-pointer justify-center items-center gap-4 mb-12 animate-fade-in">
               <div class="relative">
                 <LuFeather class="w-16 h-16 text-[#9CAF88] drop-shadow-lg" />
                 <div class="absolute -inset-2 bg-[#9CAF88]/10 rounded-full blur-xl"></div>
@@ -696,7 +697,9 @@ export default component$(() => {
       {/* Simple Footer */}
       <footer class="py-12 bg-[#2c1810] text-white text-center">
         <div class="max-w-6xl mx-auto px-4">
-          <div class="flex justify-center items-center gap-3 mb-6">
+          <div onClick$={async () => {
+            await nav('/')
+          }} class="flex cursor-pointer justify-center items-center gap-3 mb-6">
             <LuFeather class="w-8 h-8 text-[#d4af37]" />
             <span class="text-2xl font-bold">QuillSpace</span>
           </div>

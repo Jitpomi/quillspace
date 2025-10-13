@@ -12,7 +12,11 @@ import {
     LuBarChart3,
     LuRocket,
     LuHeart,
-    LuFeather
+    LuFeather,
+    LuChevronLeft,
+    LuChevronRight,
+    LuPanelLeft,
+    LuPanelLeftClose
 } from "@qwikest/icons/lucide";
 import { AuthContextId, type AuthContext } from '~/contexts/auth';
 import { useAuth } from '~/hooks/useAuth';
@@ -81,6 +85,7 @@ export default component$(() => {
     const logoutAction = useLogoutAction();
     const location = useLocation();
     const sidebarOpen = useSignal(false);
+    const sidebarCollapsed = useSignal(false);
     const nav = useNavigate();
     
     // Provide auth context to all child components
@@ -94,37 +99,63 @@ export default component$(() => {
 
     return (
         <div class="min-h-screen bg-gradient-to-br from-green-50 via-sage-50 to-green-100" style="background-image: url('/feathers.png');">
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
             {/* Sidebar - Literary sanctuary feel */}
             <div
-                class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r border-gray-300 hidden lg:block">
+                class={`fixed inset-y-0 left-0 z-50 bg-white shadow-xl border-r border-gray-300 hidden lg:block transition-all duration-300 ${
+                    sidebarCollapsed.value ? 'w-16' : 'w-64'
+                }`}>
                 {/* Literary Header */}
-                <div class="flex cursor-pointer items-center justify-center h-16 border-b border-gray-300 bg-white">
+                <div class="flex items-center h-16 border-b border-gray-300 bg-white px-4 relative">
                     <button onClick$={async () => {
                         await nav('/')
-                    }} class="flex items-center gap-3">
+                    }} class="flex items-center gap-3 flex-1">
                         <div class="relative">
                             <LuFeather class="w-8 h-8 text-[#9CAF88] drop-shadow-lg" />
                             <div class="absolute -inset-1 bg-[#9CAF88]/10 rounded-full blur-sm"></div>
                         </div>
-                        <span class="text-xl font-semibold text-[#2D3748] tracking-wide">QuillSpace</span>
+                        {!sidebarCollapsed.value && (
+                            <span class="text-xl font-semibold text-[#2D3748] tracking-wide opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.1s_forwards]">QuillSpace</span>
+                        )}
                     </button>
                 </div>
 
-                <nav class="mt-8 px-4">
+                {/* Sidebar Toggle Button - Professional panel controls */}
+                <button
+                    onClick$={() => sidebarCollapsed.value = !sidebarCollapsed.value}
+                    class="absolute top-4 -right-6 z-60 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center group hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
+                    title={sidebarCollapsed.value ? 'Show sidebar' : 'Hide sidebar'}
+                >
+                    {sidebarCollapsed.value ? (
+                        <LuPanelLeft class="w-5 h-5 text-gray-600 group-hover:text-gray-800" />
+                    ) : (
+                        <LuPanelLeftClose class="w-5 h-5 text-gray-600 group-hover:text-gray-800" />
+                    )}
+                </button>
+
+                <nav class={`mt-8 ${sidebarCollapsed.value ? 'px-2' : 'px-4'}`}>
                     <div class="space-y-2">
                         <button
                             onClick$={async () => {
                                 await nav(`${userPath}/`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                            class={`w-full cursor-pointer flex items-center rounded-xl transition-all duration-300 ${
                                 location.url.pathname=== `${userPath}/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-                            }`}
+                            } ${sidebarCollapsed.value ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'}`}
+                            title={sidebarCollapsed.value ? 'Writing Desk' : ''}
                         >
                             <LuHome class="w-5 h-5"/>
-                            <span>Writing Desk</span>
+                            {!sidebarCollapsed.value && (
+                                <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.1s_forwards]">Writing Desk</span>
+                            )}
                         </button>
 
                         <button
@@ -132,14 +163,17 @@ export default component$(() => {
                                 await nav(`${userPath}/writers`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center rounded-xl transition-all duration-200 ${
                                 location.url.pathname === `${userPath}/writers` || location.url.pathname === `${userPath}/writers/`
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-                            }`}
+                            } ${sidebarCollapsed.value ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'}`}
+                            title={sidebarCollapsed.value ? 'Writers Circle' : ''}
                         >
                             <LuHeart class="w-5 h-5"/>
-                            <span>Writers Circle</span>
+                            {!sidebarCollapsed.value && (
+                                <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.15s_forwards]">Writers Circle</span>
+                            )}
                         </button>
 
                         <button
@@ -147,14 +181,17 @@ export default component$(() => {
                                 await nav(`${userPath}/websites`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center rounded-xl transition-all duration-200 ${
                                 location.url.pathname.includes('websites')
                                     ? "bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30"
                                     : "text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]"
-                            }`}
+                            } ${sidebarCollapsed.value ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'}`}
+                            title={sidebarCollapsed.value ? 'Websites' : ''}
                         >
                             <LuGlobe class="w-5 h-5"/>
-                            <span>Websites</span>
+                            {!sidebarCollapsed.value && (
+                                <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.2s_forwards]">Websites</span>
+                            )}
                         </button>
 
                         <button
@@ -162,14 +199,17 @@ export default component$(() => {
                                 await nav(`${userPath}/readers`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center rounded-xl transition-all duration-200 ${
                                 location.url.pathname.includes('readers')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-                            }`}
+                            } ${sidebarCollapsed.value ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'}`}
+                            title={sidebarCollapsed.value ? 'Readers' : ''}
                         >
                             <LuUsers class="w-5 h-5"/>
-                            <span>Readers</span>
+                            {!sidebarCollapsed.value && (
+                                <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.25s_forwards]">Readers</span>
+                            )}
                         </button>
 
                         <button
@@ -177,33 +217,54 @@ export default component$(() => {
                                 await nav(`${userPath}/settings`);
                                 sidebarOpen.value = false;
                             }}
-                            class={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                            class={`w-full cursor-pointer flex items-center rounded-xl transition-all duration-200 ${
                                 location.url.pathname.includes('settings')
                                     ? 'bg-[#9CAF88]/20 text-[#2D3748] font-medium shadow-sm border border-[#9CAF88]/30'
                                     : 'text-gray-700 hover:bg-[#9CAF88]/10 hover:text-[#2D3748]'
-                            }`}
+                            } ${sidebarCollapsed.value ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'}`}
+                            title={sidebarCollapsed.value ? 'Settings' : ''}
                         >
                             <LuSettings class="w-5 h-5"/>
-                            <span>Settings</span>
+                            {!sidebarCollapsed.value && (
+                                <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.3s_forwards]">Settings</span>
+                            )}
                         </button>
                     </div>
                     
                     {/* Literary bottom section */}
                     <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-300 bg-white">
-
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600">{authContext.user ? `${authContext.user.first_name} ${authContext.user.last_name}` : 'User'}</span>
-                            <Form action={logoutAction}>
-                                <button
-                                    type="submit"
-                                    class="flex cursor-pointer items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
-                                    title="Sign out"
-                                >
-                                    <LuLogOut class="w-4 h-4"/>
-                                    <span>Sign out</span>
-                                </button>
-                            </Form>
-                        </div>
+                        {sidebarCollapsed.value ? (
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-8 h-8 bg-[#9CAF88]/20 rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-medium text-[#2D3748]">
+                                        {authContext.user ? authContext.user.first_name.charAt(0).toUpperCase() : 'U'}
+                                    </span>
+                                </div>
+                                <Form action={logoutAction}>
+                                    <button
+                                        type="submit"
+                                        class="p-1 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+                                        title="Sign out"
+                                    >
+                                        <LuLogOut class="w-4 h-4"/>
+                                    </button>
+                                </Form>
+                            </div>
+                        ) : (
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600 opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.1s_forwards]">{authContext.user ? `${authContext.user.first_name} ${authContext.user.last_name}` : 'User'}</span>
+                                <Form action={logoutAction}>
+                                    <button
+                                        type="submit"
+                                        class="flex cursor-pointer items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+                                        title="Sign out"
+                                    >
+                                        <LuLogOut class="w-4 h-4"/>
+                                        <span class="opacity-0 animate-[fadeIn_0.3s_ease-in-out_0.15s_forwards]">Sign out</span>
+                                    </button>
+                                </Form>
+                            </div>
+                        )}
                     </div>
                 </nav>
             </div>
@@ -327,7 +388,9 @@ export default component$(() => {
             </div>
 
             {/* Main Content */}
-            <div class="lg:pl-64">
+            <div class={`transition-all duration-300 ${
+                sidebarCollapsed.value ? 'lg:pl-16' : 'lg:pl-64'
+            }`}>
                 {/* Mobile menu button - only visible on mobile */}
                 <div class="lg:hidden fixed top-4 left-4 z-40">
                     <button
