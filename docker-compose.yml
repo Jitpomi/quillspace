@@ -66,6 +66,8 @@ services:
       - QUILLSPACE__CLICKHOUSE__DATABASE=analytics_dev
       - QUILLSPACE__SERVER__HOST=0.0.0.0
       - QUILLSPACE__AUTH__JWT_SECRET=${JWT_SECRET:-your-super-secure-jwt-secret-key-that-is-at-least-32-characters-long-change-in-production}
+      - QUILLSPACE_WIX_API_KEY=${QUILLSPACE_WIX_API_KEY}
+      - QUILLSPACE_WIX_ACCOUNT_ID=${QUILLSPACE_WIX_ACCOUNT_ID}
     ports:
       - "3001:3000"
     depends_on:

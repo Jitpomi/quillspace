@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, Map};
-use std::collections::HashMap;
-use uuid::Uuid;
+use chrono::Datelike;
 
 /// Puck composition structure from the editor
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,7 +136,7 @@ fn transform_block(block: &PuckBlock) -> Result<RenderBlock, CompositionError> {
 /// Extract SEO meta information from content blocks
 fn extract_meta_from_content(content: &[RenderBlock], defaults: &RenderDefaults) -> RenderMeta {
     let mut description = None;
-    let mut keywords = Vec::new();
+    let keywords = Vec::new();
     let mut og_image = None;
 
     for block in content {
@@ -318,7 +317,7 @@ impl ToTitleCase for str {
                 let mut chars = word.chars();
                 match chars.next() {
                     None => String::new(),
-                    Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str().to_lowercase().as_str(),
                 }
             })
             .collect::<Vec<_>>()

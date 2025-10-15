@@ -420,16 +420,15 @@ pub async fn save_page_draft(
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
 
-    // Create Puck page service with template cache
-    let template_cache = state.template_cache.clone();
-    let render_defaults = state.render_defaults.clone();
-    let puck_service = PuckPageService::new(
+    // Create page service with template engine
+    let template_engine = &state.template_engine;
+    let page_service = PageService::new(
         state.db.postgres().clone(),
-        template_cache,
-        render_defaults,
+        template_engine.template_cache.clone(),
+        template_engine.render_defaults.clone(),
     );
 
-    match puck_service.save_draft(page_id, tenant_id, request).await {
+    match page_service.save_draft(page_id, tenant_id, request).await {
         Ok(page) => {
             info!("Saved draft for page {} tenant {}", page_id, tenant_id);
 
@@ -473,15 +472,14 @@ pub async fn switch_page_template(
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
 
-    let template_cache = state.template_cache.clone();
-    let render_defaults = state.render_defaults.clone();
-    let puck_service = PuckPageService::new(
+    let template_engine = &state.template_engine;
+    let page_service = PageService::new(
         state.db.postgres().clone(),
-        template_cache,
-        render_defaults,
+        template_engine.template_cache.clone(),
+        template_engine.render_defaults.clone(),
     );
 
-    match puck_service.switch_template(page_id, tenant_id, request).await {
+    match page_service.switch_template(page_id, tenant_id, request).await {
         Ok(page) => {
             info!("Switched template for page {} tenant {}", page_id, tenant_id);
 
@@ -524,17 +522,16 @@ pub async fn generate_preview_link(
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     let request_id = Uuid::new_v4();
 
-    let template_cache = state.template_cache.clone();
-    let render_defaults = state.render_defaults.clone();
-    let puck_service = PuckPageService::new(
+    let template_engine = &state.template_engine;
+    let page_service = PageService::new(
         state.db.postgres().clone(),
-        template_cache,
-        render_defaults,
+        template_engine.template_cache.clone(),
+        template_engine.render_defaults.clone(),
     );
 
     let base_url = state.config.base_url.as_deref().unwrap_or("http://localhost:3000");
 
-    match puck_service.generate_preview_link(page_id, tenant_id, base_url).await {
+    match page_service.generate_preview_link(page_id, tenant_id, base_url).await {
         Ok(preview_response) => {
             let response = ApiResponse::success(preview_response, request_id);
             Ok((StatusCode::OK, Json(response)))
@@ -554,16 +551,15 @@ pub async fn render_preview_page(
     State(state): State<AppState>,
     Path(token): Path<String>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let template_cache = state.template_cache.clone();
-    let render_defaults = state.render_defaults.clone();
-    let puck_service = PuckPageService::new(
+    let template_engine = &state.template_engine;
+    let page_service = PageService::new(
         state.db.postgres().clone(),
-        template_cache,
-        render_defaults,
+        template_engine.template_cache.clone(),
+        template_engine.render_defaults.clone(),
     );
 
     // Parse token to get tenant_id and page_id
-    let (tenant_id, page_id, _expires_at) = match puck_service.parse_preview_token(&token) {
+    let (tenant_id, page_id, _expires_at) = match page_service.parse_preview_token(&token) {
         Ok(parsed) => parsed,
         Err(e) => {
             error!("Invalid preview token: {}", e);
@@ -572,7 +568,7 @@ pub async fn render_preview_page(
     };
 
     // Render preview HTML
-    match puck_service.render_preview(page_id, tenant_id, None).await {
+    match page_service.render_preview(page_id, tenant_id, None).await {
         Ok(html) => {
             let headers = [
                 ("content-type", "text/html; charset=utf-8"),

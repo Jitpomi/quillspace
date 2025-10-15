@@ -17,7 +17,6 @@ use crate::{
     auth::{JwtManager, CasbinAuthorizer},
     config::AppConfig,
     database::DatabaseConnections,
-    services::TemplateEngine,
 };
 // Removed unused Deserialize import
 use std::{net::SocketAddr, sync::Arc};
@@ -34,7 +33,6 @@ pub struct AppState {
     pub jwt_secret: Arc<String>,
     pub jwt_manager: Arc<JwtManager>,
     pub authorizer: Arc<CasbinAuthorizer>,
-    pub template_engine: Arc<TemplateEngine>,
     pub request_count: Arc<Mutex<usize>>,
 }
 
@@ -43,13 +41,11 @@ impl AppState {
         let db = DatabaseConnections::new(&config.database.url, &config.clickhouse).await?;
         let jwt_manager = JwtManager::new(&config.auth.jwt_secret, "quillspace");
         let authorizer = CasbinAuthorizer::new().await?;
-        let template_engine = TemplateEngine::new(Arc::new(db.clone()))?;
         
         Ok(Self {
             jwt_secret: Arc::new(config.auth.jwt_secret.clone()),
             jwt_manager: Arc::new(jwt_manager),
             authorizer: Arc::new(authorizer),
-            template_engine: Arc::new(template_engine),
             config: Arc::new(config),
             db,
             request_count: Arc::new(Mutex::new(0)),
@@ -136,7 +132,7 @@ async fn create_app(state: AppState) -> anyhow::Result<Router> {
         .route("/ping", get(ping))
         
         // API routes
-        .nest("/api", create_api_routes())
+        .nest("/api", routes::create_routes())
         
         // Middleware stack (applied in reverse order)
         .layer(
@@ -150,27 +146,6 @@ async fn create_app(state: AppState) -> anyhow::Result<Router> {
     Ok(app)
 }
 
-/// Create API routes with proper organization
-fn create_api_routes() -> Router<AppState> {
-    Router::new()
-        // Enable API routes
-        .nest("/auth", routes::auth::create_routes())
-        .nest("/tenants", routes::tenants::create_routes())
-        .nest("/content", routes::content::create_routes())
-        .nest("/analytics", routes::analytics::create_routes())
-        .nest("/users", routes::users::create_routes())
-        .nest("/templates", routes::templates::templates_router())
-        .nest("/security", routes::security::security_router())
-        // Web builder routes
-        .nest("/sites", routes::sites::sites_router())
-        .merge(routes::pages::pages_router())
-        // Health and monitoring endpoints
-        .route("/health", get(health_check))
-        .route("/ready", get(readiness_check))
-
-        // API status route
-        .route("/status", get(|| async { "QuillSpace API is operational" }))
-}
 
 async fn health_check() -> &'static str {
     "OK"

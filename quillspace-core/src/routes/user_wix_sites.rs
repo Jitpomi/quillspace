@@ -8,7 +8,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::{
-    middleware::auth::AuthContext,
+    services::user_wix_sites::{UserWixSitesService, UserWixSite},
+    auth::jwt_helpers::AuthContext,
     AppState,
 };
 

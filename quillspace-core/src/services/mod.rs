@@ -10,6 +10,8 @@ pub mod template_cache;
 pub mod template_engine;
 pub mod tenant;
 pub mod user;
+pub mod wix_api;
+pub mod connected_websites;
 
 // Re-export commonly used services
 pub use template_engine::TemplateEngine;

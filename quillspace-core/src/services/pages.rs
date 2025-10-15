@@ -91,28 +91,34 @@ impl PageService {
             &composition_json,
         ];
 
+        let mut conditions = Vec::new();
+        
         if let Some(ref title) = request.title {
-            param_count += 1;
-            query_parts.push(&format!("title = ${}", param_count));
+            conditions.push(format!("title = ${}", param_count));
             params.push(title);
+            param_count += 1;
         }
 
         if let Some(ref slug) = request.slug {
-            param_count += 1;
-            query_parts.push(&format!("slug = ${}", param_count));
+            conditions.push(format!("slug = ${}", param_count));
             params.push(slug);
+            param_count += 1;
         }
 
         if let Some(ref template_id) = request.template_id {
-            param_count += 1;
-            query_parts.push(&format!("template_id = ${}", param_count));
+            conditions.push(format!("template_id = ${}", param_count));
             params.push(template_id);
+            param_count += 1;
         }
 
         if let Some(ref template_version) = request.template_version {
-            param_count += 1;
-            query_parts.push(&format!("template_version = ${}", param_count));
+            conditions.push(format!("template_version = ${}", param_count));
             params.push(template_version);
+            param_count += 1;
+        }
+        
+        for condition in &conditions {
+            query_parts.push(condition.as_str());
         }
 
         let query = format!(

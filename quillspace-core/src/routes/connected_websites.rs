@@ -1,26 +1,17 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Request, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post, delete, put},
+    routing::{get, post, put},
     Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use uuid::Uuid;
 use crate::{
-    services::connected_websites::{ConnectedWebsitesService, ConnectedWebsite, ConnectWebsiteRequest, SiteInfo, BuilderType},
-    middleware::auth::AuthContext,
+    services::connected_websites::{ConnectedWebsitesService, ConnectedWebsite},
     AppState,
 };
 
-#[derive(Debug, Deserialize)]
-pub struct AddExistingWebsiteRequest {
-    pub builder_type: BuilderType,
-    pub external_site_id: String,
-    pub name: String,
-    pub url: Option<String>,
-    pub domain: Option<String>,
-}
 
 #[derive(Debug, Serialize)]
 pub struct ConnectedWebsitesResponse {
@@ -29,27 +20,57 @@ pub struct ConnectedWebsitesResponse {
 
 pub fn connected_websites_routes() -> Router<AppState> {
     Router::new()
-        .route("/connected-websites", get(get_user_websites))
-        .route("/connected-websites", post(connect_website))
-        .route("/connected-websites/add-existing", post(add_existing_website))
-        .route("/connected-websites/:website_id", delete(disconnect_website))
-        .route("/connected-websites/:website_id/refresh", put(refresh_website))
-        // Wix editing routes
-        .route("/connected-websites/wix/:site_id/pages/:page_id/edit", get(load_wix_page_for_editing))
-        .route("/connected-websites/wix/:site_id/pages/:page_id/save", put(save_wix_page_content))
-        .route("/connected-websites/wix/:site_id/publish", post(publish_wix_site))
-        .route("/connected-websites/wix/test-connection", post(test_wix_connection))
+        .route("/test", get(|| async { "CONNECTED WEBSITES ROUTE WORKS!" }))
+        .route("/websites", get(get_user_websites))
+        .route("/wix/books", get(get_wix_books_simple))
+        .route("/wix/books", post(create_wix_book))
+        .route("/wix/books/with-schema", post(create_wix_book_with_proper_types))
+        .route("/wix/books/:book_id", put(update_wix_book))
+        .route("/wix/author", get(get_wix_author_info))
+        .route("/wix/author", put(update_wix_author_info))
 }
 
-/// Get all connected websites for the authenticated user
+/// Get QuillSpace-built websites for the authenticated user
 pub async fn get_user_websites(
-    auth: AuthContext,
     State(state): State<AppState>,
+    request: Request,
 ) -> Result<Json<ConnectedWebsitesResponse>, StatusCode> {
+    // Extract Authorization header
+    let auth_header = request
+        .headers()
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    // Extract token from "Bearer <token>"
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    
+    // Decode and validate JWT token
+    let claims = match state.jwt_manager.verify_token(token) {
+        Ok(claims) => claims,
+        Err(e) => {
+            tracing::error!("JWT verification failed: {}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+    
+    // Get user ID from claims
+    let user_id: Uuid = claims.sub.parse().map_err(|e| {
+        tracing::error!("Failed to parse user ID from JWT: {}", e);
+        StatusCode::UNAUTHORIZED
+    })?;
+    
+    tracing::info!("Getting websites for user: {}", user_id);
+    
     let service = ConnectedWebsitesService::new(state.db.clone());
     
-    match service.get_user_websites(auth.user_id).await {
-        Ok(websites) => Ok(Json(ConnectedWebsitesResponse { websites })),
+    match service.get_user_websites(user_id).await {
+        Ok(websites) => {
+            tracing::info!("Found {} websites for user {}", websites.len(), user_id);
+            Ok(Json(ConnectedWebsitesResponse { websites }))
+        },
         Err(e) => {
             tracing::error!("Failed to get user websites: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -57,163 +78,155 @@ pub async fn get_user_websites(
     }
 }
 
-/// Connect a new website through API credentials
-pub async fn connect_website(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Json(request): Json<ConnectWebsiteRequest>,
-) -> Result<Json<ConnectedWebsite>, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    match service.connect_website(auth.user_id, auth.tenant_id, request).await {
-        Ok(website) => Ok(Json(website)),
-        Err(e) => {
-            tracing::error!("Failed to connect website: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-/// Add an existing website manually (like Yasin's Wix site)
-pub async fn add_existing_website(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Json(request): Json<AddExistingWebsiteRequest>,
-) -> Result<Json<ConnectedWebsite>, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    let site_info = SiteInfo {
-        external_site_id: request.external_site_id,
-        name: request.name,
-        url: request.url,
-        domain: request.domain,
-    };
-    
-    match service.add_existing_website(
-        auth.user_id,
-        auth.tenant_id,
-        request.builder_type,
-        site_info,
-    ).await {
-        Ok(website) => Ok(Json(website)),
-        Err(e) => {
-            tracing::error!("Failed to add existing website: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-/// Disconnect a website
-pub async fn disconnect_website(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Path(website_id): Path<Uuid>,
-) -> Result<StatusCode, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    match service.disconnect_website(website_id, auth.user_id).await {
-        Ok(_) => Ok(StatusCode::NO_CONTENT),
-        Err(e) => {
-            tracing::error!("Failed to disconnect website: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-/// Refresh website data
-pub async fn refresh_website(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Path(website_id): Path<Uuid>,
-) -> Result<Json<ConnectedWebsite>, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    // Verify the website belongs to the user
-    let user_websites = service.get_user_websites(auth.user_id).await
+/// Get Wix books - SIMPLE VERSION
+pub async fn get_wix_books_simple() -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    if !user_websites.iter().any(|w| w.id == website_id) {
-        return Err(StatusCode::NOT_FOUND);
-    }
-    
-    match service.refresh_website(website_id).await {
-        Ok(website) => Ok(Json(website)),
+    match client.get_collection_items("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books").await {
+        Ok(books) => Ok(Json(books)),
         Err(e) => {
-            tracing::error!("Failed to refresh website: {}", e);
+            tracing::error!("Failed to get Wix books: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
 
-/// Load Wix page for editing in QuillSpace
-pub async fn load_wix_page_for_editing(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Path((site_id, page_id)): Path<(String, String)>,
+/// Create new book in Wix
+pub async fn create_wix_book(
+    Json(book_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match service.load_wix_page_for_editing(auth.user_id, &site_id, &page_id).await {
-        Ok(puck_data) => Ok(Json(puck_data)),
+    match client.insert_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", book_data).await {
+        Ok(book) => Ok(Json(book)),
         Err(e) => {
-            tracing::error!("Failed to load Wix page for editing: {}", e);
+            tracing::error!("Failed to create Wix book: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
 
-/// Save edited Wix page content from QuillSpace
-pub async fn save_wix_page_content(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Path((site_id, page_id)): Path<(String, String)>,
-    Json(puck_data): Json<serde_json::Value>,
-) -> Result<StatusCode, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    match service.save_wix_page_from_quillspace(auth.user_id, &site_id, &page_id, &puck_data).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => {
-            tracing::error!("Failed to save Wix page content: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-/// Publish Wix site changes
-pub async fn publish_wix_site(
-    auth: AuthContext,
-    State(state): State<AppState>,
-    Path(site_id): Path<String>,
-) -> Result<StatusCode, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
-    
-    match service.publish_wix_site(auth.user_id, &site_id).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => {
-            tracing::error!("Failed to publish Wix site: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TestWixConnectionRequest {
-    pub api_key: String,
-    pub account_id: String,
-}
-
-/// Test Wix API connection
-pub async fn test_wix_connection(
-    State(state): State<AppState>,
-    Json(request): Json<TestWixConnectionRequest>,
+/// Update book in Wix
+pub async fn update_wix_book(
+    Path(book_id): Path<String>,
+    Json(book_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let service = ConnectedWebsitesService::new(state.db.clone());
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match service.test_wix_connection(&request.api_key, &request.account_id).await {
-        Ok(is_valid) => Ok(Json(serde_json::json!({ "valid": is_valid }))),
+    match client.update_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", &book_id, book_data).await {
+        Ok(book) => Ok(Json(book)),
         Err(e) => {
-            tracing::error!("Failed to test Wix connection: {}", e);
+            tracing::error!("Failed to update Wix book: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Get Wix author info
+pub async fn get_wix_author_info() -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.get_collection_items("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "AuthorInfo").await {
+        Ok(author) => Ok(Json(author)),
+        Err(e) => {
+            tracing::error!("Failed to get Wix author info: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Update Wix author info
+pub async fn update_wix_author_info(
+    Json(author_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    // Get existing AuthorInfo to update it
+    match client.get_collection_items("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "AuthorInfo").await {
+        Ok(existing_data) => {
+            if let Some(items) = existing_data.get("dataItems").and_then(|v| v.as_array()) {
+                if let Some(first_item) = items.first() {
+                    if let Some(item_id) = first_item.get("id").and_then(|v| v.as_str()) {
+                        return match client.update_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "AuthorInfo", item_id, author_data).await {
+                            Ok(author) => Ok(Json(author)),
+                            Err(e) => {
+                                tracing::error!("Failed to update Wix author info: {}", e);
+                                Err(StatusCode::INTERNAL_SERVER_ERROR)
+                            }
+                        };
+                    }
+                }
+            }
+            // No existing author info, create new one
+            match client.insert_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "AuthorInfo", author_data).await {
+                Ok(author) => Ok(Json(author)),
+                Err(e) => {
+                    tracing::error!("Failed to create Wix author info: {}", e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to get existing Wix author info: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Create new book in Wix with proper field types
+pub async fn create_wix_book_with_proper_types(
+    Json(book_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    let site_id = "1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9";
+    let collection_id = "Books";
+    
+    // First, ensure the priceAmount field exists with proper type (since price is already wrong type)
+    match client.ensure_collection_field(site_id, collection_id, "bookPrice", "NUMBER", "Book Price").await {
+        Ok(_) => {
+            tracing::info!("PriceAmount field ensured as number type");
+        }
+        Err(e) => {
+            tracing::warn!("Could not ensure priceAmount field type: {}", e);
+            // Continue anyway, field might already exist
+        }
+    }
+    
+    // Create the book with the data
+    match client.insert_collection_item(site_id, collection_id, book_data).await {
+        Ok(book) => Ok(Json(book)),
+        Err(e) => {
+            tracing::error!("Failed to create Wix book with schema: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

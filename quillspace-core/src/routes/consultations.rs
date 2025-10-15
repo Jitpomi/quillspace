@@ -8,8 +8,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::{
-    services::calendly::{CalendlyService, CalendlyWebhookPayload, ConsultationBooking},
-    middleware::auth::AuthContext,
+    // services::calendly::{CalendlyService, CalendlyWebhookPayload, ConsultationBooking}, // TODO: Fix calendly service
+    auth::jwt_helpers::AuthContext,
     AppState,
 };
 
