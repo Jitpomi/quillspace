@@ -1,10 +1,11 @@
-import { component$, useSignal, $, noSerialize } from '@builder.io/qwik';
-import { LuGlobe, LuPlus, LuSettings, LuExternalLink, LuRocket, LuPalette, LuFileText, LuSquare } from '@qwikest/icons/lucide';
+import { component$, useSignal, $, noSerialize, useVisibleTask$ } from '@builder.io/qwik';
+import { LuGlobe, LuPlus, LuSettings, LuExternalLink, LuRocket, LuPalette, LuFileText, LuSquare, LuUser, LuShield, LuArrowLeft, LuCalendar } from '@qwikest/icons/lucide';
 import { ConnectedWebsites } from '~/components/website-builder/connected-websites';
 import { WebsiteBuilderService } from '~/services/website-builder.service';
 import type { WebsiteBuilder, ConnectedWebsite, BuilderType } from '~/types/website-builders';
 
 export default component$(() => {
+  const serviceType = useSignal<'diy' | 'managed' | ''>('');
   const selectedBuilder = useSignal<string>('');
   const showCredentials = useSignal(false);
   const connectedWebsites = useSignal<ConnectedWebsite[]>([]);
@@ -12,6 +13,33 @@ export default component$(() => {
   const credentials = useSignal<Record<string, string>>({});
   
   const builderService = noSerialize(WebsiteBuilderService.getInstance());
+
+  // Initialize Calendly widget
+  useVisibleTask$(() => {
+    // Load Calendly CSS
+    const link = document.createElement('link');
+    link.href = 'https://assets.calendly.com/assets/external/widget.css';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    // Load Calendly JS
+    const script = document.createElement('script');
+    script.src = 'https://assets.calendly.com/assets/external/widget.js';
+    script.async = true;
+    script.onload = () => {
+      // Initialize badge widget after script loads
+      if (typeof window !== 'undefined' && (window as any).Calendly) {
+        (window as any).Calendly.initBadgeWidget({
+          url: 'https://calendly.com/dev-jitpomi/30min?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=9caf88',
+          text: 'Get Your Author Website ✨',
+          color: '#9caf88',
+          textColor: '#ffffff',
+          branding: false
+        });
+      }
+    };
+    document.head.appendChild(script);
+  });
 
   // Helper function to render the appropriate icon
   const renderIcon = (iconName: string, className: string = "w-8 h-8") => {
@@ -80,9 +108,19 @@ export default component$(() => {
     }
   ];
 
+  const handleServiceTypeSelect = $((type: 'diy' | 'managed') => {
+    serviceType.value = type;
+  });
+
   const handleBuilderSelect = $((builderId: string) => {
     selectedBuilder.value = builderId;
     showCredentials.value = true;
+  });
+
+  const handleBackToServiceSelection = $(() => {
+    serviceType.value = '';
+    selectedBuilder.value = '';
+    showCredentials.value = false;
   });
 
   const handleConnect = $(async () => {
@@ -143,50 +181,185 @@ export default component$(() => {
 
       {!showCredentials.value ? (
         <>
-          {/* Website Builder Selection */}
-          <div class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Connect Your Website Builder</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {builders.map((builder) => (
+          {/* Service Type Selection */}
+          {!serviceType.value ? (
+            <div class="mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">How would you like to manage your website?</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+                {/* DIY Option */}
                 <div
-                  key={builder.id}
                   class="group relative overflow-hidden rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
-                  onClick$={() => handleBuilderSelect(builder.id)}
+                  onClick$={() => handleServiceTypeSelect('diy')}
                 >
-                  <div class={`absolute inset-0 bg-gradient-to-br ${builder.color} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+                  <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 opacity-5 group-hover:opacity-10 transition-opacity"></div>
                   
-                  <div class="relative p-6">
-                    <div class="flex items-start justify-between mb-4">
-                      <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm border border-gray-200">
-                          {renderIcon(builder.icon, "w-8 h-8")}
-                        </div>
-                        <div>
-                          <h3 class="text-lg font-semibold text-gray-900">{builder.name}</h3>
-                          {builder.isConnected && (
-                            <span class="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                              Connected
-                            </span>
-                          )}
-                        </div>
+                  <div class="relative p-8">
+                    <div class="flex items-start gap-4 mb-4">
+                      <div class="flex items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm border border-gray-200">
+                        <LuUser class="w-6 h-6 text-[#9CAF88]" />
                       </div>
-                      <LuPlus class="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                      <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">I have my own accounts</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                          Connect your existing Wix, WordPress, or Squarespace accounts. You maintain full control and ownership of your websites.
+                        </p>
+                      </div>
                     </div>
-                    
-                    <p class="text-gray-600 text-sm leading-relaxed">{builder.description}</p>
-                    
-                    <div class="mt-4 flex items-center justify-between">
-                      <div class="text-sm text-gray-500">
-                        {builder.id === 'jflux' ? 'Native Builder' : 'External Integration'}
-                      </div>
-                      <LuExternalLink class="w-4 h-4 text-gray-400" />
+                    <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      <strong>Best for:</strong> Users with existing websites or technical experience
                     </div>
                   </div>
                 </div>
-              ))}
+
+                {/* Managed Option */}
+                <div
+                  class="group relative overflow-hidden rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
+                  onClick$={() => handleServiceTypeSelect('managed')}
+                >
+                  <div class="absolute inset-0 bg-gradient-to-br from-[#9CAF88] to-[#7A9B6E] opacity-5 group-hover:opacity-10 transition-opacity"></div>
+                  
+                  <div class="relative p-8">
+                    <div class="flex items-start gap-4 mb-4">
+                      <div class="flex items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm border border-gray-200">
+                        <LuShield class="w-6 h-6 text-[#9CAF88]" />
+                      </div>
+                      <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Build and manage for me</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                          QuillSpace creates and manages your website using our professional accounts. Focus on writing while we handle the technical details.
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      <strong>Best for:</strong> Authors who want a hassle-free, fully managed solution
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Website Builder Selection */
+            <div class="mb-8">
+              <div class="flex items-center gap-3 mb-6">
+                <button
+                  onClick$={handleBackToServiceSelection}
+                  class="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                  title="Back to service selection"
+                >
+                  <LuArrowLeft class="w-4 h-4 text-gray-600" />
+                </button>
+                <h2 class="text-xl font-semibold text-gray-900">
+                  {serviceType.value === 'diy' ? 'Connect Your Website Builder' : 'Professional Website Design Service'}
+                </h2>
+              </div>
+              {serviceType.value === 'diy' ? (
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {builders.map((builder) => (
+                    <div
+                      key={builder.id}
+                      class="group relative overflow-hidden rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
+                      onClick$={() => handleBuilderSelect(builder.id)}
+                    >
+                      <div class={`absolute inset-0 bg-gradient-to-br ${builder.color} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+                      
+                      <div class="relative p-6">
+                      <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                          <div class="flex items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm border border-gray-200">
+                            {renderIcon(builder.icon, "w-8 h-8")}
+                          </div>
+                          <div>
+                            <h3 class="text-lg font-semibold text-gray-900">{builder.name}</h3>
+                            {builder.isConnected && (
+                              <span class="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                Connected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <LuPlus class="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                      </div>
+                      
+                      <p class="text-gray-600 text-sm leading-relaxed">{builder.description}</p>
+                      
+                      <div class="mt-4 flex items-center justify-between">
+                        <div class="text-sm text-gray-500">
+                          {builder.id === 'jflux' ? 'Native Builder' : 'External Integration'}
+                        </div>
+                        <LuExternalLink class="w-4 h-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                  ))}
+                </div>
+              ) : (
+                /* Managed Service Content */
+                <div class="max-w-3xl">
+                  <div class="bg-gradient-to-br from-[#9CAF88]/10 to-[#7A9B6E]/10 rounded-xl p-8 border border-[#9CAF88]/20">
+                    <div class="flex items-start gap-4 mb-6">
+                      <div class="flex items-center justify-center w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-200">
+                        <LuShield class="w-8 h-8 text-[#9CAF88]" />
+                      </div>
+                      <div>
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-2">We'll Build Your Perfect Author Website</h3>
+                        <p class="text-gray-600 leading-relaxed">
+                          Our team of designers and developers will create a stunning, professional website tailored specifically for authors. 
+                          Focus on your writing while we handle all the technical details.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div class="bg-white/50 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-900 mb-2">✨ What's Included</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                          <li>• Custom design tailored to your genre</li>
+                          <li>• Professional author bio and book showcase</li>
+                          <li>• Mobile-responsive design</li>
+                          <li>• SEO optimization for discoverability</li>
+                          <li>• Contact forms and newsletter signup</li>
+                          <li>• Social media integration</li>
+                        </ul>
+                      </div>
+                      <div class="bg-white/50 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-900 mb-2">🚀 Coming Soon: AI Website Generator</h4>
+                        <p class="text-sm text-gray-600">
+                          We're developing an AI agent that will automatically generate a fully functional, 
+                          personalized author website based on your preferences and writing style.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg p-6 border border-gray-200">
+                      <div class="text-center">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">Ready to Get Started?</h4>
+                        <p class="text-gray-600 mb-4">
+                          Contact our team to discuss your website needs and get a custom quote.
+                        </p>
+                        <div class="flex justify-center">
+                          <button 
+                            onClick$={() => {
+                              // Trigger Calendly widget
+                              if (typeof window !== 'undefined' && (window as any).Calendly) {
+                                (window as any).Calendly.initPopupWidget({
+                                  url: 'https://calendly.com/dev-jitpomi/30min?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=9caf88'
+                                });
+                              }
+                            }}
+                            class="bg-[#9CAF88] text-white px-8 py-3 rounded-lg hover:bg-[#9CAF88]/90 transition-colors font-medium flex items-center gap-2"
+                          >
+                            <LuCalendar class="w-5 h-5" />
+                            Schedule Consultation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Connected Websites */}
           <div class="border-t pt-8">
@@ -356,6 +529,7 @@ export default component$(() => {
           </div>
         </div>
       )}
+
     </div>
   );
 });
