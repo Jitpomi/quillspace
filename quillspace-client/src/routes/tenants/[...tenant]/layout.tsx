@@ -111,7 +111,7 @@ export default component$(() => {
                     sidebarCollapsed.value ? 'w-16' : 'w-64'
                 }`}>
                 {/* Literary Header */}
-                <div class="flex items-center h-16 border-b border-gray-300 bg-white px-4 relative">
+                <div class="flex cursor-pointer items-center h-16 border-b border-gray-300 bg-white px-4 relative">
                     <button onClick$={async () => {
                         await nav('/')
                     }} class="flex items-center gap-3 flex-1">

@@ -27,8 +27,11 @@ export default component$(() => {
         <div class="relative z-10 max-w-7xl mx-auto px-4 py-20">
           <div class="text-center">
             {/* Logo with Animation */}
-            <div class="flex cursor-pointer justify-center items-center gap-4 mb-12 animate-fade-in">
+            <div onClick$={async()=>{
+              await nav('/')
+            }} class="flex cursor-pointer justify-center items-center gap-4 mb-12 animate-fade-in">
               <div class="relative">
+
                 <LuFeather class="w-16 h-16 text-[#9CAF88] drop-shadow-lg" />
                 <div class="absolute -inset-2 bg-[#9CAF88]/10 rounded-full blur-xl"></div>
               </div>
