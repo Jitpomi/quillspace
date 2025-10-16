@@ -97,17 +97,37 @@ BEGIN
 END;
 $$;
 
--- Insert default tenant
+-- Insert QuillSpace System tenant (for admin and super user)
 INSERT INTO tenants (id, name, slug, created_at, updated_at) 
 VALUES (
     '11111111-1111-1111-1111-111111111111'::uuid,
-    'Default Tenant',
-    'default',
+    'QuillSpace System',
+    'quillspace-system',
     NOW(),
     NOW()
 );
 
--- Insert admin user (password: 'secret')
+-- Insert Black Writers Ink tenant
+INSERT INTO tenants (id, name, slug, created_at, updated_at) 
+VALUES (
+    '22222222-2222-2222-2222-222222222222'::uuid,
+    'Black Writers Ink',
+    'black-writers-ink',
+    NOW(),
+    NOW()
+);
+
+-- Insert Greenlights tenant
+INSERT INTO tenants (id, name, slug, created_at, updated_at) 
+VALUES (
+    '33333333-3333-3333-3333-333333333333'::uuid,
+    'Greenlights',
+    'greenlights',
+    NOW(),
+    NOW()
+);
+
+-- Insert system admin user (password: 'secret')
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, active, created_at, updated_at)
 VALUES (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
@@ -122,7 +142,22 @@ VALUES (
     NOW()
 );
 
--- Insert test user (password: 'secret')
+-- Insert super user (can manage everything across all tenants) (password: 'secret')
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, active, created_at, updated_at)
+VALUES (
+    'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+    'super@quillspace.com',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'Super',
+    'User', 
+    'admin',
+    '11111111-1111-1111-1111-111111111111'::uuid,
+    true,
+    NOW(),
+    NOW()
+);
+
+-- Insert Yasin Kakande in Black Writers Ink tenant (password: 'secret')
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, active, created_at, updated_at)
 VALUES (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
@@ -131,7 +166,37 @@ VALUES (
     'Yasin',
     'Kakande', 
     'admin',
-    '11111111-1111-1111-1111-111111111111'::uuid,
+    '22222222-2222-2222-2222-222222222222'::uuid,
+    true,
+    NOW(),
+    NOW()
+);
+
+-- Insert Josephine Nakigozi in Black Writers Ink tenant (password: 'secret')
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, active, created_at, updated_at)
+VALUES (
+    'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+    'joeykigozi@yahoo.co.uk',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'Josephine',
+    'Nakigozi', 
+    'editor',
+    '22222222-2222-2222-2222-222222222222'::uuid,
+    true,
+    NOW(),
+    NOW()
+);
+
+-- Insert Matthew McConaughey in Greenlights tenant (password: 'secret')
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, active, created_at, updated_at)
+VALUES (
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid,
+    'matthew@greenlights.com',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'Matthew',
+    'McConaughey', 
+    'admin',
+    '33333333-3333-3333-3333-333333333333'::uuid,
     true,
     NOW(),
     NOW()

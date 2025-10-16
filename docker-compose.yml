@@ -20,8 +20,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U quillspace -d quillspace_dev"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
     networks:
       - quillspace
