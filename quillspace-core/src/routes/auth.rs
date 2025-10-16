@@ -41,11 +41,17 @@ async fn login(
     
     match client.query_opt(query, &[&login_request.email]).await {
         Ok(Some(row)) => {
-            let user = User::from_row(&row).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let user = User::from_row(&row).map_err(|e| {
+                error!("Failed to create User from row: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
             // Verify password hash
             let password_hash: String = row.try_get("password_hash")
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|e| {
+                    error!("Failed to get password_hash from row: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
             
             if !bcrypt::verify(&login_request.password, &password_hash)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {

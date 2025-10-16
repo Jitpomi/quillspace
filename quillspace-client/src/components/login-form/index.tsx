@@ -64,7 +64,7 @@ export type FormFieldProps = {
 
 export const useLogin = globalAction$(async (data, requestEvent) => {
     const {env, cookie} = requestEvent;
-    const API_BASE_URL = env.get('VITE_API_BASE_URL');
+    const API_BASE_URL = env.get('VITE_API_BASE_URL') || 'http://backend:3000/api';
     
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
