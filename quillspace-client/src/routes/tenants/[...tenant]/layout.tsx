@@ -13,8 +13,6 @@ import {
     LuRocket,
     LuHeart,
     LuFeather,
-    LuChevronLeft,
-    LuChevronRight,
     LuPanelLeft,
     LuPanelLeftClose
 } from "@qwikest/icons/lucide";

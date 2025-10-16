@@ -28,6 +28,8 @@ const login = useFormLoader();
                   src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                   alt="Cozy library with warm lighting - your writing sanctuary" 
                   class="w-full h-full object-cover opacity-45"
+                  width="2070"
+                  height="1380"
               />
               <div class="absolute inset-0 bg-gradient-to-br from-[#1a365d]/70 via-[#2d3748]/65 to-[#1a202c]/75"></div>
               

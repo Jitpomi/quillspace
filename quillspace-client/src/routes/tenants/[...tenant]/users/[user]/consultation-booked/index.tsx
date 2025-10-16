@@ -1,13 +1,13 @@
-import { component$, useSignal, useTask$, $ } from '@builder.io/qwik';
+import { component$, useSignal, useTask$ } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
 import { LuCheckCircle, LuCalendar, LuFileText, LuMail, LuArrowRight, LuClock, LuUser, LuBookOpen, LuShield } from '@qwikest/icons/lucide';
 
 export default component$(() => {
   const location = useLocation();
   const eventUuid = location.url.searchParams.get('event');
-  const inviteeUuid = location.url.searchParams.get('invitee');
+  // const inviteeUuid = location.url.searchParams.get('invitee'); // TODO: Use for future booking details
   
-  const bookingDetails = useSignal<any>(null);
+  // const bookingDetails = useSignal<any>(null); // TODO: Use when API is implemented
   const isLoading = useSignal(true);
 
   // Load booking details if available
@@ -19,7 +19,7 @@ export default component$(() => {
         setTimeout(() => {
           isLoading.value = false;
         }, 1000);
-      } catch (e) {
+      } catch {
         isLoading.value = false;
       }
     } else {

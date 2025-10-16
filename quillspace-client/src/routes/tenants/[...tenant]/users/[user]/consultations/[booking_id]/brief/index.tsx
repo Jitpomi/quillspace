@@ -1,6 +1,6 @@
 import { component$, useSignal, useTask$, $ } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
-import { LuFileText, LuSave, LuArrowLeft, LuCheckCircle, LuClock, LuUser } from '@qwikest/icons/lucide';
+import { LuFileText, LuSave, LuArrowLeft, LuCheckCircle, LuClock } from '@qwikest/icons/lucide';
 
 interface ProjectBriefForm {
   project_name?: string;
@@ -55,7 +55,7 @@ export default component$(() => {
       } else {
         error.value = 'Failed to load consultation details';
       }
-    } catch (e) {
+    } catch {
       error.value = 'Network error loading consultation';
     } finally {
       isLoading.value = false;
@@ -85,7 +85,7 @@ export default component$(() => {
       } else {
         error.value = 'Failed to save project brief';
       }
-    } catch (e) {
+    } catch {
       error.value = 'Network error saving brief';
     } finally {
       isSaving.value = false;

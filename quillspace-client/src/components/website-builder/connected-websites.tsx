@@ -1,4 +1,4 @@
-import { component$, useSignal } from '@builder.io/qwik';
+import { component$, useSignal, $ } from '@builder.io/qwik';
 import { LuExternalLink, LuSettings, LuRefreshCw, LuTrash2, LuGlobe, LuPencil, LuPlus } from '@qwikest/icons/lucide';
 import type { ConnectedWebsite } from '~/types/website-builders';
 import { AddExistingWebsiteModal } from './add-existing-website-modal';
@@ -50,10 +50,10 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
         
         <AddExistingWebsiteModal
           isOpen={showAddModal.value}
-          onClose={() => showAddModal.value = false}
-          onAdd={(website) => {
+          onClose={$(() => { showAddModal.value = false; })}
+          onAdd={$((website) => {
             websiteList.value = [...websiteList.value, website];
-          }}
+          })}
         />
       </>
     );
@@ -169,10 +169,10 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
       
       <AddExistingWebsiteModal
         isOpen={showAddModal.value}
-        onClose={() => showAddModal.value = false}
-        onAdd={(website) => {
+        onClose={$(() => { showAddModal.value = false; })}
+        onAdd={$((website: any) => {
           websiteList.value = [...websiteList.value, website];
-        }}
+        })}
       />
     </>
   );

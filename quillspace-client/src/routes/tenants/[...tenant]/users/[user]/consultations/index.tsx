@@ -1,5 +1,5 @@
 import { component$, useSignal, useTask$, $ } from '@builder.io/qwik';
-import { LuCalendar, LuClock, LuCheckCircle, LuFileText, LuArrowRight, LuUser, LuMail, LuPhone } from '@qwikest/icons/lucide';
+import { LuCalendar, LuClock, LuFileText, LuArrowRight, LuUser, LuMail } from '@qwikest/icons/lucide';
 
 interface ConsultationBooking {
   id: string;
@@ -50,7 +50,7 @@ export default component$(() => {
       } else {
         error.value = 'Failed to load consultation dashboard';
       }
-    } catch (e) {
+    } catch {
       error.value = 'Network error loading dashboard';
     } finally {
       isLoading.value = false;

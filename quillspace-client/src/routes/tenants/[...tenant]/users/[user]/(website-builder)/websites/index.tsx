@@ -16,6 +16,7 @@ export default component$(() => {
   const builderService = noSerialize(WebsiteBuilderService.getInstance());
 
   // Load connected websites
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     try {
       const response = await fetch('/api/connected-websites', {
@@ -34,6 +35,7 @@ export default component$(() => {
   });
 
   // Initialize Calendly widget
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(() => {
     // Load Calendly CSS
     const link = document.createElement('link');
@@ -64,7 +66,7 @@ export default component$(() => {
   const renderIcon = (iconName: string, className: string = "w-8 h-8") => {
     // If it's an image path, render an img element
     if (iconName.startsWith('/') || iconName.includes('.')) {
-      return <img src={iconName} alt="Builder logo" class={`${className} object-contain`} />;
+      return <img src={iconName} alt="Builder logo" class={`${className} object-contain`} width="32" height="32" />;
     }
     
     // Otherwise render Lucide icons

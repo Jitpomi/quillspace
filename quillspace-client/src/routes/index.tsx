@@ -15,6 +15,8 @@ export default component$(() => {
             src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
             alt="Cozy library with warm lighting - your writing sanctuary with fellow authors" 
             class="w-full h-full object-cover opacity-45"
+            width="2070"
+            height="1380"
           />
           <div class="absolute inset-0 bg-gradient-to-br from-[#1a365d]/70 via-[#2d3748]/65 to-[#1a202c]/75"></div>
           
@@ -238,6 +240,8 @@ export default component$(() => {
                 src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
                 alt="Cozy writing space with notebook and warm lighting" 
                 class="w-full h-[500px] object-cover rounded-2xl shadow-2xl"
+                width="800"
+                height="500"
               />
               <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent rounded-2xl"></div>
               
@@ -431,6 +435,8 @@ export default component$(() => {
                 src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
                 alt="Writer celebrating success with laptop and books" 
                 class="w-full h-[400px] object-cover rounded-2xl shadow-2xl"
+                width="800"
+                height="400"
               />
               <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-2xl"></div>
               
@@ -474,6 +480,8 @@ export default component$(() => {
                     src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                     alt="Sarah Chen, Romance Author" 
                     class="w-16 h-16 rounded-full object-cover"
+                    width="64"
+                    height="64"
                   />
                   <div>
                     <div class="font-bold text-[#2c1810] text-lg">Sarah Chen</div>
@@ -589,6 +597,8 @@ export default component$(() => {
                   src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                   alt="Sarah Chen" 
                   class="w-12 h-12 rounded-full object-cover"
+                  width="48"
+                  height="48"
                 />
                 <div class="text-left">
                   <p class="font-bold text-[#2c1810]">Sarah Chen</p>
@@ -611,6 +621,8 @@ export default component$(() => {
                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                   alt="Michael Rodriguez" 
                   class="w-12 h-12 rounded-full object-cover"
+                  width="48"
+                  height="48"
                 />
                 <div class="text-left">
                   <p class="font-bold text-[#2c1810]">Michael Rodriguez</p>
@@ -633,6 +645,8 @@ export default component$(() => {
                   src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
                   alt="Emma Thompson" 
                   class="w-12 h-12 rounded-full object-cover"
+                  width="48"
+                  height="48"
                 />
                 <div class="text-left">
                   <p class="font-bold text-[#2c1810]">Emma Thompson</p>
@@ -652,6 +666,8 @@ export default component$(() => {
             src="https://images.unsplash.com/photo-1455390582262-044cdead277a?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
             alt="Cozy writing sanctuary" 
             class="w-full h-full object-cover"
+            width="2070"
+            height="1380"
           />
         </div>
         

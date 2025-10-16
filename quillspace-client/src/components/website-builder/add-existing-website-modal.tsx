@@ -1,10 +1,10 @@
-import { component$, useSignal, $ } from '@builder.io/qwik';
+import { component$, useSignal, $, type QRL } from '@builder.io/qwik';
 import { LuX, LuPlus, LuExternalLink } from '@qwikest/icons/lucide';
 
 interface AddExistingWebsiteModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onAdd: (website: any) => void;
+  onClose: QRL<() => void>;
+  onAdd: QRL<(website: any) => void>;
 }
 
 export const AddExistingWebsiteModal = component$<AddExistingWebsiteModalProps>(({ isOpen, onClose, onAdd }) => {
@@ -67,7 +67,7 @@ export const AddExistingWebsiteModal = component$<AddExistingWebsiteModalProps>(
     try {
       const urlObj = new URL(url);
       formData.value = { ...formData.value, domain: urlObj.hostname };
-    } catch (e) {
+    } catch {
       // Invalid URL, ignore
     }
   });
