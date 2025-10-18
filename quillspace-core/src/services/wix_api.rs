@@ -216,4 +216,53 @@ impl WixApiClient {
         }
     }
 
+    /// Query sites using Wix Sites API
+    /// This fetches site information including thumbnails, names, and URLs
+    pub async fn query_sites(&self, site_ids: Option<Vec<String>>) -> Result<serde_json::Value> {
+        let url = format!("{}/site-list/v2/sites/query", self.base_url);
+        
+        // Create headers for account-level API call (no site-id needed)
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Authorization", self.api_key.parse().unwrap());
+        headers.insert("wix-account-id", self.account_id.parse().unwrap());
+        headers.insert("Content-Type", "application/json".parse().unwrap());
+        
+        let mut query_body = serde_json::json!({
+            "query": {
+                "paging": {
+                    "limit": 100
+                },
+                "sort": [{
+                    "fieldName": "updatedDate",
+                    "order": "DESC"
+                }]
+            }
+        });
+        
+        // Filter by specific site IDs if provided
+        if let Some(ids) = site_ids {
+            if !ids.is_empty() {
+                query_body["query"]["filter"] = serde_json::json!({
+                    "id": {
+                        "$in": ids
+                    }
+                });
+            }
+        }
+        
+        let response = self.client
+            .post(&url)
+            .headers(headers)
+            .json(&query_body)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_text = response.text().await?;
+            Err(anyhow::anyhow!("Wix Sites API error: {}", error_text))
+        }
+    }
+
 }

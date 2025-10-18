@@ -6,6 +6,20 @@ use crate::services::wix_api::WixApiClient;
 use anyhow::Result;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct WixSite {
+    pub id: String,
+    pub display_name: String,
+    pub view_url: Option<String>,
+    pub edit_url: Option<String>,
+    pub thumbnail: Option<String>,
+    pub owner_account_id: Option<String>,
+    pub published: Option<bool>,
+    pub premium: Option<bool>,
+    pub created_date: Option<String>,
+    pub updated_date: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConnectedWebsite {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -119,65 +133,115 @@ impl ConnectedWebsitesService {
         }
     }
 
-    /// Get websites built by QuillSpace for a user
+    /// Get websites from Wix Sites API for the authenticated user
     pub async fn get_user_websites(&self, user_id: Uuid) -> Result<Vec<ConnectedWebsite>> {
-        let client = self.db.postgres().get().await
-            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?;
-            
-        let query = "
-            SELECT uws.wix_site_id, uws.tenant_id, uws.display_name, 
-                   uws.custom_domain, uws.project_status, uws.service_type, 
-                   uws.client_can_edit, uws.metadata, uws.created_at, uws.updated_at
-            FROM user_wix_sites uws
-            WHERE uws.user_id = $1 
-            AND uws.project_status IN ('review', 'active')
-            AND uws.client_can_edit = TRUE
-            ORDER BY uws.created_at DESC
-        ";
+        // For now, we'll fetch from Wix API directly
+        // In the future, we can store user's connected sites in the database
+        let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+            .map_err(|_| anyhow::anyhow!("QUILLSPACE_WIX_API_KEY not configured"))?;
+        let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+            .map_err(|_| anyhow::anyhow!("QUILLSPACE_WIX_ACCOUNT_ID not configured"))?;
 
-        let rows = client.query(query, &[&user_id]).await?;
-        let mut websites = Vec::new();
-
-        for row in rows {
-            let wix_site_id: String = row.get(0);
-            let tenant_id: Uuid = row.get(1);
-            let display_name: Option<String> = row.get(2);
-            let custom_domain: Option<String> = row.get(3);
-            let project_status: String = row.get(4);
-            let service_type: String = row.get(5);
-            let metadata: serde_json::Value = row.get(7);
-            let created_at: DateTime<Utc> = row.get(8);
-            let updated_at: DateTime<Utc> = row.get(9);
-
-            websites.push(ConnectedWebsite {
-                id: Uuid::new_v4(),
-                tenant_id,
-                user_id,
-                builder_type: BuilderType::Wix,
-                external_site_id: wix_site_id.clone(),
-                name: display_name.unwrap_or_else(|| format!("Wix Site {}", &wix_site_id[..8])),
-                url: custom_domain.clone().map(|d| format!("https://{}", d)),
-                domain: custom_domain,
-                status: if project_status == "active" { 
-                    ConnectionStatus::Active 
-                } else { 
-                    ConnectionStatus::Inactive 
-                },
-                last_sync: Some(Utc::now()),
-                sync_error: None,
-                metadata: serde_json::json!({
-                    "wix_site_id": wix_site_id,
-                    "service_type": service_type,
-                    "project_status": project_status,
-                    "managed_by_quillspace": true,
-                    "original_metadata": metadata
-                }),
-                created_at,
-                updated_at,
-            });
+        let client = WixApiClient::new(api_key, account_id);
+        
+        // For demo purposes, we'll show the known site. In production, you'd:
+        // 1. Store user's connected site IDs in database
+        // 2. Or use OAuth to fetch sites they own
+        // 3. Or allow users to add sites manually
+        let demo_site_ids = vec!["1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9".to_string()];
+        
+        match client.query_sites(Some(demo_site_ids)).await {
+            Ok(response) => {
+                let mut websites = Vec::new();
+                
+                if let Some(sites) = response.get("sites").and_then(|s| s.as_array()) {
+                    for site in sites {
+                        let wix_site = self.parse_wix_site(site)?;
+                        let connected_website = self.wix_site_to_connected_website(wix_site, user_id);
+                        websites.push(connected_website);
+                    }
+                }
+                
+                Ok(websites)
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch sites from Wix API: {}", e);
+                // Return empty list instead of error to avoid breaking the UI
+                Ok(vec![])
+            }
         }
-
-        Ok(websites)
+    }
+    
+    /// Parse Wix site JSON into WixSite struct
+    fn parse_wix_site(&self, site_json: &serde_json::Value) -> Result<WixSite> {
+        Ok(WixSite {
+            id: site_json.get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string(),
+            display_name: site_json.get("displayName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Untitled Site")
+                .to_string(),
+            view_url: site_json.get("viewUrl")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            edit_url: site_json.get("editUrl")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            thumbnail: site_json.get("thumbnail")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            owner_account_id: site_json.get("ownerAccountId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            published: site_json.get("published")
+                .and_then(|v| v.as_bool()),
+            premium: site_json.get("premium")
+                .and_then(|v| v.as_bool()),
+            created_date: site_json.get("createdDate")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            updated_date: site_json.get("updatedDate")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        })
+    }
+    
+    /// Convert WixSite to ConnectedWebsite
+    fn wix_site_to_connected_website(&self, wix_site: WixSite, user_id: Uuid) -> ConnectedWebsite {
+        ConnectedWebsite {
+            id: Uuid::new_v4(), // Generate a new UUID for the connected website
+            tenant_id: user_id, // Use user_id as tenant_id for now
+            user_id,
+            builder_type: BuilderType::Wix,
+            external_site_id: wix_site.id.clone(),
+            name: wix_site.display_name.clone(),
+            url: wix_site.view_url.clone(),
+            domain: None, // Could extract from view_url if needed
+            status: if wix_site.published.unwrap_or(false) {
+                ConnectionStatus::Active
+            } else {
+                ConnectionStatus::Inactive
+            },
+            last_sync: Some(Utc::now()),
+            sync_error: None,
+            metadata: serde_json::json!({
+                "wix_site_id": wix_site.id,
+                "display_name": wix_site.display_name,
+                "view_url": wix_site.view_url,
+                "edit_url": wix_site.edit_url,
+                "thumbnail": wix_site.thumbnail,
+                "published": wix_site.published,
+                "premium": wix_site.premium,
+                "created_date": wix_site.created_date,
+                "updated_date": wix_site.updated_date,
+                "owner_account_id": wix_site.owner_account_id,
+                "fetched_from_api": true
+            }),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
     }
 
 
