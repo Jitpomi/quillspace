@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, Request, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post, put},
+    routing::{get, patch, post, put},
     Router,
 };
 use serde::Serialize;
@@ -25,7 +25,9 @@ pub fn connected_websites_routes() -> Router<AppState> {
         .route("/wix/books", get(get_wix_books_simple))
         .route("/wix/books", post(create_wix_book))
         .route("/wix/books/with-schema", post(create_wix_book_with_proper_types))
+        .route("/wix/books/:book_id", get(get_single_wix_book))
         .route("/wix/books/:book_id", put(update_wix_book))
+        .route("/wix/books/:book_id", patch(patch_wix_book))
         .route("/wix/author", get(get_wix_author_info))
         .route("/wix/author", put(update_wix_author_info))
 }
@@ -96,6 +98,26 @@ pub async fn get_wix_books_simple() -> Result<Json<serde_json::Value>, StatusCod
     }
 }
 
+/// Get single Wix book by ID
+pub async fn get_single_wix_book(
+    Path(book_id): Path<String>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.get_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", &book_id).await {
+        Ok(book) => Ok(Json(book)),
+        Err(e) => {
+            tracing::error!("Failed to get Wix book {}: {}", book_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 /// Create new book in Wix
 pub async fn create_wix_book(
     Json(book_data): Json<serde_json::Value>,
@@ -132,6 +154,27 @@ pub async fn update_wix_book(
         Ok(book) => Ok(Json(book)),
         Err(e) => {
             tracing::error!("Failed to update Wix book: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Partially update book in Wix (PATCH)
+pub async fn patch_wix_book(
+    Path(book_id): Path<String>,
+    Json(patch_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.patch_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", &book_id, patch_data).await {
+        Ok(book) => Ok(Json(book)),
+        Err(e) => {
+            tracing::error!("Failed to patch Wix book: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

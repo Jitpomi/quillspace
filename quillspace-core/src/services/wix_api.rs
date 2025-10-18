@@ -53,6 +53,57 @@ impl WixApiClient {
         }
     }
 
+    /// Get a single item from a Wix Data collection by ID
+    pub async fn get_collection_item(&self, site_id: &str, collection_id: &str, item_id: &str) -> Result<serde_json::Value> {
+        let url = format!("{}/wix-data/v2/items/{}", self.base_url, item_id);
+        let mut headers = self.create_headers(site_id);
+        
+        // Add collection ID as query parameter for single item retrieval
+        let url_with_collection = format!("{}?dataCollectionId={}", url, collection_id);
+        
+        let response = self.client
+            .get(&url_with_collection)
+            .headers(headers)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_text = response.text().await?;
+            Err(anyhow::anyhow!("Wix Data API error: {}", error_text))
+        }
+    }
+
+    /// Partially update (patch) an item in Wix Data collection
+    pub async fn patch_collection_item(&self, site_id: &str, collection_id: &str, item_id: &str, patch_data: serde_json::Value) -> Result<serde_json::Value> {
+        // First, get the existing item
+        let existing_item = self.get_collection_item(site_id, collection_id, item_id).await?;
+        
+        // Extract the current data
+        let mut current_data = existing_item
+            .get("dataItem")
+            .and_then(|item| item.get("data"))
+            .cloned()
+            .unwrap_or_default();
+        
+        // Merge the patch data into current data
+        if let Some(patch_obj) = patch_data.get("data") {
+            if let (Some(current_obj), Some(patch_obj)) = (current_data.as_object_mut(), patch_obj.as_object()) {
+                for (key, value) in patch_obj {
+                    current_obj.insert(key.clone(), value.clone());
+                }
+            }
+        }
+        
+        // Update with the merged data
+        let update_payload = serde_json::json!({
+            "data": current_data
+        });
+        
+        self.update_collection_item(site_id, collection_id, item_id, update_payload).await
+    }
+
     /// Insert item into Wix Data collection
     pub async fn insert_collection_item(&self, site_id: &str, collection_id: &str, item_data: serde_json::Value) -> Result<serde_json::Value> {
         let url = format!("{}/wix-data/v2/items", self.base_url);
@@ -83,13 +134,14 @@ impl WixApiClient {
         let url = format!("{}/wix-data/v2/items/{}", self.base_url, item_id);
         let headers = self.create_headers(site_id);
         
+        // Wix Data API v2 requires PUT with full dataItem, not PATCH
         let body = serde_json::json!({
             "dataCollectionId": collection_id,
             "dataItem": item_data
         });
         
         let response = self.client
-            .patch(&url)
+            .put(&url)  // Changed from patch to put
             .headers(headers)
             .json(&body)
             .send()
