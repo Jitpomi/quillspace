@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use crate::database::DatabaseConnections;
 use crate::services::wix_api::WixApiClient;
-use anyhow::Result;
+use anyhow::{Result, Context};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WixSite {
@@ -58,6 +58,23 @@ pub struct ConnectedWebsitesService {
 impl ConnectedWebsitesService {
     pub fn new(db: DatabaseConnections) -> Self {
         Self { db }
+    }
+
+    /// Check if a tenant owns a specific site
+    pub async fn verify_site_ownership(&self, site_id: &str, tenant_id: uuid::Uuid) -> Result<bool> {
+        // For demo purposes, use the same logic as get_user_websites_with_tenant
+        // In production, this would query the connected_websites table
+        match site_id {
+            "1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9" => {
+                // Yasin's site belongs to his tenant
+                let yasin_tenant_id = "22222222-2222-2222-2222-222222222222";
+                Ok(tenant_id.to_string() == yasin_tenant_id)
+            },
+            _ => {
+                tracing::warn!("Unknown site ID: {}", site_id);
+                Ok(false) // Unknown sites are not owned by anyone
+            }
+        }
     }
 
     /// Get Wix books for a specific site
@@ -133,7 +150,31 @@ impl ConnectedWebsitesService {
         }
     }
 
-    /// Get websites from Wix Sites API for the authenticated user
+    /// Get websites from Wix Sites API for the authenticated user with tenant isolation
+    pub async fn get_user_websites_with_tenant(&self, user_id: Uuid, tenant_id: Uuid) -> Result<Vec<ConnectedWebsite>> {
+        // TODO: In production, this should:
+        // 1. Query a connected_websites table filtered by user_id AND tenant_id
+        // 2. Only return sites that belong to the specific tenant
+        // 3. Use OAuth or stored site mappings instead of hardcoded demo sites
+        
+        // For now, implement tenant-based filtering:
+        // - Only Yasin's tenant (22222222-2222-2222-2222-222222222222) should see the demo site
+        // - Other tenants should see empty results
+        let yasin_tenant_id = "22222222-2222-2222-2222-222222222222";
+        
+        if tenant_id.to_string() != yasin_tenant_id {
+            tracing::info!(
+                "Tenant {} has no connected websites (demo site belongs to Yasin's tenant only)", 
+                tenant_id
+            );
+            return Ok(vec![]);
+        }
+        
+        // Call the original method for Yasin's tenant
+        self.get_user_websites(user_id).await
+    }
+
+    /// Get websites from Wix Sites API for the authenticated user (legacy method)
     pub async fn get_user_websites(&self, user_id: Uuid) -> Result<Vec<ConnectedWebsite>> {
         // For now, we'll fetch from Wix API directly
         // In the future, we can store user's connected sites in the database

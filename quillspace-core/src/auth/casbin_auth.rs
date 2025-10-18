@@ -44,7 +44,8 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act && (r.tenant == p.tenant
         // VIEWER PERMISSIONS (read-only access)
         let viewer_permissions = vec![
             ("content", "read"), ("sites", "read"), ("pages", "read"), 
-            ("templates", "read"), ("assets", "read"), ("analytics", "read")
+            ("templates", "read"), ("assets", "read"), ("analytics", "read"),
+            ("connected_websites", "read"), ("books", "read")
         ];
         for (resource, action) in viewer_permissions {
             enforcer.add_policy(vec!["viewer".to_string(), resource.to_string(), action.to_string(), "*".to_string()]).await?;
@@ -56,7 +57,9 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act && (r.tenant == p.tenant
             ("sites", "write"), ("sites", "update"), ("sites", "publish"),
             ("pages", "write"), ("pages", "update"), ("pages", "publish"),
             ("templates", "write"), ("templates", "update"),
-            ("assets", "write"), ("assets", "update")
+            ("assets", "write"), ("assets", "update"),
+            ("connected_websites", "write"), ("connected_websites", "update"),
+            ("books", "write"), ("books", "update")
         ];
         for (resource, action) in editor_permissions {
             enforcer.add_policy(vec!["editor".to_string(), resource.to_string(), action.to_string(), "*".to_string()]).await?;
@@ -68,6 +71,8 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act && (r.tenant == p.tenant
             ("tenants", "read"), ("tenants", "update"), ("tenants", "configure"),
             ("sites", "delete"), ("pages", "delete"), ("content", "delete"),
             ("templates", "delete"), ("assets", "delete"),
+            ("connected_websites", "delete"), ("connected_websites", "admin"),
+            ("books", "delete"), ("books", "admin"),
             ("analytics", "admin"), ("security", "admin")
         ];
         for (resource, action) in admin_permissions {

@@ -8,6 +8,7 @@ use axum::{
 use serde::Serialize;
 use uuid::Uuid;
 use crate::{
+    auth::CasbinAuthContext,
     services::connected_websites::{ConnectedWebsitesService, ConnectedWebsite},
     AppState,
 };
@@ -22,55 +23,41 @@ pub fn connected_websites_routes() -> Router<AppState> {
     Router::new()
         .route("/test", get(|| async { "CONNECTED WEBSITES ROUTE WORKS!" }))
         .route("/websites", get(get_user_websites))
-        .route("/wix/books", get(get_wix_books_simple))
-        .route("/wix/books", post(create_wix_book))
-        .route("/wix/books/with-schema", post(create_wix_book_with_proper_types))
-        .route("/wix/books/:book_id", get(get_single_wix_book))
-        .route("/wix/books/:book_id", put(update_wix_book))
-        .route("/wix/books/:book_id", patch(patch_wix_book))
+        .route("/wix/sites/:site_id/books", get(get_wix_books_simple))
+        .route("/wix/sites/:site_id/books", post(create_wix_book))
+        .route("/wix/sites/:site_id/books/with-schema", post(create_wix_book_with_proper_types))
+        .route("/wix/sites/:site_id/books/:book_id", get(get_single_wix_book))
+        .route("/wix/sites/:site_id/books/:book_id", put(update_wix_book))
+        .route("/wix/sites/:site_id/books/:book_id", patch(patch_wix_book))
+        // Keep legacy routes for backward compatibility
+        .route("/wix/books", get(get_wix_books_legacy))
+        .route("/wix/books/:book_id", get(get_single_wix_book_legacy))
         .route("/wix/author", get(get_wix_author_info))
         .route("/wix/author", put(update_wix_author_info))
 }
 
-/// Get QuillSpace-built websites for the authenticated user
+/// Get connected websites for the authenticated user with Casbin authorization
 pub async fn get_user_websites(
     State(state): State<AppState>,
-    request: Request,
+    auth: CasbinAuthContext,
 ) -> Result<Json<ConnectedWebsitesResponse>, StatusCode> {
-    // Extract Authorization header
-    let auth_header = request
-        .headers()
-        .get("authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+    // Check Casbin permission for connected_websites read
+    auth.require_permission("connected_websites", "read").await?;
     
-    // Extract token from "Bearer <token>"
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    
-    // Decode and validate JWT token
-    let claims = match state.jwt_manager.verify_token(token) {
-        Ok(claims) => claims,
-        Err(e) => {
-            tracing::error!("JWT verification failed: {}", e);
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-    };
-    
-    // Get user ID from claims
-    let user_id: Uuid = claims.sub.parse().map_err(|e| {
-        tracing::error!("Failed to parse user ID from JWT: {}", e);
-        StatusCode::UNAUTHORIZED
-    })?;
-    
-    tracing::info!("Getting websites for user: {}", user_id);
+    tracing::info!(
+        "Getting websites for user: {} (tenant: {}, role: {:?})", 
+        auth.user_id, auth.tenant_id, auth.user_role
+    );
     
     let service = ConnectedWebsitesService::new(state.db.clone());
     
-    match service.get_user_websites(user_id).await {
+    // Get websites with proper tenant/user isolation
+    match service.get_user_websites_with_tenant(auth.user_id, auth.tenant_id).await {
         Ok(websites) => {
-            tracing::info!("Found {} websites for user {}", websites.len(), user_id);
+            tracing::info!(
+                "Found {} websites for user {} in tenant {}", 
+                websites.len(), auth.user_id, auth.tenant_id
+            );
             Ok(Json(ConnectedWebsitesResponse { websites }))
         },
         Err(e) => {
@@ -80,8 +67,36 @@ pub async fn get_user_websites(
     }
 }
 
-/// Get Wix books - SIMPLE VERSION
-pub async fn get_wix_books_simple() -> Result<Json<serde_json::Value>, StatusCode> {
+/// Get Wix books for a specific site with site ownership verification
+pub async fn get_wix_books_simple(
+    Path(site_id): Path<String>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books read
+    auth.require_permission("books", "read").await?;
+    
+    tracing::info!(
+        "Getting books for site {} by user: {} (tenant: {}, role: {:?})", 
+        site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership - users can only read books from sites they own
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to access books for site {} - access denied (not site owner)", 
+            auth.tenant_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
     let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
@@ -89,19 +104,28 @@ pub async fn get_wix_books_simple() -> Result<Json<serde_json::Value>, StatusCod
 
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.get_collection_items("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books").await {
-        Ok(books) => Ok(Json(books)),
+    match client.get_collection_items(&site_id, "Books").await {
+        Ok(books) => {
+            tracing::info!("Books for site {} accessed by tenant {}", site_id, auth.tenant_id);
+            Ok(Json(books))
+        },
         Err(e) => {
-            tracing::error!("Failed to get Wix books: {}", e);
+            tracing::error!("Failed to get Wix books for site {}: {}", site_id, e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
 
-/// Get single Wix book by ID
+/// Get single Wix book by ID with Casbin authorization (shared read access)
 pub async fn get_single_wix_book(
     Path(book_id): Path<String>,
+    auth: CasbinAuthContext,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books read
+    auth.require_permission("books", "read").await?;
+    
+    // Single book read is also shared - all tenants can view individual books
+    
     let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
@@ -118,10 +142,37 @@ pub async fn get_single_wix_book(
     }
 }
 
-/// Create new book in Wix
+/// Create new book in Wix for a specific site with site ownership verification
 pub async fn create_wix_book(
+    Path(site_id): Path<String>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
     Json(book_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books write
+    auth.require_permission("books", "write").await?;
+    
+    tracing::info!(
+        "Creating book for site {} by user: {} (tenant: {}, role: {:?})", 
+        site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership - users can only create books for sites they own
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to create book for site {} - access denied (not site owner)", 
+            auth.tenant_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
     let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
@@ -129,20 +180,48 @@ pub async fn create_wix_book(
 
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.insert_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", book_data).await {
-        Ok(book) => Ok(Json(book)),
+    match client.insert_collection_item(&site_id, "Books", book_data).await {
+        Ok(book) => {
+            tracing::info!("Book created for site {} by tenant {}", site_id, auth.tenant_id);
+            Ok(Json(book))
+        },
         Err(e) => {
-            tracing::error!("Failed to create Wix book: {}", e);
+            tracing::error!("Failed to create Wix book for site {}: {}", site_id, e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
 
-/// Update book in Wix
+/// Update book in Wix with Casbin authorization (owner-only)
 pub async fn update_wix_book(
-    Path(book_id): Path<String>,
+    Path((site_id, book_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
     Json(book_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books update
+    auth.require_permission("books", "update").await?;
+    
+    tracing::info!(
+        "Updating book {} for site {} by user: {} (tenant: {}, role: {:?})", 
+        book_id, site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership - users can only update books for sites they own
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to update book {} for site {} - access denied (not site owner)", 
+            auth.tenant_id, book_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
     let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
@@ -150,20 +229,48 @@ pub async fn update_wix_book(
 
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.update_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", &book_id, book_data).await {
-        Ok(book) => Ok(Json(book)),
+    match client.update_collection_item(&site_id, "Books", &book_id, book_data).await {
+        Ok(book) => {
+            tracing::info!("Book {} updated for site {} by tenant {}", book_id, site_id, auth.tenant_id);
+            Ok(Json(book))
+        },
         Err(e) => {
-            tracing::error!("Failed to update Wix book: {}", e);
+            tracing::error!("Failed to update Wix book {} for site {}: {}", book_id, site_id, e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
 
-/// Partially update book in Wix (PATCH)
+/// Partially update book in Wix (PATCH) with Casbin authorization (owner-only)
 pub async fn patch_wix_book(
-    Path(book_id): Path<String>,
+    Path((site_id, book_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
     Json(patch_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books update
+    auth.require_permission("books", "update").await?;
+    
+    tracing::info!(
+        "Patching book {} for site {} by user: {} (tenant: {}, role: {:?})", 
+        book_id, site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership - users can only patch books for sites they own
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to patch book {} for site {} - access denied (not site owner)", 
+            auth.tenant_id, book_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
     let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
@@ -171,10 +278,86 @@ pub async fn patch_wix_book(
 
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.patch_collection_item("1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9", "Books", &book_id, patch_data).await {
+    match client.patch_collection_item(&site_id, "Books", &book_id, patch_data).await {
+        Ok(book) => {
+            tracing::info!("Book {} patched for site {} by tenant {}", book_id, site_id, auth.tenant_id);
+            Ok(Json(book))
+        },
+        Err(e) => {
+            tracing::error!("Failed to patch Wix book {} for site {}: {}", book_id, site_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Legacy: Get Wix books (defaults to Yasin's site for backward compatibility)
+pub async fn get_wix_books_legacy(auth: CasbinAuthContext) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books read
+    auth.require_permission("books", "read").await?;
+    
+    // Default to Yasin's site for backward compatibility
+    let default_site_id = "1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9";
+    
+    // Only Yasin's tenant can access the legacy endpoint
+    let yasin_tenant_id = "22222222-2222-2222-2222-222222222222";
+    
+    if auth.tenant_id.to_string() != yasin_tenant_id {
+        tracing::warn!(
+            "Tenant {} attempted to access legacy books endpoint - access denied", 
+            auth.tenant_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.get_collection_items(default_site_id, "Books").await {
+        Ok(books) => Ok(Json(books)),
+        Err(e) => {
+            tracing::error!("Failed to get legacy Wix books: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Legacy: Get single Wix book by ID (defaults to Yasin's site for backward compatibility)
+pub async fn get_single_wix_book_legacy(
+    Path(book_id): Path<String>,
+    auth: CasbinAuthContext,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Check Casbin permission for books read
+    auth.require_permission("books", "read").await?;
+    
+    // Default to Yasin's site for backward compatibility
+    let default_site_id = "1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9";
+    
+    // Only Yasin's tenant can access the legacy endpoint
+    let yasin_tenant_id = "22222222-2222-2222-2222-222222222222";
+    
+    if auth.tenant_id.to_string() != yasin_tenant_id {
+        tracing::warn!(
+            "Tenant {} attempted to access legacy book {} - access denied", 
+            auth.tenant_id, book_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.get_collection_item(default_site_id, "Books", &book_id).await {
         Ok(book) => Ok(Json(book)),
         Err(e) => {
-            tracing::error!("Failed to patch Wix book: {}", e);
+            tracing::error!("Failed to get legacy Wix book {}: {}", book_id, e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
