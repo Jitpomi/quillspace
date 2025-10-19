@@ -2,7 +2,7 @@ import { component$, useSignal, $, noSerialize, useVisibleTask$ } from '@builder
 import { LuGlobe, LuPlus, LuSettings, LuExternalLink, LuRocket, LuPalette, LuFileText, LuSquare, LuUser, LuShield, LuArrowLeft, LuCalendar } from '@qwikest/icons/lucide';
 import { ConnectedWebsites } from '~/components/website-builder/connected-websites';
 import { WebsiteBuilderService } from '~/services/website-builder.service';
-import type { WebsiteBuilder, ConnectedWebsite, BuilderType } from '~/types/website-builders';
+import type { WebsiteBuilder,BuilderType } from '~/types/website-builders';
 import {routeLoader$} from "@builder.io/qwik-city";
 import {getAuthToken, getTenantInfo, getUserInfo} from "~/utils/auth";
 
