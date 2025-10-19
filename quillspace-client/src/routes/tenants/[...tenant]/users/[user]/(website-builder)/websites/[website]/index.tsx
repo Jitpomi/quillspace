@@ -445,29 +445,23 @@ export default component$(() => {
               
               {/* Toolbar Buttons */}
               <div class="flex items-center gap-1">
-                <button
-                  onClick$={() => switchMode('edit')}
-                  class={`p-2 rounded-lg transition-colors ${
-                    (editorMode.value as EditorMode) === 'edit'
-                      ? 'bg-[#9CAF88] text-white'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Edit Mode"
-                >
-                  <LuPencil class="w-4 h-4" />
-                </button>
-                
-                <button
-                  onClick$={() => switchMode('preview')}
-                  class={`p-2 rounded-lg transition-colors ${
-                    (editorMode.value as EditorMode) === 'preview'
-                      ? 'bg-[#9CAF88] text-white'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Preview"
-                >
-                  <LuEye class="w-4 h-4" />
-                </button>
+                {(editorMode.value as EditorMode) === 'edit' ? (
+                  <button
+                    onClick$={() => switchMode('preview')}
+                    class="p-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    title="Preview Mode"
+                  >
+                    <LuEye class="w-5 h-5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick$={() => switchMode('edit')}
+                    class="p-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    title="Edit Mode"
+                  >
+                    <LuPencil class="w-5 h-5" />
+                  </button>
+                )}
 
 
                 <button
@@ -571,7 +565,7 @@ export default component$(() => {
             <div class="text-center">
               <LuRefreshCw class="w-8 h-8 text-[#9CAF88] animate-spin mx-auto mb-4" />
               <p class="text-gray-600">
-                {(editorMode.value as EditorMode) === 'edit' ? 'Loading Interactive Editor...' : 'Loading Preview...'}
+                {(editorMode.value as EditorMode) === 'edit' ? 'Loading Content Editor...' : 'Loading Preview...'}
               </p>
             </div>
           </div>
@@ -587,7 +581,7 @@ export default component$(() => {
             class="w-full h-full border-0"
             onLoad$={handleIframeLoad}
             onError$={handleIframeError}
-            title={`${(editorMode.value as EditorMode) === 'edit' ? 'Interactive Editor' : 'Website Preview'} - ${website.value?.name || 'Website'}`}
+            title={`${(editorMode.value as EditorMode) === 'edit' ? 'Content Editor' : 'Website Preview'} - ${website.value?.name || 'Website'}`}
             sandbox="allow-same-origin allow-scripts allow-forms"
           />
         ) : (
@@ -978,8 +972,8 @@ export default component$(() => {
             <p class="text-sm text-gray-600 text-center">
               {(editorMode.value as EditorMode) === 'edit' ? (
                 <>
-                  <span class="font-medium">Edit Mode:</span> Double-click any element on your website to edit its content directly. 
-                  Changes sync automatically to your Wix site.
+                  <span class="font-medium">Edit Mode:</span> Use the floating edit button to manage your website content. 
+                  Changes sync automatically to your website.
                 </>
               ) : (
                 <>
