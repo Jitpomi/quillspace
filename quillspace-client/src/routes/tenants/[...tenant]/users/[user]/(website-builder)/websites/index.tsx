@@ -409,7 +409,7 @@ export default component$(() => {
             ) : (
 
             )}*/}
-            <ConnectedWebsites websites={[...connectedWebsites.value?.websites]} />
+            <ConnectedWebsites websites={[...(connectedWebsites.value?.websites || [])]} />
           </div>
         </>
       ) : (
