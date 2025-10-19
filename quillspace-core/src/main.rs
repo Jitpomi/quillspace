@@ -5,6 +5,7 @@ mod middleware;
 mod routes;
 mod services;
 mod auth;
+mod models;
 
 use axum::{
     extract::State,

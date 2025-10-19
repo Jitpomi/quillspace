@@ -9,7 +9,10 @@ use serde::Serialize;
 use uuid::Uuid;
 use crate::{
     auth::CasbinAuthContext,
-    services::connected_websites::{ConnectedWebsitesService, ConnectedWebsite},
+    services::{
+        connected_websites::{ConnectedWebsitesService, ConnectedWebsite},
+        wix_data_types::WixDataTypeValidator,
+    },
     AppState,
 };
 
@@ -29,6 +32,10 @@ pub fn connected_websites_routes() -> Router<AppState> {
         .route("/wix/sites/:site_id/books/:book_id", get(get_single_wix_book))
         .route("/wix/sites/:site_id/books/:book_id", put(update_wix_book))
         .route("/wix/sites/:site_id/books/:book_id", patch(patch_wix_book))
+        .route("/wix/sites/:site_id/authors", get(get_wix_authors_for_site))
+        .route("/wix/sites/:site_id/authors", post(create_wix_author_for_site))
+        .route("/wix/sites/:site_id/authors/:author_id", put(update_wix_author))
+        .route("/wix/sites/:site_id/authors/:author_id", patch(patch_wix_author))
         // Keep legacy routes for backward compatibility
         .route("/wix/books", get(get_wix_books_legacy))
         .route("/wix/books/:book_id", get(get_single_wix_book_legacy))
@@ -178,11 +185,44 @@ pub async fn create_wix_book(
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Validate and format data according to Wix data type requirements
+    let validated_data = if let Some(data_field) = book_data.get("data") {
+        // Validate the nested data field
+        match WixDataTypeValidator::validate_and_format_book_data(data_field) {
+            Ok(validated) => {
+                // Reconstruct the full payload with validated data
+                let mut full_payload = book_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for book creation: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        // If no nested data field, validate the entire payload and wrap it
+        match WixDataTypeValidator::validate_and_format_book_data(&book_data) {
+            Ok(data) => {
+                // Wrap the validated data in the proper Wix format
+                serde_json::json!({
+                    "data": data
+                })
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for book creation: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
+    tracing::info!("Book data validated successfully for site {}", site_id);
+    
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.insert_collection_item(&site_id, "Books", book_data).await {
+    match client.insert_collection_item(&site_id, "Books", validated_data).await {
         Ok(book) => {
-            tracing::info!("Book created for site {} by tenant {}", site_id, auth.tenant_id);
+            tracing::info!("Book created for site {} by tenant {} with validated data types", site_id, auth.tenant_id);
             Ok(Json(book))
         },
         Err(e) => {
@@ -227,11 +267,35 @@ pub async fn update_wix_book(
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Validate and format data according to Wix data type requirements
+    let validated_data = if let Some(data_field) = book_data.get("data") {
+        // Validate the nested data field
+        match WixDataTypeValidator::validate_and_format_book_data(data_field) {
+            Ok(validated) => {
+                let mut full_payload = book_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for book update: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        match WixDataTypeValidator::validate_and_format_book_data(&book_data) {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::error!("Data validation failed for book update: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.update_collection_item(&site_id, "Books", &book_id, book_data).await {
+    match client.update_collection_item(&site_id, "Books", &book_id, validated_data).await {
         Ok(book) => {
-            tracing::info!("Book {} updated for site {} by tenant {}", book_id, site_id, auth.tenant_id);
+            tracing::info!("Book {} updated for site {} by tenant {} with validated data types", book_id, site_id, auth.tenant_id);
             Ok(Json(book))
         },
         Err(e) => {
@@ -276,11 +340,35 @@ pub async fn patch_wix_book(
     let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Validate and format patch data according to Wix data type requirements
+    let validated_data = if let Some(data_field) = patch_data.get("data") {
+        // Validate the nested data field
+        match WixDataTypeValidator::validate_and_format_book_data(data_field) {
+            Ok(validated) => {
+                let mut full_payload = patch_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for book patch: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        match WixDataTypeValidator::validate_and_format_book_data(&patch_data) {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::error!("Data validation failed for book patch: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
     let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
     
-    match client.patch_collection_item(&site_id, "Books", &book_id, patch_data).await {
+    match client.patch_collection_item(&site_id, "Books", &book_id, validated_data).await {
         Ok(book) => {
-            tracing::info!("Book {} patched for site {} by tenant {}", book_id, site_id, auth.tenant_id);
+            tracing::info!("Book {} patched for site {} by tenant {} with validated data types", book_id, site_id, auth.tenant_id);
             Ok(Json(book))
         },
         Err(e) => {
@@ -453,6 +541,272 @@ pub async fn create_wix_book_with_proper_types(
         Ok(book) => Ok(Json(book)),
         Err(e) => {
             tracing::error!("Failed to create Wix book with schema: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Get Authors for a specific site with Casbin authorization
+pub async fn get_wix_authors_for_site(
+    Path(site_id): Path<String>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    auth.require_permission("connected_websites", "read").await?;
+    
+    tracing::info!(
+        "Getting authors for site {} by user: {} (tenant: {}, role: {:?})", 
+        site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to access authors for site {} - access denied (not site owner)", 
+            auth.tenant_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.get_collection_items(&site_id, "Authors").await {
+        Ok(authors) => {
+            tracing::info!("Authors retrieved for site {} by tenant {}", site_id, auth.tenant_id);
+            Ok(Json(authors))
+        },
+        Err(e) => {
+            tracing::error!("Failed to get Wix authors for site {}: {}", site_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Create new author in Wix with proper validation
+pub async fn create_wix_author_for_site(
+    Path(site_id): Path<String>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+    Json(author_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    auth.require_permission("connected_websites", "create").await?;
+    
+    tracing::info!(
+        "Creating author for site {} by user: {} (tenant: {}, role: {:?})", 
+        site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to create author for site {} - access denied (not site owner)", 
+            auth.tenant_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Validate and format data according to Authors schema
+    let validated_data = if let Some(data_field) = author_data.get("data") {
+        match WixDataTypeValidator::validate_and_format_author_data(data_field) {
+            Ok(validated) => {
+                let mut full_payload = author_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for author creation: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        match WixDataTypeValidator::validate_and_format_author_data(&author_data) {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::error!("Data validation failed for author creation: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
+    tracing::info!("Author data validated successfully for site {}", site_id);
+    
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.insert_collection_item(&site_id, "Authors", validated_data).await {
+        Ok(author) => {
+            tracing::info!("Author created for site {} by tenant {} with validated data types", site_id, auth.tenant_id);
+            Ok(Json(author))
+        },
+        Err(e) => {
+            tracing::error!("Failed to create Wix author for site {}: {}", site_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Update author in Wix with Casbin authorization (owner-only)
+pub async fn update_wix_author(
+    Path((site_id, author_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+    Json(author_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    auth.require_permission("connected_websites", "update").await?;
+    
+    tracing::info!(
+        "Updating author {} for site {} by user: {} (tenant: {}, role: {:?})", 
+        author_id, site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to update author {} for site {} - access denied (not site owner)", 
+            auth.tenant_id, author_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Validate and format data according to Authors schema
+    let validated_data = if let Some(data_field) = author_data.get("data") {
+        match WixDataTypeValidator::validate_and_format_author_data(data_field) {
+            Ok(validated) => {
+                let mut full_payload = author_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for author update: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        match WixDataTypeValidator::validate_and_format_author_data(&author_data) {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::error!("Data validation failed for author update: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.update_collection_item(&site_id, "Authors", &author_id, validated_data).await {
+        Ok(author) => {
+            tracing::info!("Author {} updated for site {} by tenant {} with validated data types", author_id, site_id, auth.tenant_id);
+            Ok(Json(author))
+        },
+        Err(e) => {
+            tracing::error!("Failed to update Wix author {} for site {}: {}", author_id, site_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Partially update author in Wix (PATCH) with Casbin authorization (owner-only)
+pub async fn patch_wix_author(
+    Path((site_id, author_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+    Json(patch_data): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    auth.require_permission("connected_websites", "update").await?;
+    
+    tracing::info!(
+        "Patching author {} for site {} by user: {} (tenant: {}, role: {:?})", 
+        author_id, site_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    // Verify site ownership
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    let owns_site = service.verify_site_ownership(&site_id, auth.tenant_id).await
+        .map_err(|e| {
+            tracing::error!("Failed to verify site ownership: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !owns_site {
+        tracing::warn!(
+            "Tenant {} attempted to patch author {} for site {} - access denied (not site owner)", 
+            auth.tenant_id, author_id, site_id
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Validate and format patch data according to Authors schema
+    let validated_data = if let Some(data_field) = patch_data.get("data") {
+        match WixDataTypeValidator::validate_and_format_author_data(data_field) {
+            Ok(validated) => {
+                let mut full_payload = patch_data.clone();
+                full_payload["data"] = validated;
+                full_payload
+            },
+            Err(e) => {
+                tracing::error!("Data validation failed for author patch: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        match WixDataTypeValidator::validate_and_format_author_data(&patch_data) {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::error!("Data validation failed for author patch: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    };
+    
+    let client = crate::services::wix_api::WixApiClient::new(api_key, account_id);
+    
+    match client.patch_collection_item(&site_id, "Authors", &author_id, validated_data).await {
+        Ok(author) => {
+            tracing::info!("Author {} patched for site {} by tenant {} with validated data types", author_id, site_id, auth.tenant_id);
+            Ok(Json(author))
+        },
+        Err(e) => {
+            tracing::error!("Failed to patch Wix author {} for site {}: {}", author_id, site_id, e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

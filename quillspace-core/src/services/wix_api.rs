@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
-use reqwest::Client;
+use reqwest::{Client, header::HeaderMap};
+use anyhow::{Result, anyhow};
 
 pub struct WixApiClient {
     client: Client,
@@ -34,8 +34,7 @@ impl WixApiClient {
         let headers = self.create_headers(site_id);
         
         let body = serde_json::json!({
-            "dataCollectionId": collection_id,
-            "query": {}
+            "dataCollectionId": collection_id
         });
         
         let response = self.client
@@ -44,12 +43,37 @@ impl WixApiClient {
             .json(&body)
             .send()
             .await?;
-
+        
         if response.status().is_success() {
-            Ok(response.json().await?)
+            let result = response.json::<serde_json::Value>().await?;
+            Ok(result)
         } else {
-            let error_text = response.text().await?;
-            Err(anyhow::anyhow!("Wix Data API error: {}", error_text))
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            Err(anyhow!("Failed to get collection items: {}", error_text))
+        }
+    }
+
+    /// Query items from a Wix Data collection with custom filter
+    pub async fn query_collection_items_with_filter(&self, site_id: &str, collection_id: &str, query_body: serde_json::Value) -> Result<serde_json::Value> {
+        let url = format!("{}/wix-data/v2/items/query", self.base_url);
+        let headers = self.create_headers(site_id);
+        
+        let mut body = query_body;
+        body["dataCollectionId"] = serde_json::Value::String(collection_id.to_string());
+        
+        let response = self.client
+            .post(&url)
+            .headers(headers)
+            .json(&body)
+            .send()
+            .await?;
+        
+        if response.status().is_success() {
+            let result = response.json::<serde_json::Value>().await?;
+            Ok(result)
+        } else {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            Err(anyhow!("Failed to query collection items with filter: {}", error_text))
         }
     }
 

@@ -11,6 +11,7 @@ pub mod template_engine;
 pub mod tenant;
 pub mod user;
 pub mod wix_api;
+pub mod wix_data_types;
 pub mod connected_websites;
 
 // Re-export commonly used services
