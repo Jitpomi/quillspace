@@ -67,6 +67,8 @@ export default component$(() => {
   type EditorMode = 'preview' | 'edit';
   const editorMode = useSignal<EditorMode>('edit');
   const isLoading = useSignal(true);
+  const showEditSidebar = useSignal(false);
+  const expandedAccordion = useSignal<string | null>(null);
   
   // Interactive editing state
   const selectedElement = useSignal<string | null>(null);
@@ -446,7 +448,7 @@ export default component$(() => {
                       ? 'bg-[#9CAF88] text-white'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
-                  title="Edit"
+                  title="Edit Mode"
                 >
                   <LuPencil class="w-4 h-4" />
                 </button>
@@ -462,6 +464,7 @@ export default component$(() => {
                 >
                   <LuEye class="w-4 h-4" />
                 </button>
+
 
                 <button
                   onClick$={() => {
@@ -570,25 +573,40 @@ export default component$(() => {
           </div>
         )}
 
-        {/* Interactive Editing Hint */}
-        {(editorMode.value as EditorMode) === 'edit' && !isLoading.value && (
-          <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-[#9CAF88] text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-            <LuPencil class="w-4 h-4 inline mr-2" />
-            Double-click anywhere to edit content
-          </div>
-        )}
 
 
         {/* Website Iframe */}
-        <iframe
-          id="website-iframe"
-          src={previewUrl.value}
-          class="w-full h-full border-0"
-          onLoad$={handleIframeLoad}
-          onError$={handleIframeError}
-          title={`${(editorMode.value as EditorMode) === 'edit' ? 'Interactive Editor' : 'Website Preview'} - ${website.value?.name || 'Website'}`}
-          sandbox="allow-same-origin allow-scripts allow-forms"
-        />
+        {previewUrl.value ? (
+          <iframe
+            id="website-iframe"
+            src={previewUrl.value}
+            class="w-full h-full border-0"
+            onLoad$={handleIframeLoad}
+            onError$={handleIframeError}
+            title={`${(editorMode.value as EditorMode) === 'edit' ? 'Interactive Editor' : 'Website Preview'} - ${website.value?.name || 'Website'}`}
+            sandbox="allow-same-origin allow-scripts allow-forms"
+          />
+        ) : (
+          <div class="w-full h-full flex items-center justify-center bg-gray-100">
+            <div class="text-center">
+              <div class="text-gray-500 mb-2">No website URL found</div>
+              <div class="text-sm text-gray-400">
+                Website data: {JSON.stringify(websiteData.value, null, 2)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Action Button - Only visible in edit mode */}
+        {(editorMode.value as EditorMode) === 'edit' && (
+          <button
+            onClick$={() => showEditSidebar.value = true}
+            class="fixed bottom-6 right-6 z-40 bg-[#9CAF88] text-white p-4 rounded-full shadow-lg hover:bg-[#8BA079] transition-all duration-200 hover:scale-105"
+            title="Edit Website Content"
+          >
+            <LuPencil class="w-6 h-6" />
+          </button>
+        )}
 
         {/* Debug Info */}
         {process.env.NODE_ENV === 'development' && (
@@ -596,6 +614,196 @@ export default component$(() => {
             <div>URL: {previewUrl.value || 'No URL'}</div>
             <div>Mode: {editorMode.value}</div>
             <div>Loading: {isLoading.value ? 'Yes' : 'No'}</div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEditSidebar.value && (
+          <div class="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop */}
+            <div 
+              class="absolute inset-0"
+              onClick$={() => showEditSidebar.value = false}
+            ></div>
+            
+            {/* Modal */}
+            <div class="relative bg-white rounded-2xl shadow-lg border border-gray-100 w-[800px] max-h-[80vh] overflow-hidden">
+              {/* Header */}
+              <div class="px-8 py-6 border-b border-gray-50 bg-gradient-to-r from-gray-50/50 to-[#9CAF88]/5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-[#9CAF88]/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-[#9CAF88]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 class="text-xl font-medium text-gray-800">Editing Wizard</h2>
+                    <p class="text-sm text-gray-500">Manage your website content</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div class="p-8 overflow-y-auto max-h-[calc(80vh-120px)]">
+                <div class="space-y-4">
+                  {/* Books Accordion */}
+                  <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
+                    <button 
+                      class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
+                      onClick$={() => {
+                        expandedAccordion.value = expandedAccordion.value === 'books' ? null : 'books';
+                      }}
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl">📚</span>
+                        <div>
+                          <div class="font-medium text-gray-900 text-sm">Books Management</div>
+                          <div class="text-xs text-gray-500 mt-0.5">Show/hide books, edit details, set featured books</div>
+                        </div>
+                      </div>
+                      <svg 
+                        class={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedAccordion.value === 'books' ? 'rotate-90' : ''
+                        }`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </button>
+                    
+                    {/* Books Content */}
+                    {expandedAccordion.value === 'books' && (
+                      <div class="border-t border-gray-200 p-4 bg-gray-50">
+                        <div class="space-y-3">
+                          <div class="text-sm font-medium text-gray-700 mb-3">Manage Your Books</div>
+                          
+                          {/* Book List */}
+                          <div class="space-y-2">
+                            <div class="flex items-center justify-between p-3 bg-white rounded border">
+                              <div class="flex items-center gap-3">
+                                <div class="w-8 h-10 bg-[#9CAF88]/10 rounded flex items-center justify-center text-xs">📖</div>
+                                <div>
+                                  <div class="font-medium text-sm">The Missing Corpse</div>
+                                  <div class="text-xs text-gray-500">Book 2 of 2: The General's Project</div>
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <button class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Featured</button>
+                                <button class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">Edit</button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button class="w-full p-2 border-2 border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600">
+                            + Add New Book
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Author Accordion */}
+                  <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
+                    <button 
+                      class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
+                      onClick$={() => {
+                        expandedAccordion.value = expandedAccordion.value === 'author' ? null : 'author';
+                      }}
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl">👤</span>
+                        <div>
+                          <div class="font-medium text-gray-900 text-sm">Author Information</div>
+                          <div class="text-xs text-gray-500 mt-0.5">Update name, bio, photo, and contact information</div>
+                        </div>
+                      </div>
+                      <svg 
+                        class={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedAccordion.value === 'author' ? 'rotate-90' : ''
+                        }`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </button>
+                    
+                    {/* Author Content */}
+                    {expandedAccordion.value === 'author' && (
+                      <div class="border-t border-gray-200 p-4 bg-gray-50">
+                        <div class="space-y-4">
+                          <div class="text-sm font-medium text-gray-700 mb-3">Author Profile</div>
+                          
+                          <div class="space-y-3">
+                            <div>
+                              <label class="block text-xs font-medium text-gray-600 mb-1">Author Name</label>
+                              <input 
+                                type="text" 
+                                value="Yasin Kakande" 
+                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-[0.5px] focus:ring-[#9CAF88]/30 focus:border-[#9CAF88]"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label class="block text-xs font-medium text-gray-600 mb-1">Bio</label>
+                              <textarea 
+                                rows={3}
+                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-[0.5px] focus:ring-[#9CAF88]/30 focus:border-[#9CAF88]"
+                                placeholder="Author biography..."
+                              ></textarea>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                              <button class="px-3 py-1 bg-[#9CAF88] text-white text-xs rounded hover:bg-[#8BA079]">
+                                Save Changes
+                              </button>
+                              <button class="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Theme Accordion - Coming Soon */}
+                  <div class="border border-gray-200 rounded-lg bg-gray-50">
+                    <div class="w-full flex items-center justify-between p-4 text-left rounded-lg">
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl opacity-50">🎨</span>
+                        <div>
+                          <div class="font-medium text-gray-500 text-sm">Theme & Styling</div>
+                          <div class="text-xs text-gray-400 mt-0.5">Customize colors and fonts - Coming soon</div>
+                        </div>
+                      </div>
+                      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Copy Accordion - Coming Soon */}
+                  <div class="border border-gray-200 rounded-lg bg-gray-50">
+                    <div class="w-full flex items-center justify-between p-4 text-left rounded-lg">
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl opacity-50">✏️</span>
+                        <div>
+                          <div class="font-medium text-gray-500 text-sm">Advanced Editing</div>
+                          <div class="text-xs text-gray-400 mt-0.5">Visual page editing - Coming soon</div>
+                        </div>
+                      </div>
+                      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
