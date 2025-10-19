@@ -704,7 +704,7 @@ export default component$(() => {
             <p class="text-sm text-gray-600 text-center">
               {(editorMode.value as EditorMode) === 'edit' ? (
                 <>
-                  <span class="font-medium">Edit Mode:</span> Edit your website content on the left and see live changes on the right. 
+                  <span class="font-medium">Edit Mode:</span> Double-click any element on your website to edit its content directly. 
                   Changes sync automatically to your Wix site.
                 </>
               ) : (
