@@ -3,36 +3,55 @@ import { LuGlobe, LuPlus, LuSettings, LuExternalLink, LuRocket, LuPalette, LuFil
 import { ConnectedWebsites } from '~/components/website-builder/connected-websites';
 import { WebsiteBuilderService } from '~/services/website-builder.service';
 import type { WebsiteBuilder, ConnectedWebsite, BuilderType } from '~/types/website-builders';
+import {routeLoader$} from "@builder.io/qwik-city";
+import {getAuthToken, getTenantInfo, getUserInfo} from "~/utils/auth";
+
+export const useConnectedWebsites = routeLoader$(async (requestEventAction) => {
+  const { cookie } = requestEventAction;
+  const user = await getUserInfo(cookie);
+  const tenant = await getTenantInfo(cookie);
+  const token = getAuthToken(cookie);
+  if (!user || !tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Call the backend API to get connected websites
+    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/websites`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch websites: ${response.statusText}`);
+    }
+
+    const {websites} = await response.json();
+    return { success: true, websites };
+  } catch (error) {
+    console.error('Error fetching connected websites:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      websites: []
+    };
+  }
+});
 
 export default component$(() => {
   const serviceType = useSignal<'diy' | 'managed' | ''>('');
   const selectedBuilder = useSignal<string>('');
   const showCredentials = useSignal(false);
-  const connectedWebsites = useSignal<ConnectedWebsite[]>([]);
+  const connectedWebsites = useConnectedWebsites();
   const isLoading = useSignal(false);
   const credentials = useSignal<Record<string, string>>({});
-  const isLoadingWebsites = useSignal(true);
+  // const isLoadingWebsites = useSignal(true);
   
   const builderService = noSerialize(WebsiteBuilderService.getInstance());
 
-  // Load connected websites
-  // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(async () => {
-    try {
-      const response = await fetch('/api/connected-websites', {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        connectedWebsites.value = data.websites || [];
-      }
-    } catch (error) {
-      console.error('Failed to load connected websites:', error);
-    } finally {
-      isLoadingWebsites.value = false;
-    }
-  });
 
   // Initialize Calendly widget
   // eslint-disable-next-line qwik/no-use-visible-task
@@ -52,7 +71,7 @@ export default component$(() => {
       if (typeof window !== 'undefined' && (window as any).Calendly) {
         (window as any).Calendly.initBadgeWidget({
           url: 'https://calendly.com/dev-jitpomi/30min?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=9caf88',
-          text: 'Get Your Author Website ✨',
+          text: 'Schedule Consultation',
           color: '#9caf88',
           textColor: '#ffffff',
           branding: false
@@ -167,10 +186,7 @@ export default component$(() => {
             selectedBuilder.value as BuilderType, 
             credentials.value
           );
-          
-          // Refresh connected websites
-          const websites = await builderService.getConnectedWebsites();
-          connectedWebsites.value = websites;
+
           
           showCredentials.value = false;
           selectedBuilder.value = '';
@@ -371,7 +387,7 @@ export default component$(() => {
                             class="bg-[#9CAF88] text-white px-8 py-3 rounded-lg hover:bg-[#9CAF88]/90 transition-colors font-medium flex items-center gap-2"
                           >
                             <LuCalendar class="w-5 h-5" />
-                            Schedule Consultation
+                            Reserve Your Spot
                           </button>
                         </div>
                       </div>
@@ -385,14 +401,15 @@ export default component$(() => {
           {/* Connected Websites */}
           <div class="border-t pt-8">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">Your Connected Websites</h2>
-            {isLoadingWebsites.value ? (
+          {/*  {isLoadingWebsites.value ? (
               <div class="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
                 <div class="animate-spin w-8 h-8 border-2 border-[#9CAF88] border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p class="text-gray-600">Loading your connected websites...</p>
               </div>
             ) : (
-              <ConnectedWebsites websites={connectedWebsites.value} />
-            )}
+
+            )}*/}
+            <ConnectedWebsites websites={[...connectedWebsites.value?.websites]} />
           </div>
         </>
       ) : (

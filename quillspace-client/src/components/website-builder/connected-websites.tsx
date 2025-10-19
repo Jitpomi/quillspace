@@ -1,14 +1,50 @@
 import { component$, useSignal, $ } from '@builder.io/qwik';
-import { LuExternalLink, LuSettings, LuRefreshCw, LuTrash2, LuGlobe, LuPencil, LuPlus } from '@qwikest/icons/lucide';
+import { LuExternalLink, LuSettings, LuRefreshCw, LuTrash2, LuGlobe, LuPencil, LuEye, LuCopy } from '@qwikest/icons/lucide';
 import type { ConnectedWebsite } from '~/types/website-builders';
-import { AddExistingWebsiteModal } from './add-existing-website-modal';
+import {globalAction$} from "@builder.io/qwik-city";
+import {getTenantInfo, getUserInfo} from "~/utils/auth";
 
 interface ConnectedWebsitesProps {
-  websites: ConnectedWebsite[];
+  // Make websites optional since we'll fetch them via action
+  websites?: ConnectedWebsite[];
 }
 
-export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites }) => {
-  const showAddModal = useSignal(false);
+export const useUsersWebsite = globalAction$(async (_, requestEventAction) => {
+  const { cookie } = requestEventAction;
+  const user = await getUserInfo(cookie);
+  const tenant = await getTenantInfo(cookie);
+
+  if (!user || !tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Call the backend API to get connected websites
+    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/websites`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${user.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch websites: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return { success: true, websites: data.websites };
+  } catch (error) {
+    console.error('Error fetching connected websites:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      websites: []
+    };
+  }
+});
+
+export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites = [] }) => {
   const websiteList = useSignal(websites);
   const getStatusColor = (status: ConnectedWebsite['status']) => {
     switch (status) {
@@ -33,147 +69,179 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
   if (websiteList.value.length === 0) {
     return (
       <>
-        <div class="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-          <LuGlobe class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 mb-2">No websites connected yet</h3>
-          <p class="text-gray-600 mb-6">
-            Select a website builder above to connect your first website, or add an existing one
+        <div class="text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200/60">
+          <div class="w-16 h-16 bg-gradient-to-br from-[#9CAF88] to-[#8BA079] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <LuGlobe class="w-8 h-8 text-white" />
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">No websites connected yet</h3>
+          <p class="text-gray-600 max-w-md mx-auto leading-relaxed">
+            Select a website builder above to connect your first website and start managing your content
           </p>
-          <button
-            onClick$={() => showAddModal.value = true}
-            class="inline-flex items-center gap-2 bg-[#9CAF88] text-white px-4 py-2 rounded-lg hover:bg-[#9CAF88]/90 transition-colors"
-          >
-            <LuPlus class="w-4 h-4" />
-            Add Existing Website
-          </button>
         </div>
-        
-        <AddExistingWebsiteModal
-          isOpen={showAddModal.value}
-          onClose={$(() => { showAddModal.value = false; })}
-          onAdd={$((website) => {
-            websiteList.value = [...websiteList.value, website];
-          })}
-        />
       </>
     );
   }
 
   return (
     <>
-      <div class="flex items-center justify-between mb-4">
-        <p class="text-sm text-gray-600">
-          {websiteList.value.length} website{websiteList.value.length !== 1 ? 's' : ''} connected
-        </p>
-        <button
-          onClick$={() => showAddModal.value = true}
-          class="inline-flex items-center gap-2 text-[#9CAF88] hover:text-[#9CAF88]/80 text-sm font-medium"
-        >
-          <LuPlus class="w-4 h-4" />
-          Add Existing Website
-        </button>
+      <div class="mb-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-600 text-sm">
+              {websiteList.value.length} website{websiteList.value.length !== 1 ? 's' : ''} connected
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors" title="Refresh">
+              <LuRefreshCw class="w-4 h-4" />
+            </button>
+            <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors" title="Settings">
+              <LuSettings class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
       
       <div class="space-y-4">
         {websiteList.value.map((website) => (
         <div
           key={website.id}
-          class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
+          class="bg-white border border-gray-200 rounded-lg p-4 md:p-6 hover:shadow-md transition-shadow"
         >
-          <div class="flex items-start justify-between">
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-2">
-                <h3 class="text-lg font-semibold text-gray-900">{website.name}</h3>
-                <span class={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(website.status)}`}>
-                  {getStatusIcon(website.status)}
-                  {website.status.charAt(0).toUpperCase() + website.status.slice(1)}
-                </span>
-              </div>
-              
-              <div class="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                <div class="flex items-center gap-1">
-                  <span class="font-medium">Builder:</span>
-                  <span>{website.builderName}</span>
-                </div>
-                {website.domain && (
-                  <div class="flex items-center gap-1">
-                    <span class="font-medium">Domain:</span>
-                    <span>{website.domain}</span>
+          {/* Mobile Layout */}
+          <div class="block md:hidden">
+            <div class="text-center">
+              <div class="w-full h-32 bg-gray-100 rounded-lg overflow-hidden mb-4">
+                {website.metadata?.thumbnail ? (
+                  <img 
+                    src={`https://www.wix.com${website.metadata.thumbnail}`} 
+                    alt={website.name}
+                    class="w-full h-full object-cover"
+                    onError$={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div class="flex items-center justify-center h-full">
+                    <LuGlobe class="w-8 h-8 text-gray-400" />
                   </div>
                 )}
               </div>
+              
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <h3 class="text-lg font-medium text-gray-900">
+                  {website.name}
+                </h3>
+                <span class={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(website.status)}`}>
+                  {getStatusIcon(website.status)}
+                  {website.status === 'active' ? 'Live' : website.status.charAt(0).toUpperCase() + website.status.slice(1)}
+                </span>
+              </div>
+              
+              <div class="text-sm text-gray-600 mb-4 break-words">
+                {website.url ? website.url.replace('https://', '') : 'No domain'}
+              </div>
+              
+              <a
+                href={`/editor/wix/${(website as any).external_site_id}`}
+                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#9CAF88] text-white rounded-lg transition-colors hover:bg-[#8BA079] font-medium"
+              >
+                <LuPencil class="w-4 h-4" />
+                Edit Site
+              </a>
+            </div>
+          </div>
 
-              {website.url && (
-                <a
-                  href={website.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  Visit Website
-                  <LuExternalLink class="w-3 h-3" />
-                </a>
-              )}
-
-              {website.lastSync && (
-                <div class="text-xs text-gray-500 mt-2">
-                  Last synced: {new Date(website.lastSync).toLocaleDateString()}
+          {/* Desktop Layout */}
+          <div class="hidden md:flex items-center gap-6">
+            {/* Website Thumbnail */}
+            <div class="w-24 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+              {website.metadata?.thumbnail ? (
+                <img 
+                  src={`https://www.wix.com${website.metadata.thumbnail}`} 
+                  alt={website.name}
+                  class="w-full h-full object-cover"
+                  onError$={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div class="flex items-center justify-center h-full">
+                  <LuGlobe class="w-5 h-5 text-gray-400" />
                 </div>
               )}
             </div>
 
-            <div class="flex items-center gap-2 ml-4">
-              {(website.builderName === 'Wix' || website.metadata?.built_by === 'quillspace_team') && (
-                <a
-                  href={`/editor/wix/${website.id}`}
-                  class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#9CAF88] text-white text-sm font-medium rounded-lg hover:bg-[#9CAF88]/90 transition-colors"
-                  title="Edit in QuillSpace"
-                >
-                  <LuPencil class="w-3 h-3" />
-                  Edit
-                </a>
-              )}
-              
-              <button
-                class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Website settings"
-              >
-                <LuSettings class="w-4 h-4" />
-              </button>
-              
-              <button
-                class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Sync website"
-              >
-                <LuRefreshCw class="w-4 h-4" />
-              </button>
-              
-              <button
-                class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                title="Settings"
-              >
-                <LuSettings class="w-4 h-4" />
-              </button>
-              
-              <button
-                class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Disconnect website"
-              >
-                <LuTrash2 class="w-4 h-4" />
-              </button>
+            {/* Website Info */}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-3">
+                    <h3 class="text-lg font-medium text-gray-900">
+                      {website.name}
+                    </h3>
+                    <span class={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(website.status)}`}>
+                      {getStatusIcon(website.status)}
+                      {website.status === 'active' ? 'Live' : website.status.charAt(0).toUpperCase() + website.status.slice(1)}
+                    </span>
+                  </div>
+                  
+                  <div class="grid grid-cols-3 lg:grid-cols-5 gap-6 text-sm">
+                    <div>
+                      <div class="text-gray-500 text-xs font-medium mb-1">BUILDER</div>
+                      <div class="text-gray-900 capitalize">{(website as any).builder_type || 'Unknown'}</div>
+                    </div>
+                    
+                    <div>
+                      <div class="text-gray-500 text-xs font-medium mb-1">DOMAIN</div>
+                      <div class="text-gray-900 truncate">
+                        {website.url ? website.url.replace('https://', '') : 'No domain'}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div class="text-gray-500 text-xs font-medium mb-1">ACTIONS</div>
+                      <a
+                        href={`/editor/wix/${(website as any).external_site_id}`}
+                        class="text-[#9CAF88] hover:text-[#8BA079] text-sm transition-colors"
+                      >
+                        Edit Site
+                      </a>
+                    </div>
+                    
+                    <div class="lg:block hidden">
+                      <div class="text-gray-500 text-xs font-medium mb-1">BUSINESS EMAIL</div>
+                      <button class="text-[#9CAF88] hover:text-[#8BA079] text-sm transition-colors text-left">Connect</button>
+                    </div>
+                    
+                    <div class="lg:block hidden">
+                      <div class="text-gray-500 text-xs font-medium mb-1">BUSINESS PHONE</div>
+                      <button class="text-[#9CAF88] hover:text-[#8BA079] text-sm transition-colors text-left">Connect</button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action Menu */}
+                <div class="flex items-center gap-1 ml-4">
+                  <button class="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors" title="Settings">
+                    <LuSettings class="w-4 h-4" />
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors" title="Refresh">
+                    <LuRefreshCw class="w-4 h-4" />
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors" title="View Website">
+                    <LuEye class="w-4 h-4" />
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-red-600 rounded transition-colors" title="Delete">
+                    <LuTrash2 class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       ))}
       </div>
-      
-      <AddExistingWebsiteModal
-        isOpen={showAddModal.value}
-        onClose={$(() => { showAddModal.value = false; })}
-        onAdd={$((website: any) => {
-          websiteList.value = [...websiteList.value, website];
-        })}
-      />
     </>
   );
 });
