@@ -1,9 +1,17 @@
-import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
+import {
+  component$,
+  useSignal,
+  $,
+  useVisibleTask$,
+  useComputed$,
+  useOnDocument,
+  useTask$,
+  isServer, useOnWindow
+} from '@builder.io/qwik';
 import { routeLoader$ } from "@builder.io/qwik-city";
 import { getAuthToken, getTenantInfo, getUserInfo } from "~/utils/auth";
 import { 
-  LuEye, 
-  LuGlobe, 
+  LuEye,
   LuExternalLink,
   LuRefreshCw,
   LuX,
@@ -77,40 +85,10 @@ export default component$(() => {
     content: '',
     elementId: ''
   });
-  
-  // Get URLs directly without $ wrapper since they're synchronous
-  const getEditorUrl = () => {
-    if (!websiteData.value.success || !websiteData.value.website) return '';
-    
-    const website = websiteData.value.website;
-    
-    // First try to use the edit_url from metadata if available
-    if (website.metadata?.edit_url || website.metadata?.editUrl) {
-      return website.metadata.edit_url || website.metadata.editUrl;
-    }
-    
-    // Construct the proper Wix editor URL
-    // The correct format is: https://manage.wix.com/dashboard/{site-id}/home
-    // Or for direct editing: https://editor.wix.com/html/editor/web/renderer/edit/{site-id}?metaSiteId={site-id}
-    const siteId = website.external_site_id;
-    if (siteId) {
-      // Try the manage dashboard first (more reliable)
-      return `https://manage.wix.com/dashboard/${siteId}/home`;
-    }
-    
-    return '';
-  };
-
-  const getPreviewUrl = () => {
-    if (!websiteData.value.success || !websiteData.value.website) return '';
-    
-    const website = websiteData.value.website;
-    return website.url || website.metadata?.view_url || website.metadata?.viewUrl || '';
-  };
 
   const handleIframeLoad = $(() => {
-    isLoading.value = false;
     console.log('Iframe loaded successfully');
+    isLoading.value = false;
   });
 
   const handleIframeError = $(() => {
@@ -119,14 +97,9 @@ export default component$(() => {
   });
 
   // Initial loading timeout
-  useVisibleTask$(() => {
-    setTimeout(() => {
-      if (isLoading.value) {
-        console.log('Initial load timeout, stopping loading state');
-        isLoading.value = false;
-      }
-    }, 8000);
-  });
+  useOnDocument('load', $(() => {
+    isLoading.value = false;
+  }))
 
   const toggleFullscreen = $(() => {
     isFullscreen.value = !isFullscreen.value;
@@ -150,27 +123,27 @@ export default component$(() => {
   });
 
   // Interactive editing functions
-  const handleElementClick = $((event: MouseEvent, elementType: string, content: string, elementId: string) => {
-    if ((editorMode.value as EditorMode) !== 'edit') return;
-    
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const rect = (event.target as HTMLElement).getBoundingClientRect();
-    const iframeRect = document.getElementById('website-iframe')?.getBoundingClientRect();
-    
-    if (iframeRect) {
-      editPopup.value = {
-        show: true,
-        x: rect.left - iframeRect.left + rect.width / 2,
-        y: rect.top - iframeRect.top - 10,
-        type: elementType as 'text' | 'image' | 'book' | 'price',
-        content: content,
-        elementId: elementId
-      };
-      selectedElement.value = elementId;
-    }
-  });
+  // const handleElementClick = $((event: MouseEvent, elementType: string, content: string, elementId: string) => {
+  //   if ((editorMode.value as EditorMode) !== 'edit') return;
+  //
+  //   event.preventDefault();
+  //   event.stopPropagation();
+  //
+  //   const rect = (event.target as HTMLElement).getBoundingClientRect();
+  //   const iframeRect = document.getElementById('website-iframe')?.getBoundingClientRect();
+  //
+  //   if (iframeRect) {
+  //     editPopup.value = {
+  //       show: true,
+  //       x: rect.left - iframeRect.left + rect.width / 2,
+  //       y: rect.top - iframeRect.top - 10,
+  //       type: elementType as 'text' | 'image' | 'book' | 'price',
+  //       content: content,
+  //       elementId: elementId
+  //     };
+  //     selectedElement.value = elementId;
+  //   }
+  // });
 
   const saveEdit = $((newContent: string) => {
     // Here you would save the changes to your backend/Wix
@@ -207,7 +180,7 @@ export default component$(() => {
         }
       }
     } catch (error) {
-      console.log('Cross-origin restriction, using position-based detection');
+      console.log('Cross-origin restriction, using position-based detection: ',error);
     }
     
     // Fallback: Use position-based heuristics
@@ -215,7 +188,7 @@ export default component$(() => {
   });
 
   // Analyze HTML element to determine type and content
-  const analyzeElement = (element: HTMLElement) => {
+  const analyzeElement = $((element: HTMLElement) => {
     const tagName = element.tagName.toLowerCase();
     const className = element.className.toLowerCase();
     const textContent = element.textContent?.trim() || '';
@@ -268,10 +241,10 @@ export default component$(() => {
       elementId: `text-${Date.now()}`,
       title: 'Edit Text'
     };
-  };
+  });
 
   // Fallback analysis based on click position when cross-origin blocks access
-  const analyzeByPosition = (x: number, y: number, iframe: HTMLIFrameElement) => {
+  const analyzeByPosition = $((x: number, y: number, iframe: HTMLIFrameElement) => {
     const rect = iframe.getBoundingClientRect();
     const relativeX = x / rect.width;
     const relativeY = y / rect.height;
@@ -313,12 +286,13 @@ export default component$(() => {
       elementId: `footer-${Date.now()}`,
       title: 'Edit Footer'
     };
-  };
+  });
 
   // Double-click to edit with better event handling
-  useVisibleTask$(({ track }) => {
+  useTask$(({ track }) => {
     track(() => editorMode.value);
-    
+    track(() => isLoading.value);
+    if(isServer) return;
     const iframe = document.getElementById('website-iframe') as HTMLIFrameElement;
     if (!iframe) return;
     
@@ -338,7 +312,7 @@ export default component$(() => {
       console.log('Click position:', x, y);
       
       // Try to get the element at the click position from iframe
-      let elementInfo = await analyzeClickPosition(x, y, iframe);
+      const elementInfo = await analyzeClickPosition(x, y, iframe);
       
       console.log('Element info:', elementInfo);
       
@@ -357,24 +331,36 @@ export default component$(() => {
     const container = iframe.parentElement;
     if (container) {
       container.addEventListener('dblclick', handleDoubleClick);
-      console.log('Added double-click listener to container');
+      
+      return () => {
+        container.removeEventListener('dblclick', handleDoubleClick);
+      };
     }
-    
-    // Also add to the iframe itself
-    iframe.addEventListener('dblclick', handleDoubleClick);
-    console.log('Added double-click listener to iframe');
-    
-    // Add to the document as fallback
-    document.addEventListener('dblclick', (e) => {
-      // Only handle if the click is within the iframe area
-      const rect = iframe.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right && 
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        handleDoubleClick(e);
-      }
-    });
-    console.log('Added document-level double-click listener');
   });
+
+  const handleMessage = $((event: MessageEvent) => {
+    // Only process QuillSpace messages
+    if (event.data.type !== 'QUILLSPACE_ELEMENT_CLICK') return;
+
+    // Only process in edit mode
+    if ((editorMode.value as EditorMode) !== 'edit') return;
+
+    const elementData = event.data.data;
+    console.log('Received element data from iframe:', elementData);
+
+    // Show edit popup with the exact element data
+    editPopup.value = {
+      show: true,
+      x: elementData.position.x,
+      y: elementData.position.y,
+      type: elementData.type,
+      content: elementData.content,
+      elementId: elementData.elementId
+    };
+  });
+
+  useOnWindow('message',handleMessage)
+
 
   if (!websiteData.value.success) {
     return (
@@ -390,8 +376,42 @@ export default component$(() => {
     );
   }
 
-  const website = websiteData.value.website;
-  const currentUrl = (editorMode.value as EditorMode) === 'edit' ? getEditorUrl() : getPreviewUrl();
+
+  // // Get URLs directly without $ wrapper since they're synchronous
+  // const editorUrl = useComputed$(() => {
+  //   if (!websiteData.value.success || !websiteData.value.website) return '';
+  //
+  //   const website = websiteData.value.website;
+  //
+  //   // First try to use the edit_url from metadata if available
+  //   if (website.metadata?.edit_url || website.metadata?.editUrl) {
+  //     return website.metadata.edit_url || website.metadata.editUrl;
+  //   }
+  //
+  //   // Construct the proper Wix editor URL
+  //   // The correct format is: https://manage.wix.com/dashboard/{site-id}/home
+  //   // Or for direct editing: https://editor.wix.com/html/editor/web/renderer/edit/{site-id}?metaSiteId={site-id}
+  //   const siteId = website.external_site_id;
+  //   if (siteId) {
+  //     // Try the manage dashboard first (more reliable)
+  //     return `https://manage.wix.com/dashboard/${siteId}/home`;
+  //   }
+  //
+  //   return '';
+  // });
+
+  const previewUrl = useComputed$(() => {
+    if (!websiteData.value.success || !websiteData.value.website) return '';
+
+    const website = websiteData.value.website;
+    return website.url || website.metadata?.view_url || website.metadata?.viewUrl || '';
+  });
+
+
+  const website = useComputed$(() => websiteData.value.website);
+  // const currentUrl = useComputed$(() => {
+  //   return ((editorMode.value as EditorMode) === 'edit') ? editorUrl.value : previewUrl.value;
+  // });
 
   return (
     <div class={`${isFullscreen.value || (editorMode.value as EditorMode) === 'preview' ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-gray-50`}>
@@ -413,7 +433,7 @@ export default component$(() => {
                 
                 
                 <div>
-                  <h1 class="text-xl font-semibold text-gray-900">{website?.name || 'Website Editor'}</h1>
+                  <h1 class="text-xl font-semibold text-gray-900">{website.value?.name || 'Website Editor'}</h1>
                 </div>
               </div>
               
@@ -448,7 +468,7 @@ export default component$(() => {
                     isLoading.value = true;
                     const iframe = document.querySelector('#website-iframe') as HTMLIFrameElement;
                     if (iframe) {
-                      iframe.src = iframe.src;
+                      iframe.src = website.value.url;
                     }
                   }}
                   class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -469,9 +489,9 @@ export default component$(() => {
                   )}
                 </button>
 
-                {website?.url && (
+                {website.value?.url && (
                   <a
-                    href={website.url}
+                    href={website.value.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -502,7 +522,7 @@ export default component$(() => {
               isLoading.value = true;
               const iframe = document.querySelector('#website-iframe') as HTMLIFrameElement;
               if (iframe) {
-                iframe.src = iframe.src;
+                iframe.src = website.value.url;
               }
             }}
             class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
@@ -511,9 +531,9 @@ export default component$(() => {
             <LuRefreshCw class="w-4 h-4" />
           </button>
 
-          {website?.url && (
+          {website.value?.url && (
             <a
-              href={website.url}
+              href={website.value.url}
               target="_blank"
               rel="noopener noreferrer"
               class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
@@ -562,18 +582,18 @@ export default component$(() => {
         {/* Website Iframe */}
         <iframe
           id="website-iframe"
-          src={getPreviewUrl()}
+          src={previewUrl.value}
           class="w-full h-full border-0"
           onLoad$={handleIframeLoad}
           onError$={handleIframeError}
-          title={`${(editorMode.value as EditorMode) === 'edit' ? 'Interactive Editor' : 'Website Preview'} - ${website?.name || 'Website'}`}
+          title={`${(editorMode.value as EditorMode) === 'edit' ? 'Interactive Editor' : 'Website Preview'} - ${website.value?.name || 'Website'}`}
           sandbox="allow-same-origin allow-scripts allow-forms"
         />
 
         {/* Debug Info */}
         {process.env.NODE_ENV === 'development' && (
           <div class="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded max-w-xs">
-            <div>URL: {getPreviewUrl() || 'No URL'}</div>
+            <div>URL: {previewUrl.value || 'No URL'}</div>
             <div>Mode: {editorMode.value}</div>
             <div>Loading: {isLoading.value ? 'Yes' : 'No'}</div>
           </div>
