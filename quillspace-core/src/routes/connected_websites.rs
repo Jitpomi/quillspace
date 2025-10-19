@@ -26,6 +26,7 @@ pub fn connected_websites_routes() -> Router<AppState> {
     Router::new()
         .route("/test", get(|| async { "CONNECTED WEBSITES ROUTE WORKS!" }))
         .route("/websites", get(get_user_websites))
+        .route("/websites/:website_id", get(get_single_website))
         .route("/wix/sites/:site_id/books", get(get_wix_books_simple))
         .route("/wix/sites/:site_id/books", post(create_wix_book))
         .route("/wix/sites/:site_id/books/with-schema", post(create_wix_book_with_proper_types))
@@ -73,6 +74,66 @@ pub async fn get_user_websites(
         }
     }
 }
+
+/// Get a single connected website by website_id (supports UUID, wix_site_id, or external_site_id)
+pub async fn get_single_website(
+    Path(website_id): Path<String>,
+    State(state): State<AppState>,
+    auth: CasbinAuthContext,
+) -> Result<Json<ConnectedWebsite>, StatusCode> {
+    // Check Casbin permission for connected_websites read
+    auth.require_permission("connected_websites", "read").await?;
+    
+    tracing::info!(
+        "Getting website with id {} for user: {} (tenant: {}, role: {:?})", 
+        website_id, auth.user_id, auth.tenant_id, auth.user_role
+    );
+    
+    let service = ConnectedWebsitesService::new(state.db.clone());
+    
+    // Get all websites for user and filter by website_id
+    match service.get_user_websites_with_tenant(auth.user_id, auth.tenant_id).await {
+        Ok(websites) => {
+            tracing::info!("Got {} websites, looking for website_id: {}", websites.len(), website_id);
+            
+            // Find website with matching ID - try multiple matching strategies
+            if let Some(website) = websites.into_iter().find(|w| {
+                // Try internal UUID id first
+                if w.id.to_string() == website_id {
+                    tracing::info!("Found match via internal UUID id");
+                    return true;
+                }
+                
+                // Try external_site_id (Wix site ID)
+                if w.external_site_id == website_id {
+                    tracing::info!("Found match via external_site_id");
+                    return true;
+                }
+                
+                // Try metadata.wix_site_id
+                if let Some(metadata_id) = w.metadata.get("wix_site_id").and_then(|v| v.as_str()) {
+                    if metadata_id == website_id {
+                        tracing::info!("Found match via metadata.wix_site_id");
+                        return true;
+                    }
+                }
+                
+                false
+            }) {
+                tracing::info!("Found website with id {} for user {}", website_id, auth.user_id);
+                Ok(Json(website))
+            } else {
+                tracing::warn!("Website with id {} not found for user {}", website_id, auth.user_id);
+                Err(StatusCode::NOT_FOUND)
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to get websites for user {}: {}", auth.user_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 
 /// Get Wix books for a specific site with site ownership verification
 pub async fn get_wix_books_simple(

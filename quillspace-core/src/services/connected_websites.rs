@@ -170,8 +170,47 @@ impl ConnectedWebsitesService {
             return Ok(vec![]);
         }
         
-        // Call the original method for Yasin's tenant
-        self.get_user_websites(user_id).await
+        // Call the method with proper tenant_id
+        self.get_user_websites_with_proper_tenant(user_id, tenant_id).await
+    }
+
+    /// Get websites from Wix Sites API with proper tenant_id handling
+    pub async fn get_user_websites_with_proper_tenant(&self, user_id: Uuid, tenant_id: Uuid) -> Result<Vec<ConnectedWebsite>> {
+        // For now, we'll fetch from Wix API directly
+        // In the future, we can store user's connected sites in the database
+        let api_key = std::env::var("QUILLSPACE_WIX_API_KEY")
+            .map_err(|_| anyhow::anyhow!("QUILLSPACE_WIX_API_KEY not configured"))?;
+        let account_id = std::env::var("QUILLSPACE_WIX_ACCOUNT_ID")
+            .map_err(|_| anyhow::anyhow!("QUILLSPACE_WIX_ACCOUNT_ID not configured"))?;
+
+        let client = WixApiClient::new(api_key, account_id);
+        
+        // For demo purposes, we'll show the known site. In production, you'd:
+        // 1. Store user's connected site IDs in database
+        // 2. Or use OAuth to fetch sites they own
+        // 3. Or allow users to add sites manually
+        let demo_site_ids = vec!["1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9".to_string()];
+        
+        match client.query_sites(Some(demo_site_ids)).await {
+            Ok(response) => {
+                let mut websites = Vec::new();
+                
+                if let Some(sites) = response.get("sites").and_then(|s| s.as_array()) {
+                    for site in sites {
+                        let wix_site = self.parse_wix_site(site)?;
+                        let connected_website = self.wix_site_to_connected_website_with_tenant(wix_site, user_id, tenant_id);
+                        websites.push(connected_website);
+                    }
+                }
+                
+                Ok(websites)
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch sites from Wix API: {}", e);
+                // Return empty list instead of error to avoid breaking the UI
+                Ok(vec![])
+            }
+        }
     }
 
     /// Get websites from Wix Sites API for the authenticated user (legacy method)
@@ -249,11 +288,55 @@ impl ConnectedWebsitesService {
         })
     }
     
-    /// Convert WixSite to ConnectedWebsite
-    fn wix_site_to_connected_website(&self, wix_site: WixSite, user_id: Uuid) -> ConnectedWebsite {
+    /// Convert WixSite to ConnectedWebsite with proper tenant_id
+    fn wix_site_to_connected_website_with_tenant(&self, wix_site: WixSite, user_id: Uuid, tenant_id: Uuid) -> ConnectedWebsite {
+        // Use the Wix site ID as our website ID (parse it as UUID)
+        let website_id = Uuid::parse_str(&wix_site.id)
+            .expect("Wix site ID should be a valid UUID");
+        
         ConnectedWebsite {
-            id: Uuid::new_v4(), // Generate a new UUID for the connected website
-            tenant_id: user_id, // Use user_id as tenant_id for now
+            id: website_id, // Use wix_site_id as our website ID
+            tenant_id, // Use proper tenant_id
+            user_id,
+            builder_type: BuilderType::Wix,
+            external_site_id: wix_site.id.clone(),
+            name: wix_site.display_name.clone(),
+            url: wix_site.view_url.clone(),
+            domain: None, // Could extract from view_url if needed
+            status: if wix_site.published.unwrap_or(false) {
+                ConnectionStatus::Active
+            } else {
+                ConnectionStatus::Inactive
+            },
+            last_sync: Some(Utc::now()),
+            sync_error: None,
+            metadata: serde_json::json!({
+                "wix_site_id": wix_site.id,
+                "display_name": wix_site.display_name,
+                "view_url": wix_site.view_url,
+                "edit_url": wix_site.edit_url,
+                "thumbnail": wix_site.thumbnail,
+                "published": wix_site.published,
+                "premium": wix_site.premium,
+                "created_date": wix_site.created_date,
+                "updated_date": wix_site.updated_date,
+                "owner_account_id": wix_site.owner_account_id,
+                "fetched_from_api": true
+            }),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    /// Convert WixSite to ConnectedWebsite (legacy method - uses user_id as tenant_id)
+    fn wix_site_to_connected_website(&self, wix_site: WixSite, user_id: Uuid) -> ConnectedWebsite {
+        // Use the Wix site ID as our website ID (parse it as UUID)
+        let website_id = Uuid::parse_str(&wix_site.id)
+            .expect("Wix site ID should be a valid UUID");
+        
+        ConnectedWebsite {
+            id: website_id, // Use wix_site_id as our website ID
+            tenant_id: user_id, // LEGACY: Use user_id as tenant_id for backward compatibility
             user_id,
             builder_type: BuilderType::Wix,
             external_site_id: wix_site.id.clone(),
