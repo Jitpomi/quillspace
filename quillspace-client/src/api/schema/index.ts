@@ -464,3 +464,156 @@ export const validateSlug = (value: string): boolean => {
 export const validateDomain = (value: string): boolean => {
     return z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/).safeParse(value).success;
 };
+
+export const WixDateSchema = z.object({
+    $date: z.string().datetime(),
+});
+
+export const AuthorProfileSchema = z.object({
+    tagline: z.string(),
+    x: z.string().url(),
+    name: z.string(),
+    email: z.string().email(),
+    _id: z.string(),
+    _owner: z.string(),
+    _createdDate: WixDateSchema,
+    portraitImage: z.string(),
+    _updatedDate: WixDateSchema,
+    bio: z.string(),
+    facebook: z.string().url().optional(),
+    address: z.string().optional(),
+    instagram: z.string().optional(), // could post-process into string[]
+    phone: z.string().optional(),
+});
+
+export type AuthorProfile = z.infer<typeof AuthorProfileSchema>;
+
+/* ---------- Rich Text ---------- */
+// Decorations (extend as needed)
+export const DecorationSchema = z.union([
+    z.object({ type: z.literal("BOLD") }),
+    z.object({ type: z.literal("ITALIC") }),
+    z.object({ type: z.literal("UNDERLINE") }),
+    z.object({ type: z.literal("STRIKETHROUGH") }),
+    z.object({
+        type: z.literal("LINK"),
+        url: z.string().url(),
+        target: z.enum(["_blank", "_self"]).optional(),
+    }),
+    // Fallback for unknown decoration types
+    z.object({ type: z.string() }).passthrough(),
+]);
+export type Decoration = z.infer<typeof DecorationSchema>;
+
+// Forward declarations for recursion
+export type RichTextNode = z.infer<typeof RichTextNodeSchema>;
+
+export const TextNodeSchema = z.object({
+    type: z.literal("TEXT"),
+    id: z.string(),
+    textData: z.object({
+        text: z.string(),
+        decorations: z.array(DecorationSchema),
+    }),
+});
+
+// Define the base paragraph schema without the recursive reference first
+const BaseParagraphNodeSchema = z.object({
+    type: z.literal("PARAGRAPH"),
+    id: z.string(),
+});
+
+// Create the discriminated union with lazy evaluation for the recursive part
+export const RichTextNodeSchema: z.ZodType<any> = z.discriminatedUnion("type", [
+    TextNodeSchema,
+    BaseParagraphNodeSchema.extend({
+        nodes: z.array(z.lazy(() => RichTextNodeSchema)),
+    }),
+]);
+
+// Export the complete paragraph schema for external use
+export const ParagraphNodeSchema = BaseParagraphNodeSchema.extend({
+    nodes: z.array(z.lazy(() => RichTextNodeSchema)),
+});
+
+export const RichTextDocumentSchema = z.object({
+    nodes: z.array(RichTextNodeSchema),
+    documentStyle: z.record(z.unknown()),
+});
+export type RichTextDocument = z.infer<typeof RichTextDocumentSchema>;
+
+/* ---------- Book ---------- */
+export const BookSchema = z.object({
+    author: z.string(),                  // author _id (string/uuid)
+    externalId: z.string(),
+    description: RichTextDocumentSchema,
+
+    _id: z.string(),
+    _createdDate: WixDateSchema,
+
+    // If incoming price can be a string, switch to z.coerce.number()
+    price: z.number().finite().nonnegative(),
+    featured: z.boolean(),
+
+    _updatedDate: WixDateSchema,
+
+    coverImage: z.string().url(),
+    buyLink: z.string().url(),
+    subTitle: z.string(),
+    tiltedCoverImage: z.string().url().optional(),
+    status: z.enum(["draft", "published", "archived"]),
+    title: z.string(),
+});
+
+export type Book = z.infer<typeof BookSchema>;
+
+/** Platforms you plan to support; add more as you integrate them */
+export const BuilderTypeSchema = z.enum(["wix", "squarespace", "wordpress"]);
+export type BuilderType = z.infer<typeof BuilderTypeSchema>;
+
+/** Common lifecycle states; extend as needed */
+export const SiteStatusSchema = z.enum(["active", "inactive", "pending", "syncing", "error"]);
+export type SiteStatus = z.infer<typeof SiteStatusSchema>;
+
+/**
+ * NOTE on timestamps:
+ * - Your payload includes nanosecond precision (e.g., "2025-10-20T03:21:50.036651209Z"),
+ *   which may fail Zod's `.datetime()` strict RFC3339 check.
+ * - To be robust, validate as `string` here. If you prefer `Date`, see the "Coerced Dates" variant below.
+ */
+const TimestampString = z.string(); // accept high-precision RFC3339-like strings
+
+export const MetadataSchema = z.object({
+    wix_site_id: z.string(),
+    display_name: z.string(),
+    view_url: z.string().url(),
+    edit_url: z.string(),       // relative URL allowed by your example
+    thumbnail: z.string(),      // path like "/site-thumbnail/..."
+    published: z.boolean(),
+    premium: z.boolean(),
+    created_date: TimestampString,
+    updated_date: TimestampString,
+    owner_account_id: z.string().uuid(),
+    fetched_from_api: z.boolean(),
+}).strict();
+
+export const ConnectedWebsiteSchema = z.object({
+    id: z.string().uuid(),
+    tenant_id: z.string().uuid(),
+    user_id: z.string().uuid(),
+    builder_type: BuilderTypeSchema,
+    external_site_id: z.string(),
+    name: z.string(),
+    url: z.string().url(),
+    // If you store a bare domain (no protocol), keep as string|null. If it's a full URL, switch to z.string().url().nullable()
+    domain: z.string().nullable(),
+    status: SiteStatusSchema,
+    last_sync: TimestampString,
+    sync_error: z.string().nullable(),
+    metadata: MetadataSchema,
+    created_at: TimestampString,
+    updated_at: TimestampString,
+}).strict();
+
+export type ConnectedWebsite = z.infer<typeof ConnectedWebsiteSchema>;
+

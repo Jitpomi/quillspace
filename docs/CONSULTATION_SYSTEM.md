@@ -41,7 +41,7 @@ graph TD
 ### 1. **Calendly Integration Layer**
 
 #### **Frontend Widget**
-- **Location**: `websites/index.tsx`
+- **Location**: `websites/content-editor-model.tsx`
 - **Purpose**: Floating badge widget for booking consultations
 - **Configuration**:
   ```typescript
@@ -123,7 +123,7 @@ projects (
 ### 4. **User Interface Components**
 
 #### **Thank You Page**
-- **Location**: `consultation-booked/index.tsx`
+- **Location**: `consultation-booked/content-editor-model.tsx`
 - **Purpose**: Post-booking onboarding experience
 - **Features**:
   - Success confirmation
@@ -132,7 +132,7 @@ projects (
   - Quick actions
 
 #### **Consultation Dashboard**
-- **Location**: `consultations/index.tsx`
+- **Location**: `consultations/content-editor-model.tsx`
 - **Purpose**: Central hub for consultation management
 - **Features**:
   - Upcoming consultations
@@ -141,7 +141,7 @@ projects (
   - Preparation materials
 
 #### **Project Brief Form**
-- **Location**: `consultations/[booking_id]/brief/index.tsx`
+- **Location**: `consultations/[booking_id]/brief/content-editor-model.tsx`
 - **Purpose**: Detailed requirements gathering
 - **Sections**:
   - Basic project information

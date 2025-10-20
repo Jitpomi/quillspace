@@ -1,12 +1,73 @@
-import { component$, useSignal, $, noSerialize, useVisibleTask$ } from '@builder.io/qwik';
+import {
+  component$,
+  useSignal,
+  $,
+  noSerialize,
+  isServer,
+  useTask$, useComputed$
+} from '@builder.io/qwik';
 import { LuGlobe, LuPlus, LuSettings, LuExternalLink, LuRocket, LuPalette, LuFileText, LuSquare, LuUser, LuShield, LuArrowLeft, LuCalendar } from '@qwikest/icons/lucide';
 import { ConnectedWebsites } from '~/components/website-builder/connected-websites';
 import { WebsiteBuilderService } from '~/services/website-builder.service';
 import type { WebsiteBuilder,BuilderType } from '~/types/website-builders';
 import {routeLoader$} from "@builder.io/qwik-city";
 import {getAuthToken, getTenantInfo, getUserInfo} from "~/utils/auth";
+import type {ConnectedWebsite} from "~/types/website-builders";
 
-export const useConnectedWebsites = routeLoader$(async (requestEventAction) => {
+const builders: WebsiteBuilder[] = [
+  {
+    id: 'jflux',
+    name: 'JFlux',
+    description: 'Our powerful visual website builder with advanced templates',
+    icon: 'LuRocket',
+    color: 'from-[#9CAF88] to-[#7A9B6E]',
+    isConnected: false,
+    authType: 'native',
+    requiredFields: []
+  },
+  {
+    id: 'wix',
+    name: 'Wix',
+    description: 'Connect your existing Wix website and manage through QuillSpace',
+    icon: '/wix.png',
+    color: 'from-orange-500 to-red-500',
+    isConnected: false,
+    authType: 'api_key',
+    requiredFields: ['apiKey', 'siteId'],
+    apiEndpoint: 'https://www.wixapis.com'
+  },
+  {
+    id: 'wordpress',
+    name: 'WordPress',
+    description: 'Integrate your WordPress site for unified management',
+    icon: '/wp.png',
+    color: 'from-[#6B8E5A] to-[#5A7A49]',
+    isConnected: false,
+    authType: 'username_password',
+    requiredFields: ['username', 'password', 'siteUrl']
+  },
+  {
+    id: 'squarespace',
+    name: 'Squarespace',
+    description: 'Connect your Squarespace site and publish from QuillSpace',
+    icon: '/squarespace.webp',
+    color: 'from-gray-700 to-black',
+    isConnected: false,
+    authType: 'api_key',
+    requiredFields: ['apiKey'],
+    apiEndpoint: 'https://api.squarespace.com'
+  }
+];
+
+
+type ConnectedWebsitesResponse = {
+  success: boolean,
+  error?: string,
+  websites: ConnectedWebsite[]
+}
+
+
+export const useConnectedWebsites = routeLoader$(async (requestEventAction): Promise<ConnectedWebsitesResponse> => {
   const { cookie } = requestEventAction;
   const user = await getUserInfo(cookie);
   const tenant = await getTenantInfo(cookie);
@@ -24,10 +85,6 @@ export const useConnectedWebsites = routeLoader$(async (requestEventAction) => {
         'Content-Type': 'application/json',
       },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch websites: ${response.statusText}`);
-    }
 
     const {websites} = await response.json();
     return { success: true, websites };
@@ -48,14 +105,12 @@ export default component$(() => {
   const connectedWebsites = useConnectedWebsites();
   const isLoading = useSignal(false);
   const credentials = useSignal<Record<string, string>>({});
-  // const isLoadingWebsites = useSignal(true);
-  
   const builderService = noSerialize(WebsiteBuilderService.getInstance());
 
 
   // Initialize Calendly widget
-  // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(() => {
+  useTask$(() => {
+    if(isServer) return;
     // Load Calendly CSS
     const link = document.createElement('link');
     link.href = 'https://assets.calendly.com/assets/external/widget.css';
@@ -80,9 +135,8 @@ export default component$(() => {
     };
     document.head.appendChild(script);
   });
-
   // Helper function to render the appropriate icon
-  const renderIcon = (iconName: string, className: string = "w-8 h-8") => {
+  const renderIcon = $((iconName: string, className: string = "w-8 h-8") => {
     // If it's an image path, render an img element
     if (iconName.startsWith('/') || iconName.includes('.')) {
       return <img src={iconName} alt="Builder logo" class={`${className} object-contain`} width="32" height="32" />;
@@ -101,52 +155,8 @@ export default component$(() => {
       default:
         return <LuGlobe class={className} />;
     }
-  };
+  });
 
-  const builders: WebsiteBuilder[] = [
-    {
-      id: 'jflux',
-      name: 'JFlux',
-      description: 'Our powerful visual website builder with advanced templates',
-      icon: 'LuRocket',
-      color: 'from-[#9CAF88] to-[#7A9B6E]',
-      isConnected: false,
-      authType: 'native',
-      requiredFields: []
-    },
-    {
-      id: 'wix',
-      name: 'Wix',
-      description: 'Connect your existing Wix website and manage through QuillSpace',
-      icon: '/wix.png',
-      color: 'from-orange-500 to-red-500',
-      isConnected: false,
-      authType: 'api_key',
-      requiredFields: ['apiKey', 'siteId'],
-      apiEndpoint: 'https://www.wixapis.com'
-    },
-    {
-      id: 'wordpress',
-      name: 'WordPress',
-      description: 'Integrate your WordPress site for unified management',
-      icon: '/wp.png',
-      color: 'from-[#6B8E5A] to-[#5A7A49]',
-      isConnected: false,
-      authType: 'username_password',
-      requiredFields: ['username', 'password', 'siteUrl']
-    },
-    {
-      id: 'squarespace',
-      name: 'Squarespace',
-      description: 'Connect your Squarespace site and publish from QuillSpace',
-      icon: '/squarespace.webp',
-      color: 'from-gray-700 to-black',
-      isConnected: false,
-      authType: 'api_key',
-      requiredFields: ['apiKey'],
-      apiEndpoint: 'https://api.squarespace.com'
-    }
-  ];
 
   const handleServiceTypeSelect = $((type: 'diy' | 'managed') => {
     serviceType.value = type;
@@ -202,6 +212,10 @@ export default component$(() => {
       isLoading.value = false;
     }
   });
+
+  const websites = useComputed$(() => {
+    return (connectedWebsites.value?.websites || []);
+  })
 
   return (
     <div class="max-w-6xl mx-auto p-6">
@@ -409,7 +423,7 @@ export default component$(() => {
             ) : (
 
             )}*/}
-            <ConnectedWebsites websites={[...(connectedWebsites.value?.websites || [])]} />
+            <ConnectedWebsites websites={websites.value} />
           </div>
         </>
       ) : (

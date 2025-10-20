@@ -408,7 +408,7 @@ export const PuckEditor = qwikify$(
 ### **Site Builder Interface**
 
 ```typescript
-// src/routes/builder/[siteId]/index.tsx
+// src/routes/builder/[siteId]/content-editor-model.tsx
 import { component$, useSignal, $ } from '@builder.io/qwik';
 import { routeLoader$, routeAction$ } from '@builder.io/qwik-city';
 import { PuckEditor } from '~/components/editor/PuckEditor';

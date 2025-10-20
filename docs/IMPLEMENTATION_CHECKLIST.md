@@ -30,15 +30,15 @@
 ### **✅ Frontend Implementation**
 
 #### **Calendly Integration**
-- [ ] Badge widget implemented in `websites/index.tsx`
+- [ ] Badge widget implemented in `websites/content-editor-model.tsx`
 - [ ] Widget loads with correct styling and text
 - [ ] Click tracking and analytics configured
 - [ ] Mobile responsiveness verified
 
 #### **User Interface Components**
-- [ ] Thank you page (`consultation-booked/index.tsx`)
-- [ ] Consultation dashboard (`consultations/index.tsx`)
-- [ ] Project brief form (`consultations/[booking_id]/brief/index.tsx`)
+- [ ] Thank you page (`consultation-booked/content-editor-model.tsx`)
+- [ ] Consultation dashboard (`consultations/content-editor-model.tsx`)
+- [ ] Project brief form (`consultations/[booking_id]/brief/content-editor-model.tsx`)
 - [ ] All components responsive and accessible
 - [ ] Loading states and error handling
 

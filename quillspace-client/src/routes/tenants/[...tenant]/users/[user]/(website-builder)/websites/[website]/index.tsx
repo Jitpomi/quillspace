@@ -2,11 +2,10 @@ import {
   component$,
   useSignal,
   $,
-  useVisibleTask$,
   useComputed$,
   useOnDocument,
   useTask$,
-  isServer, useOnWindow
+  isServer, useOnWindow, Signal
 } from '@builder.io/qwik';
 import { routeLoader$ } from "@builder.io/qwik-city";
 import { getAuthToken, getTenantInfo, getUserInfo } from "~/utils/auth";
@@ -24,8 +23,19 @@ import {
   LuImage,
   LuDollarSign
 } from '@qwikest/icons/lucide';
+import ContentEditorModel from "~/components/website-builder/content-editor/content-editor-model";
+import {AuthorProfile, Book} from "~/api/schema";
+import type {ConnectedWebsite} from "~/types/website-builders";
 
-export const useConnectedWebsite = routeLoader$(async (requestEventAction) => {
+type ConnectedWebsiteResponse = {
+  success: boolean;
+  error?: string;
+  website: ConnectedWebsite | null;
+  authors: AuthorProfile[];
+  books: Book[];
+}
+
+export const useConnectedWebsite = routeLoader$(async (requestEventAction): Promise<ConnectedWebsiteResponse> => {
   const { cookie, params } = requestEventAction;
   const user = await getUserInfo(cookie);
   const tenant = await getTenantInfo(cookie);
@@ -36,26 +46,45 @@ export const useConnectedWebsite = routeLoader$(async (requestEventAction) => {
 
   try {
     // Call the backend API to get connected websites
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/websites/${params.website}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const [siteResponse, authorsResponse, booksResponse] = await Promise.all([
+      fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/websites/${params.website}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }),
+      fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/wix/sites/${params.website}/authors`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }),
+      fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/connected-websites/wix/sites/${params.website}/books`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }),
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch websites: ${response.statusText}`);
-    }
 
-    const website = await response.json();
-    return { success: true, website };
+    const website = await siteResponse.json();
+    const authorsData = await authorsResponse.json();
+    const authors = authorsData.dataItems.map((item: any) => item.data);
+    const booksData = await booksResponse.json();
+    const books =  booksData.dataItems.map((book: any) => (book.data));
+    return { success: true, website, authors, books };
   } catch (error) {
     console.error('Error fetching connected websites:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      website: null
+      website: null,
+      authors: [],
+      books: [],
     };
   }
 });
@@ -68,11 +97,14 @@ export default component$(() => {
   const editorMode = useSignal<EditorMode>('edit');
   const isLoading = useSignal(true);
   const showEditSidebar = useSignal(false);
-  const expandedAccordion = useSignal<string | null>(null);
-  const books = useSignal([
-    { id: '1', title: 'The Missing Corpse', subtitle: 'Book 2 of 2: The General\'s Project', featured: true },
-    { id: '2', title: 'The General\'s Project', subtitle: 'Book 1 of 2: The General\'s Project', featured: false },
-  ]);
+  const books: Signal<Book[]> = useComputed$((): Book[] => {
+    return (websiteData.value?.books || []);
+  });
+
+  const authors: Signal<AuthorProfile[]> = useComputed$((): AuthorProfile[] => {
+
+    return (websiteData.value?.authors || []);
+  })
   
   // Interactive editing state
   const selectedElement = useSignal<string | null>(null);
@@ -125,31 +157,9 @@ export default component$(() => {
         console.log('Iframe load timeout, stopping loading state');
         isLoading.value = false;
       }
-    }, 10000);
+    }, 5000);
   });
 
-  // Interactive editing functions
-  // const handleElementClick = $((event: MouseEvent, elementType: string, content: string, elementId: string) => {
-  //   if ((editorMode.value as EditorMode) !== 'edit') return;
-  //
-  //   event.preventDefault();
-  //   event.stopPropagation();
-  //
-  //   const rect = (event.target as HTMLElement).getBoundingClientRect();
-  //   const iframeRect = document.getElementById('website-iframe')?.getBoundingClientRect();
-  //
-  //   if (iframeRect) {
-  //     editPopup.value = {
-  //       show: true,
-  //       x: rect.left - iframeRect.left + rect.width / 2,
-  //       y: rect.top - iframeRect.top - 10,
-  //       type: elementType as 'text' | 'image' | 'book' | 'price',
-  //       content: content,
-  //       elementId: elementId
-  //     };
-  //     selectedElement.value = elementId;
-  //   }
-  // });
 
   const saveEdit = $((newContent: string) => {
     // Here you would save the changes to your backend/Wix
@@ -383,29 +393,6 @@ export default component$(() => {
   }
 
 
-  // // Get URLs directly without $ wrapper since they're synchronous
-  // const editorUrl = useComputed$(() => {
-  //   if (!websiteData.value.success || !websiteData.value.website) return '';
-  //
-  //   const website = websiteData.value.website;
-  //
-  //   // First try to use the edit_url from metadata if available
-  //   if (website.metadata?.edit_url || website.metadata?.editUrl) {
-  //     return website.metadata.edit_url || website.metadata.editUrl;
-  //   }
-  //
-  //   // Construct the proper Wix editor URL
-  //   // The correct format is: https://manage.wix.com/dashboard/{site-id}/home
-  //   // Or for direct editing: https://editor.wix.com/html/editor/web/renderer/edit/{site-id}?metaSiteId={site-id}
-  //   const siteId = website.external_site_id;
-  //   if (siteId) {
-  //     // Try the manage dashboard first (more reliable)
-  //     return `https://manage.wix.com/dashboard/${siteId}/home`;
-  //   }
-  //
-  //   return '';
-  // });
-
   const previewUrl = useComputed$(() => {
     if (!websiteData.value.success || !websiteData.value.website) return '';
 
@@ -415,9 +402,7 @@ export default component$(() => {
 
 
   const website = useComputed$(() => websiteData.value.website);
-  // const currentUrl = useComputed$(() => {
-  //   return ((editorMode.value as EditorMode) === 'edit') ? editorUrl.value : previewUrl.value;
-  // });
+
 
   return (
     <div class={`${isFullscreen.value || (editorMode.value as EditorMode) === 'preview' ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-gray-50`}>
@@ -469,7 +454,7 @@ export default component$(() => {
                     isLoading.value = true;
                     const iframe = document.querySelector('#website-iframe') as HTMLIFrameElement;
                     if (iframe) {
-                      iframe.src = website.value.url;
+                      iframe.src = website.value?.url ?? '#';
                     }
                   }}
                   class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -523,7 +508,7 @@ export default component$(() => {
               isLoading.value = true;
               const iframe = document.querySelector('#website-iframe') as HTMLIFrameElement;
               if (iframe) {
-                iframe.src = website.value.url;
+                iframe.src = website.value?.url ?? '#';
               }
             }}
             class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
@@ -606,14 +591,6 @@ export default component$(() => {
           </button>
         )}
 
-        {/* Debug Info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div class="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded max-w-xs">
-            <div>URL: {previewUrl.value || 'No URL'}</div>
-            <div>Mode: {editorMode.value}</div>
-            <div>Loading: {isLoading.value ? 'Yes' : 'No'}</div>
-          </div>
-        )}
 
         {/* Edit Modal */}
         {showEditSidebar.value && (
@@ -625,245 +602,10 @@ export default component$(() => {
             ></div>
             
             {/* Modal */}
-            <div class="relative bg-white rounded-2xl shadow-lg border border-gray-100 w-[800px] max-h-[80vh] overflow-hidden">
-              {/* Header */}
-              <div class="px-8 py-6 border-b border-gray-50 bg-gradient-to-r from-gray-50/50 to-[#9CAF88]/5">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-[#9CAF88]/10 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-[#9CAF88]" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 class="text-xl font-medium text-gray-800">Editing Wizard</h2>
-                    <p class="text-sm text-gray-500">Manage your website content</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div class="p-8 overflow-y-auto max-h-[calc(80vh-120px)]">
-                <div class="space-y-4">
-                  {/* Books Accordion */}
-                  <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
-                    <button 
-                      class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
-                      onClick$={() => {
-                        expandedAccordion.value = expandedAccordion.value === 'books' ? null : 'books';
-                      }}
-                    >
-                      <div class="flex items-center gap-3">
-                        <span class="text-xl">📚</span>
-                        <div>
-                          <div class="font-medium text-gray-900 text-sm">Books Management</div>
-                          <div class="text-xs text-gray-500 mt-0.5">Show/hide books, edit details, set featured books</div>
-                        </div>
-                      </div>
-                      <svg 
-                        class={`w-4 h-4 text-gray-400 transition-transform ${
-                          expandedAccordion.value === 'books' ? 'rotate-90' : ''
-                        }`} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </button>
-                    
-                    {/* Books Content */}
-                    {expandedAccordion.value === 'books' && (
-                      <div class="border-t border-gray-200 p-4 bg-gray-50">
-                        <div class="space-y-3">
-                          <div class="text-sm font-medium text-gray-700 mb-3">Manage Your Books</div>
-                          
-                          {/* Sortable Book List */}
-                          <div class="space-y-2">
-                            {books.value.map((book, index) => (
-                              <div 
-                                key={book.id}
-                                draggable
-                                class="flex items-center gap-3 p-3 bg-white rounded border hover:border-[#9CAF88]/30 transition-colors cursor-move"
-                                onDragStart$={(e) => {
-                                  e.dataTransfer!.setData('text/plain', index.toString());
-                                  e.dataTransfer!.effectAllowed = 'move';
-                                }}
-                                onDragOver$={(e) => {
-                                  e.preventDefault();
-                                  e.dataTransfer!.dropEffect = 'move';
-                                }}
-                                onDrop$={(e) => {
-                                  e.preventDefault();
-                                  const draggedIndex = parseInt(e.dataTransfer!.getData('text/plain'));
-                                  const targetIndex = index;
-                                  
-                                  if (draggedIndex !== targetIndex) {
-                                    const newBooks = [...books.value];
-                                    const [draggedBook] = newBooks.splice(draggedIndex, 1);
-                                    newBooks.splice(targetIndex, 0, draggedBook);
-                                    books.value = newBooks;
-                                  }
-                                }}
-                              >
-                                {/* Drag Handle */}
-                                <div class="text-gray-400 hover:text-[#9CAF88] cursor-grab active:cursor-grabbing">
-                                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
-                                  </svg>
-                                </div>
-                                
-                                {/* Book Icon */}
-                                <div class="w-8 h-10 bg-[#9CAF88]/10 rounded flex items-center justify-center text-xs flex-shrink-0">
-                                  📖
-                                </div>
-                                
-                                {/* Book Info */}
-                                <div class="flex-1">
-                                  <div class="font-medium text-sm">{book.title}</div>
-                                  <div class="text-xs text-gray-500">{book.subtitle}</div>
-                                </div>
-                                
-                                {/* Actions */}
-                                <div class="flex items-center gap-2">
-                                  {book.featured ? (
-                                    <button class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Featured</button>
-                                  ) : (
-                                    <button 
-                                      class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-green-100 hover:text-green-700"
-                                      onClick$={() => {
-                                        books.value = books.value.map(b => 
-                                          b.id === book.id ? { ...b, featured: !b.featured } : { ...b, featured: false }
-                                        );
-                                      }}
-                                    >
-                                      Set Featured
-                                    </button>
-                                  )}
-                                  <button class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">Edit</button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          <button 
-                            class="w-full p-2 border-2 border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-[#9CAF88] hover:text-[#9CAF88] transition-colors"
-                            onClick$={() => {
-                              const newBook = {
-                                id: Date.now().toString(),
-                                title: 'New Book',
-                                subtitle: 'Click edit to customize',
-                                featured: false
-                              };
-                              books.value = [...books.value, newBook];
-                            }}
-                          >
-                            + Add New Book
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Author Accordion */}
-                  <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
-                    <button 
-                      class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
-                      onClick$={() => {
-                        expandedAccordion.value = expandedAccordion.value === 'author' ? null : 'author';
-                      }}
-                    >
-                      <div class="flex items-center gap-3">
-                        <span class="text-xl">👤</span>
-                        <div>
-                          <div class="font-medium text-gray-900 text-sm">Author Information</div>
-                          <div class="text-xs text-gray-500 mt-0.5">Update name, bio, photo, and contact information</div>
-                        </div>
-                      </div>
-                      <svg 
-                        class={`w-4 h-4 text-gray-400 transition-transform ${
-                          expandedAccordion.value === 'author' ? 'rotate-90' : ''
-                        }`} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </button>
-                    
-                    {/* Author Content */}
-                    {expandedAccordion.value === 'author' && (
-                      <div class="border-t border-gray-200 p-4 bg-gray-50">
-                        <div class="space-y-4">
-                          <div class="text-sm font-medium text-gray-700 mb-3">Author Profile</div>
-                          
-                          <div class="space-y-3">
-                            <div>
-                              <label class="block text-xs font-medium text-gray-600 mb-1">Author Name</label>
-                              <input 
-                                type="text" 
-                                value="Yasin Kakande" 
-                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-[0.5px] focus:ring-[#9CAF88]/30 focus:border-[#9CAF88]"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label class="block text-xs font-medium text-gray-600 mb-1">Bio</label>
-                              <textarea 
-                                rows={3}
-                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-[0.5px] focus:ring-[#9CAF88]/30 focus:border-[#9CAF88]"
-                                placeholder="Author biography..."
-                              ></textarea>
-                            </div>
-                            
-                            <div class="flex gap-2">
-                              <button class="px-3 py-1 bg-[#9CAF88] text-white text-xs rounded hover:bg-[#8BA079]">
-                                Save Changes
-                              </button>
-                              <button class="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Theme Accordion - Coming Soon */}
-                  <div class="border border-gray-200 rounded-lg bg-gray-50">
-                    <div class="w-full flex items-center justify-between p-4 text-left rounded-lg">
-                      <div class="flex items-center gap-3">
-                        <span class="text-xl opacity-50">🎨</span>
-                        <div>
-                          <div class="font-medium text-gray-500 text-sm">Theme & Styling</div>
-                          <div class="text-xs text-gray-400 mt-0.5">Customize colors and fonts - Coming soon</div>
-                        </div>
-                      </div>
-                      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Copy Accordion - Coming Soon */}
-                  <div class="border border-gray-200 rounded-lg bg-gray-50">
-                    <div class="w-full flex items-center justify-between p-4 text-left rounded-lg">
-                      <div class="flex items-center gap-3">
-                        <span class="text-xl opacity-50">✏️</span>
-                        <div>
-                          <div class="font-medium text-gray-500 text-sm">Advanced Editing</div>
-                          <div class="text-xs text-gray-400 mt-0.5">Visual page editing - Coming soon</div>
-                        </div>
-                      </div>
-                      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ContentEditorModel
+            books={books.value}
+            authors={authors.value}
+            />
           </div>
         )}
 

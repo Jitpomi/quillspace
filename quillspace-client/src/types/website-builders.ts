@@ -25,7 +25,7 @@ export interface ConnectedWebsite {
   name: string;
   url?: string;
   domain?: string;
-  status: 'active' | 'inactive' | 'syncing' | 'error';
+  status: 'active' | 'inactive' | 'syncing' | 'error' | 'pending';
   lastSync?: Date;
   createdAt: Date;
   updatedAt: Date;

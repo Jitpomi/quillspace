@@ -18,6 +18,7 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
       case 'inactive': return 'text-gray-600 bg-gray-50';
       case 'syncing': return 'text-blue-600 bg-blue-50';
       case 'error': return 'text-red-600 bg-red-50';
+      case 'pending': return 'text-yellow-600 bg-yellow-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -28,6 +29,7 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
       case 'inactive': return <div class="w-2 h-2 bg-gray-400 rounded-full"></div>;
       case 'syncing': return <LuRefreshCw class="w-3 h-3 text-blue-500 animate-spin" />;
       case 'error': return <div class="w-2 h-2 bg-red-500 rounded-full"></div>;
+      case 'pending': return <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>;
       default: return <div class="w-2 h-2 bg-gray-400 rounded-full"></div>;
     }
   };
