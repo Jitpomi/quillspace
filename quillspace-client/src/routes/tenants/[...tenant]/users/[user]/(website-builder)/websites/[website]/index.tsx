@@ -71,11 +71,26 @@ export const useConnectedWebsite = routeLoader$(async (requestEventAction): Prom
     ]);
 
 
-    const website = await siteResponse.json();
-    const authorsData = await authorsResponse.json();
-    const authors = authorsData.dataItems.map((item: any) => item.data);
-    const booksData = await booksResponse.json();
-    const books =  booksData.dataItems.map((book: any) => (book.data));
+    // Check if responses are OK and have content
+    if (!siteResponse.ok) {
+      throw new Error(`Site API error: ${siteResponse.status}`);
+    }
+    if (!authorsResponse.ok) {
+      throw new Error(`Authors API error: ${authorsResponse.status}`);
+    }
+    if (!booksResponse.ok) {
+      throw new Error(`Books API error: ${booksResponse.status}`);
+    }
+
+    const siteText = await siteResponse.text();
+    const authorsText = await authorsResponse.text();
+    const booksText = await booksResponse.text();
+
+    const website = siteText ? JSON.parse(siteText) : null;
+    const authorsData = authorsText ? JSON.parse(authorsText) : { dataItems: [] };
+    const authors = authorsData.dataItems ? authorsData.dataItems.map((item: any) => item.data) : [];
+    const booksData = booksText ? JSON.parse(booksText) : { dataItems: [] };
+    const books = booksData.dataItems ? booksData.dataItems.map((book: any) => book.data) : [];
     return { success: true, website, authors, books };
   } catch (error) {
     console.error('Error fetching connected websites:', error);
@@ -584,7 +599,7 @@ export default component$(() => {
         {(editorMode.value as EditorMode) === 'edit' && (
           <button
             onClick$={() => showEditSidebar.value = true}
-            class="fixed bottom-6 right-6 z-40 bg-[#9CAF88] text-white p-4 rounded-full shadow-lg hover:bg-[#8BA079] transition-all duration-200 hover:scale-105"
+            class="fixed bottom-6 right-6 z-40 bg-[#9CAF88] text-white p-4 rounded-full shadow-lg hover:bg-[#8BA079] transition-all duration-200 hover:scale-105 cursor-pointer"
             title="Edit Website Content"
           >
             <LuPencil class="w-6 h-6" />

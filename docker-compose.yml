@@ -93,7 +93,7 @@ services:
     container_name: quillspace-frontend
     environment:
       - VITE_API_BASE_URL=http://backend:3000/api
-      - VITE_INTERNAL_API_URL=http://backend:3000/api
+      - BACKEND_URL=http://backend:3000
       - ORIGIN=http://localhost
     ports:
       - "80:3000"

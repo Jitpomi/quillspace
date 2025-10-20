@@ -116,7 +116,7 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
               
               <div class="flex gap-2">
                 <a
-                  href={`${userPath}/websites/${(website as any).external_site_id}`}
+                  href={`${userPath}/websites/${website.metadata?.wix_site_id}`}
                   class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#9CAF88] text-white rounded-lg transition-colors hover:bg-[#8BA079] font-medium"
                 >
                   <LuPencil class="w-4 h-4" />
@@ -175,7 +175,7 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
                     {/* All Actions as Icons */}
                     <div class="flex items-center gap-1">
                       <a
-                        href={`${userPath}/websites/${(website as any).external_site_id}`}
+                        href={`${userPath}/websites/${website.metadata?.wix_site_id}`}
                         class="p-2 text-[#9CAF88] hover:text-[#8BA079] hover:bg-green-50 rounded-lg transition-all duration-150"
                         title="Edit Site"
                       >
@@ -205,7 +205,7 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
                     <div>
                       <div class="text-gray-400 text-xs mb-1">Builder</div>
                       <div class="text-gray-500 text-sm capitalize">
-                        {(website as any).builder_type || 'Unknown'}
+                        {website.builderName || 'Unknown'}
                       </div>
                     </div>
                     

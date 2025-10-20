@@ -37,7 +37,7 @@ export default component$<ContentEditorModelProps>((props)=> {
                     {/* Books Accordion */}
                     <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
                         <button
-                            class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
+                            class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl cursor-pointer"
                             onClick$={() => {
                                 expandedAccordion.value = expandedAccordion.value === 'books' ? null : 'books';
                             }}
@@ -75,7 +75,7 @@ export default component$<ContentEditorModelProps>((props)=> {
                     {/* Author Accordion */}
                     <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-[#9CAF88]/30 transition-all duration-200">
                         <button
-                            class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl"
+                            class="w-full flex items-center justify-between p-5 text-left hover:bg-[#9CAF88]/5 transition-colors rounded-xl cursor-pointer"
                             onClick$={() => {
                                 expandedAccordion.value = expandedAccordion.value === 'author' ? null : 'author';
                             }}
