@@ -325,7 +325,7 @@ export default component$(() => {
                             <div class="flex items-center gap-3 mb-6">
                                 <button
                                     onClick$={handleBackToServiceSelection}
-                                    class="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                                    class="cursor-pointer flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
                                     title="Back to service selection"
                                 >
                                     <LuArrowLeft class="w-4 h-4 text-gray-600"/>
