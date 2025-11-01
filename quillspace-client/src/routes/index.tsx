@@ -185,7 +185,7 @@ export default component$(() => {
                     <LuFeather class="w-5 h-5 text-[#9CAF88]" />
                   </div>
                   <div>
-                    <h4 class="font-semibold text-[#2D3748] mb-1">Keep Your Worlds in One Place</h4>
+                    <h4 class="font-semibold text-[#2D3748] mb-1">Keep Your Words in One Place</h4>
                     <p class="text-gray-600">All your stories, characters, and tangled threads—gathered, clear, and close at hand.</p>
                   </div>
                 </div>

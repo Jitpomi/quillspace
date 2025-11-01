@@ -459,14 +459,6 @@ export default component$(() => {
                     {/* Connected Websites */}
                     <div class="border-t pt-8">
                         <h2 class="text-xl font-semibold text-gray-900 mb-6">Your Connected Websites</h2>
-                        {/*  {isLoadingWebsites.value ? (
-              <div class="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                <div class="animate-spin w-8 h-8 border-2 border-[#9CAF88] border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p class="text-gray-600">Loading your connected websites...</p>
-              </div>
-            ) : (
-
-            )}*/}
                         <ConnectedWebsites websites={websites.value}/>
                     </div>
                 </>

@@ -1,15 +1,58 @@
 import {component$, useSignal, useTask$, $} from "@builder.io/qwik";
-import {AuthorProfile} from "~/api/schema";
+import {AuthorProfile, AuthorProfileSchema} from "~/api/schema";
+import {routeAction$, Form, zod$, z} from "@builder.io/qwik-city";
 
 
 export interface AuthorEditorProps {
     authors: AuthorProfile[]
 }
 
+export const useUpdateAuthor = routeAction$(async (data, requestEvent) => {
+    try {
+        // TODO: Replace with actual API call to your backend
+        console.log('Updating author:', data);
+        
+        // Example API call structure:
+        // const response = await fetch(`${API_BASE_URL}/api/authors/${data.authorId}`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Authorization': `Bearer ${token}`
+        //     },
+        //     body: JSON.stringify(data)
+        // });
+        
+        // if (!response.ok) {
+        //     throw new Error('Failed to update author');
+        // }
+        
+        return {
+            success: true,
+            message: 'Author updated successfully'
+        };
+    } catch (error) {
+        console.error('Error updating author:', error);
+        return {
+            success: false,
+            message: 'Failed to update author'
+        };
+    }
+}, zod$(
+    AuthorProfileSchema.omit({
+        _id: true,
+        _owner: true,
+        _createdDate: true,
+        _updatedDate: true
+    }).extend({
+        authorId: z.string()
+    })
+));
+
 export default component$<AuthorEditorProps>((props) => {
     const authors = useSignal<AuthorProfile[]>([]);
     const editingAuthor = useSignal<AuthorProfile | null>(null);
     const isEditing = useSignal(false);
+    const updateAuthorAction = useUpdateAuthor();
     
     useTask$(({track}) => {
         track(()=>props.authors);
@@ -26,18 +69,26 @@ export default component$<AuthorEditorProps>((props) => {
         isEditing.value = false;
     });
 
-    const saveChanges = $(() => {
+    const handleFormSubmit = $(() => {
+        // Form submission is handled by the action
+        // Update local state after successful submission
         if (editingAuthor.value) {
-            // Find and update the author in the array
             const index = authors.value.findIndex(a => a._id === editingAuthor.value!._id);
             if (index !== -1) {
                 authors.value[index] = { ...editingAuthor.value };
                 authors.value = [...authors.value]; // Trigger reactivity
             }
-            // TODO: Call API to save changes to backend
-            console.log('Saving author changes:', editingAuthor.value);
         }
         cancelEditing();
+    });
+
+    // Watch for action completion
+    useTask$(({ track }) => {
+        track(() => updateAuthorAction.value);
+        if (updateAuthorAction.value?.success) {
+            // Action completed successfully
+            handleFormSubmit();
+        }
     });
 
     const stripHtmlTags = (html: string): string => {
@@ -222,28 +273,58 @@ export default component$<AuthorEditorProps>((props) => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div class="flex gap-2 pt-2">
+                    <div class="flex justify-end space-x-2 pt-2">
                         {isEditing.value && editingAuthor.value?._id === author._id ? (
-                            <>
+                            <Form action={updateAuthorAction} class="flex space-x-2">
+                                {/* Hidden fields for form data */}
+                                <input type="hidden" name="authorId" value={author._id} />
+                                <input type="hidden" name="name" value={editingAuthor.value?.name || ''} />
+                                <input type="hidden" name="tagline" value={editingAuthor.value?.tagline || ''} />
+                                <input type="hidden" name="email" value={editingAuthor.value?.email || ''} />
+                                <input type="hidden" name="phone" value={editingAuthor.value?.phone || ''} />
+                                <input type="hidden" name="address" value={editingAuthor.value?.address || ''} />
+                                <input type="hidden" name="bio" value={stripHtmlTags(editingAuthor.value?.bio || '')} />
+                                <input type="hidden" name="x" value={editingAuthor.value?.x || ''} />
+                                <input type="hidden" name="facebook" value={editingAuthor.value?.facebook || ''} />
+                                <input type="hidden" name="instagram" value={editingAuthor.value?.instagram || ''} />
+                                <input type="hidden" name="portraitImage" value={editingAuthor.value?.portraitImage || ''} />
+                                
                                 <button
-                                    onClick$={saveChanges}
-                                    class="px-3 py-1 bg-[#9CAF88] text-white text-xs rounded hover:bg-[#8BA079] transition-colors">
-                                    Save Changes
-                                </button>
-                                <button
+                                    type="button"
                                     onClick$={cancelEditing}
-                                    class="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300 transition-colors">
+                                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                                >
                                     Cancel
                                 </button>
-                            </>
+                                <button
+                                    type="submit"
+                                    disabled={updateAuthorAction.isRunning}
+                                    class="px-3 py-1.5 text-xs font-medium text-white bg-[#9CAF88] rounded hover:bg-[#8BA077] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {updateAuthorAction.isRunning ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </Form>
                         ) : (
                             <button
+                                type="button"
                                 onClick$={() => startEditing(author)}
-                                class="px-3 py-1 bg-[#9CAF88] text-white text-xs rounded hover:bg-[#8BA079] transition-colors">
+                                class="px-3 py-1.5 text-xs font-medium text-[#9CAF88] bg-[#9CAF88]/10 rounded hover:bg-[#9CAF88]/20 transition-colors"
+                            >
                                 Edit Profile
                             </button>
                         )}
                     </div>
+
+                    {/* Display action feedback */}
+                    {updateAuthorAction.value && (
+                        <div class={`mt-2 p-2 text-xs rounded ${
+                            updateAuthorAction.value.success 
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            {updateAuthorAction.value.message}
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
