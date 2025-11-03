@@ -19,7 +19,7 @@ const ignores = [
   "**/dist",
   "**/dist-dev",
   "**/lib",
-  "**/lib-schemas",
+  "**/lib-types",
   "**/etc",
   "**/external",
   "**/node_modules",

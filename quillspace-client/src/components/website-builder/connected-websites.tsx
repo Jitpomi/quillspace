@@ -1,7 +1,7 @@
 import { component$, useSignal} from '@builder.io/qwik';
 import { LuSettings, LuRefreshCw, LuTrash2, LuGlobe, LuPencil, LuEye} from '@qwikest/icons/lucide';
-import type { ConnectedWebsite } from '~/types/website-builders';
 import {useAuth} from "~/hooks/useAuth";
+import {ConnectedWebsite} from "~/api/schema";
 
 interface ConnectedWebsitesProps {
   // Make websites optional since we'll fetch them via action
@@ -111,7 +111,9 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
               </div>
               
               <div class="text-xs text-gray-400 mb-4">
-                Last sync: {website.lastSync ? new Date(website.lastSync).toLocaleDateString() : 'Never'}
+                Last sync: {
+               // website.lastSync ? new Date(website.lastSync).toLocaleDateString() : 'Never'
+              }
               </div>
               
               <div class="flex gap-2">
@@ -205,7 +207,9 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
                     <div>
                       <div class="text-gray-400 text-xs mb-1">Builder</div>
                       <div class="text-gray-500 text-sm capitalize">
-                        {website.builderName || 'Unknown'}
+                        {
+                          // website.builderName || 'Unknown'
+                        }
                       </div>
                     </div>
                     
@@ -219,7 +223,9 @@ export const ConnectedWebsites = component$<ConnectedWebsitesProps>(({ websites 
                     <div>
                       <div class="text-gray-400 text-xs mb-1">Last Sync</div>
                       <div class="text-gray-500 text-sm">
-                        {website.lastSync ? new Date(website.lastSync).toLocaleDateString() : 'Never'}
+                        {
+                        //  website.lastSync ? new Date(website.lastSync).toLocaleDateString() : 'Never'
+                        }
                       </div>
                     </div>
                     

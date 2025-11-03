@@ -1,7 +1,8 @@
-import {component$, Slot, useSignal, useContextProvider} from '@builder.io/qwik';
+import {component$, Slot, useSignal, useContextProvider, createContextId} from '@builder.io/qwik';
 import {RequestEvent, routeLoader$,  routeAction$, Form, useNavigate, useLocation} from '@builder.io/qwik-city';
 import type { RequestHandler } from '@builder.io/qwik-city';
 import {getTenantInfo, getUserInfo, isAuthenticated, logout} from '~/utils/auth';
+import type { User, Tenant } from '~/api/schema';
 import {
     LuGlobe,
     LuLogOut,
@@ -16,7 +17,18 @@ import {
     LuPanelLeft,
     LuPanelLeftClose
 } from "@qwikest/icons/lucide";
-import { AuthContextId, type AuthContext } from '~/contexts/auth';
+
+// ============================================================================
+// AUTH CONTEXT DEFINITION
+// ============================================================================
+
+export interface AuthContext {
+  user: User | null;
+  tenant: Tenant | null;
+}
+
+export const AuthContextId = createContextId<AuthContext>('auth-context');
+
 import { useAuth } from '~/hooks/useAuth';
 
 // Route guard function to check authentication and redirect if needed

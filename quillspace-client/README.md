@@ -24,7 +24,7 @@ Inside your project, you'll see the following directory structure:
         └── ...
 ```
 
-- `src/routes`: Provides the directory-based routing, which can include a hierarchy of `layout.tsx` layout files, and an `content-editor-model.tsx` file as the page. Additionally, `index.ts` files are endpoints. Please see the [routing docs](https://qwik.dev/qwikcity/routing/overview/) for more info.
+- `src/routes`: Provides the directory-based routing, which can include a hierarchy of `layout.tsx` layout files, and an `index.tsx` file as the page. Additionally, `index.ts` files are endpoints. Please see the [routing docs](https://qwik.dev/qwikcity/routing/overview/) for more info.
 
 - `src/components`: Recommended directory for components.
 
@@ -63,13 +63,3 @@ The production build will generate client and server modules by running both cli
 ```shell
 pnpm build # or `pnpm build`
 ```
-
-## Fastify Server
-
-This app has a minimal [Fastify server](https://fastify.dev/) implementation. After running a full build, you can preview the build using the command:
-
-```
-pnpm serve
-```
-
-Then visit [http://localhost:3000/](http://localhost:3000/)

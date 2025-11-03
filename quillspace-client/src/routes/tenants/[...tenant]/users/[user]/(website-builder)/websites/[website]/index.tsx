@@ -5,9 +5,10 @@ import {
   useComputed$,
   useOnDocument,
   useTask$,
-  isServer, useOnWindow, Signal
+  isServer, useOnWindow
 } from '@builder.io/qwik';
-import { routeLoader$ } from "@builder.io/qwik-city";
+import { routeLoader$, routeAction$, zod$, z } from "@builder.io/qwik-city";
+import {AuthorProfileSchema, ConnectedWebsite} from "~/api/schema";
 import { getAuthToken, getTenantInfo, getUserInfo } from "~/utils/auth";
 import { 
   LuEye,
@@ -23,9 +24,8 @@ import {
   LuImage,
   LuDollarSign
 } from '@qwikest/icons/lucide';
-import ContentEditorModel from "~/components/website-builder/content-editor/content-editor-model";
 import {AuthorProfile, Book} from "~/api/schema";
-import type {ConnectedWebsite} from "~/types/website-builders";
+import ContentEditorModel from "~/components/website-builder/content-editor/content-editor-model";
 
 type ConnectedWebsiteResponse = {
   success: boolean;
@@ -34,6 +34,55 @@ type ConnectedWebsiteResponse = {
   authors: AuthorProfile[];
   books: Book[];
 }
+
+export const useUpdateAuthor = routeAction$(async (data, requestEvent) => {
+    console.log('🚀 ACTION STARTED - Updating author:', data);
+    try {
+        console.log('✅ ACTION EXECUTING - Updating author:', data);
+        const { cookie } = requestEvent;
+        const token = getAuthToken(cookie);
+        
+        const siteId = "1e4e0091-f4d5-4a4c-a66a-4d09e7a5b4e9"; // Yasin's site ID - should come from context
+        // Format data for Wix API - exclude authorId and wrap in data object
+        const { authorId, ...authorData } = data;
+        const wixPayload = {
+            data: authorData
+        };
+        
+        const response = await fetch(`${process.env.BACKEND_URL || 'http://backend:3000'}/api/connected-websites/wix/sites/${siteId}/authors/${authorId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(wixPayload)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update author');
+        }
+        
+        return {
+            success: true,
+            message: 'Author updated successfully'
+        };
+    } catch (error) {
+        console.error('❌ ACTION ERROR - Error updating author:', error);
+        return {
+            success: false,
+            message: 'Failed to update author'
+        };
+    }
+}, zod$(
+    AuthorProfileSchema.omit({
+        _id: true,
+        _owner: true,
+        _createdDate: true,
+        _updatedDate: true
+    }).extend({
+        authorId: z.string()
+    })
+));
 
 export const useConnectedWebsite = routeLoader$(async (requestEventAction): Promise<ConnectedWebsiteResponse> => {
   const { cookie, params } = requestEventAction;
@@ -106,20 +155,20 @@ export const useConnectedWebsite = routeLoader$(async (requestEventAction): Prom
 
 export default component$(() => {
   const websiteData = useConnectedWebsite();
-  
+  const updateAuthorAction = useUpdateAuthor();
   const isFullscreen = useSignal(false);
   type EditorMode = 'preview' | 'edit';
   const editorMode = useSignal<EditorMode>('edit');
   const isLoading = useSignal(true);
   const showEditSidebar = useSignal(false);
-  const books: Signal<Book[]> = useComputed$((): Book[] => {
-    return (websiteData.value?.books || []);
-  });
+  // const books: Signal<Book[]> = useComputed$((): Book[] => {
+  //   return (websiteData.value?.books || []);
+  // });
 
-  const authors: Signal<AuthorProfile[]> = useComputed$((): AuthorProfile[] => {
-
-    return (websiteData.value?.authors || []);
-  })
+  // const authors: Signal<AuthorProfile[]> = useComputed$((): AuthorProfile[] => {
+  //
+  //   return (websiteData.value?.authors || []);
+  // })
   
   // Interactive editing state
   const selectedElement = useSignal<string | null>(null);
@@ -199,6 +248,51 @@ export default component$(() => {
     selectedElement.value = null;
   });
 
+  // Fallback analysis based on click position when cross-origin blocks access
+  const analyzeByPosition = $((x: number, y: number, iframe: HTMLIFrameElement) => {
+    const rect = iframe.getBoundingClientRect();
+    const relativeX = x / rect.width;
+    const relativeY = y / rect.height;
+    
+    // Top area likely to be navigation/headers
+    if (relativeY < 0.2) {
+      return {
+        type: 'text' as const,
+        content: 'Navigation or Header Text',
+        elementId: `nav-${Date.now()}`,
+        title: 'Edit Navigation'
+      };
+    }
+    
+    // Center area likely to be main content
+    if (relativeY > 0.2 && relativeY < 0.8) {
+      // Left side might be images, right side text
+      if (relativeX < 0.4) {
+        return {
+          type: 'image' as const,
+          content: 'https://via.placeholder.com/300x400',
+          elementId: `img-${Date.now()}`,
+          title: 'Edit Image'
+        };
+      } else {
+        return {
+          type: 'text' as const,
+          content: 'Main content text',
+          elementId: `content-${Date.now()}`,
+          title: 'Edit Content'
+        };
+      }
+    }
+    
+    // Bottom area likely to be footer or buttons
+    return {
+      type: 'text' as const,
+      content: 'Footer or Button Text',
+      elementId: `footer-${Date.now()}`,
+      title: 'Edit Footer'
+    };
+  });
+
   // Analyze what element was clicked to determine edit type and content
   const analyzeClickPosition = $((x: number, y: number, iframe: HTMLIFrameElement) => {
     try {
@@ -271,51 +365,6 @@ export default component$(() => {
       content: textContent || 'Click to edit this content',
       elementId: `text-${Date.now()}`,
       title: 'Edit Text'
-    };
-  });
-
-  // Fallback analysis based on click position when cross-origin blocks access
-  const analyzeByPosition = $((x: number, y: number, iframe: HTMLIFrameElement) => {
-    const rect = iframe.getBoundingClientRect();
-    const relativeX = x / rect.width;
-    const relativeY = y / rect.height;
-    
-    // Top area likely to be navigation/headers
-    if (relativeY < 0.2) {
-      return {
-        type: 'text' as const,
-        content: 'Navigation or Header Text',
-        elementId: `nav-${Date.now()}`,
-        title: 'Edit Navigation'
-      };
-    }
-    
-    // Center area likely to be main content
-    if (relativeY > 0.2 && relativeY < 0.8) {
-      // Left side might be images, right side text
-      if (relativeX < 0.4) {
-        return {
-          type: 'image' as const,
-          content: 'https://via.placeholder.com/300x400',
-          elementId: `img-${Date.now()}`,
-          title: 'Edit Image'
-        };
-      } else {
-        return {
-          type: 'text' as const,
-          content: 'Main content text',
-          elementId: `content-${Date.now()}`,
-          title: 'Edit Content'
-        };
-      }
-    }
-    
-    // Bottom area likely to be footer or buttons
-    return {
-      type: 'text' as const,
-      content: 'Footer or Button Text',
-      elementId: `footer-${Date.now()}`,
-      title: 'Edit Footer'
     };
   });
 
@@ -412,7 +461,7 @@ export default component$(() => {
     if (!websiteData.value.success || !websiteData.value.website) return '';
 
     const website = websiteData.value.website;
-    return website.url || website.metadata?.view_url || website.metadata?.viewUrl || '';
+    return website.url || website.metadata?.view_url || '';
   });
 
 
@@ -612,14 +661,15 @@ export default component$(() => {
           <div class="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div 
-              class="absolute inset-0"
+              class="absolute inset-0 bg-transparent"
               onClick$={() => showEditSidebar.value = false}
             ></div>
             
             {/* Modal */}
-            <ContentEditorModel
-            books={books.value}
-            authors={authors.value}
+            <ContentEditorModel 
+              books={websiteData.value.books || []}
+              authors={websiteData.value.authors || []}
+              updateAuthorAction={updateAuthorAction}
             />
           </div>
         )}

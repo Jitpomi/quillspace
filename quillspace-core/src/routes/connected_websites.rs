@@ -662,7 +662,7 @@ pub async fn create_wix_author_for_site(
     auth: CasbinAuthContext,
     Json(author_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    auth.require_permission("connected_websites", "create").await?;
+    auth.require_permission("connected_websites", "write").await?;
     
     tracing::info!(
         "Creating author for site {} by user: {} (tenant: {}, role: {:?})", 

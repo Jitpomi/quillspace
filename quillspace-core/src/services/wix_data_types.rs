@@ -239,29 +239,82 @@ impl WixDataTypeValidator {
     fn format_rich_text_field(value: &Value) -> Result<Value> {
         match value {
             Value::String(s) => {
-                // Convert plain text to Ricos Document format
-                Ok(serde_json::json!({
-                    "nodes": [{
-                        "type": "PARAGRAPH",
-                        "id": "1",
-                        "nodes": [{
-                            "type": "TEXT",
-                            "id": "2",
-                            "textData": {
-                                "text": s,
-                                "decorations": []
-                            }
-                        }]
-                    }],
-                    "documentStyle": {}
-                }))
+                // Try to parse as JSON first (from frontend rich text editor)
+                if let Ok(parsed) = serde_json::from_str::<Value>(s) {
+                    if parsed.is_object() {
+                        // Already in Wix Rich Text format
+                        return Ok(parsed);
+                    }
+                }
+                // Otherwise, convert HTML/plain text to Wix Rich Text format
+                Self::html_to_wix_rich_text(s)
             },
             Value::Object(_) => {
-                // Assume it's already in Ricos format
+                // Already in Ricos format
                 Ok(value.clone())
             },
             _ => Err(anyhow!("Invalid value for rich text field: {:?}", value))
         }
+    }
+    
+    /// Convert HTML string to Wix Rich Text format
+    fn html_to_wix_rich_text(html: &str) -> Result<Value> {
+        // For now, create a simple paragraph with the HTML content
+        // This preserves the HTML structure while putting it in Wix format
+        let mut nodes = Vec::new();
+        let mut node_id = 1;
+        
+        // Split by paragraph tags
+        let paragraphs: Vec<&str> = html.split("</p>").collect();
+        
+        for (i, paragraph) in paragraphs.iter().enumerate() {
+            if paragraph.trim().is_empty() {
+                continue;
+            }
+            
+            // Remove opening <p> tag and any class attributes
+            let clean_text = paragraph
+                .trim_start_matches("<p>")
+                .trim_start_matches(|c: char| c != '>' && c != '<')
+                .trim_start_matches('>');
+            
+            if !clean_text.trim().is_empty() {
+                nodes.push(serde_json::json!({
+                    "type": "PARAGRAPH",
+                    "id": node_id.to_string(),
+                    "nodes": [{
+                        "type": "TEXT", 
+                        "id": (node_id + 1).to_string(),
+                        "textData": {
+                            "text": clean_text.trim(),
+                            "decorations": []
+                        }
+                    }]
+                }));
+                node_id += 2;
+            }
+        }
+        
+        // If no paragraphs found, treat as plain text
+        if nodes.is_empty() {
+            nodes.push(serde_json::json!({
+                "type": "PARAGRAPH",
+                "id": "1",
+                "nodes": [{
+                    "type": "TEXT",
+                    "id": "2", 
+                    "textData": {
+                        "text": html,
+                        "decorations": []
+                    }
+                }]
+            }));
+        }
+        
+        Ok(serde_json::json!({
+            "nodes": nodes,
+            "documentStyle": {}
+        }))
     }
     
     /// Format array fields according to Wix requirements
@@ -611,9 +664,23 @@ impl WixDataTypeValidator {
                         formatted_data.insert(key.clone(), Self::format_text_field(value)?);
                     },
                     
-                    // Rich text fields
+                    // Bio field - allow HTML and empty values
                     "bio" => {
-                        formatted_data.insert(key.clone(), Self::format_rich_text_field(value)?);
+                        match value {
+                            Value::String(s) => {
+                                // Allow empty bio and HTML content, just validate length
+                                if s.len() > 50000 {  // Larger limit for bio with HTML
+                                    return Err(anyhow!("Bio field too long (max 50000 characters)"));
+                                }
+                                formatted_data.insert(key.clone(), Value::String(s.clone()));
+                            },
+                            Value::Null => {
+                                formatted_data.insert(key.clone(), Value::String("".to_string()));
+                            },
+                            _ => {
+                                formatted_data.insert(key.clone(), Value::String(value.to_string()));
+                            }
+                        }
                     },
                     
                     // Image fields

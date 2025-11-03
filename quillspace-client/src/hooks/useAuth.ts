@@ -1,5 +1,5 @@
 import { useContext } from '@builder.io/qwik';
-import { AuthContextId, type AuthContext } from '~/contexts/auth';
+import { AuthContextId, type AuthContext } from '~/routes/tenants/[...tenant]/layout';
 
 /**
  * Custom hook to access user and tenant information from context

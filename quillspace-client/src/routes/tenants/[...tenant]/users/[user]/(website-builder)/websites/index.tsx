@@ -2,7 +2,6 @@ import {
     component$,
     useSignal,
     $,
-    noSerialize,
     isServer,
     useTask$, useComputed$, useOnDocument
 } from '@builder.io/qwik';
@@ -20,12 +19,10 @@ import {
     LuArrowLeft,
     LuCalendar
 } from '@qwikest/icons/lucide';
-import {ConnectedWebsites} from '~/components/website-builder/connected-websites';
-import {WebsiteBuilderService} from '~/services/website-builder.service';
-import type {WebsiteBuilder, BuilderType} from '~/types/website-builders';
 import {routeLoader$} from "@builder.io/qwik-city";
 import {getAuthToken, getTenantInfo, getUserInfo} from "~/utils/auth";
-import type {ConnectedWebsite} from "~/types/website-builders";
+import {WebsiteBuilder} from "~/api/schema";
+import {ConnectedWebsites} from "~/components/website-builder/connected-websites";
 
 const builders: WebsiteBuilder[] = [
     {
@@ -73,14 +70,7 @@ const builders: WebsiteBuilder[] = [
 ];
 
 
-type ConnectedWebsitesResponse = {
-    success: boolean,
-    error?: string,
-    websites: ConnectedWebsite[]
-}
-
-
-export const useConnectedWebsites = routeLoader$(async (requestEventAction): Promise<ConnectedWebsitesResponse> => {
+export const useConnectedWebsites = routeLoader$(async (requestEventAction) => {
     const {cookie} = requestEventAction;
     const user = await getUserInfo(cookie);
     const tenant = await getTenantInfo(cookie);
@@ -118,7 +108,7 @@ export default component$(() => {
     const connectedWebsites = useConnectedWebsites();
     const isLoading = useSignal<boolean>(false);
     const credentials = useSignal<Record<string, string>>({});
-    const builderService = noSerialize(WebsiteBuilderService.getInstance());
+    // const builderService = noSerialize(WebsiteBuilderService.getInstance());
     const domContentLoaded = useSignal<boolean>(false);
 
 
@@ -194,7 +184,7 @@ export default component$(() => {
     });
 
     const handleConnect = $(async () => {
-        if (!selectedBuilder.value || !builderService) return;
+        if (!selectedBuilder.value) return;
 
         isLoading.value = true;
 
@@ -205,25 +195,7 @@ export default component$(() => {
                 selectedBuilder.value = '';
                 // TODO: Navigate to JFlux builder
             } else {
-                // For external builders, test connection and save credentials
-                const success = await builderService.testConnection(
-                    selectedBuilder.value as BuilderType,
-                    credentials.value
-                );
-
-                if (success) {
-                    await builderService.connectBuilder(
-                        selectedBuilder.value as BuilderType,
-                        credentials.value
-                    );
-
-
-                    showCredentials.value = false;
-                    selectedBuilder.value = '';
-                    credentials.value = {};
-                } else {
-                    alert('Failed to connect. Please check your credentials.');
-                }
+            // TODO: Cirtain things here
             }
         } catch (error) {
             console.error('Connection error:', error);

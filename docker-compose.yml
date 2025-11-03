@@ -92,7 +92,8 @@ services:
       dockerfile: Dockerfile
     container_name: quillspace-frontend
     environment:
-      - VITE_API_BASE_URL=http://backend:3000/api
+      - NODE_ENV=production
+      - VITE_API_BASE_URL=http://backend:3000
       - BACKEND_URL=http://backend:3000
       - ORIGIN=http://localhost
     ports:
@@ -103,11 +104,6 @@ services:
     restart: unless-stopped
     networks:
       - quillspace
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Redis Cache (Optional)
   redis:

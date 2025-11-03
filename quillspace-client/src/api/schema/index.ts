@@ -617,3 +617,16 @@ export const ConnectedWebsiteSchema = z.object({
 
 export type ConnectedWebsite = z.infer<typeof ConnectedWebsiteSchema>;
 
+//TODO: schema it up
+export interface WebsiteBuilder {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    color: string;
+    isConnected: boolean;
+    apiEndpoint?: string;
+    authType: 'api_key' | 'oauth' | 'username_password' | 'native';
+    requiredFields: string[];
+}
+

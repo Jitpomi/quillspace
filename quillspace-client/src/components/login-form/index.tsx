@@ -1,5 +1,4 @@
 import {
-    HTMLAttributes, HTMLInputAutocompleteAttribute, HTMLInputTypeAttribute, QwikJSX, Signal, Size,
     component$, $, useSignal, useTask$
 } from "@builder.io/qwik";
 import {LoginRequest, LoginRequestSchema, LoginResponse} from "~/api/schema";
@@ -12,62 +11,12 @@ export interface LoginFormProps {
     login?: LoginRequest,
 }
 
-export type FormFieldProps = {
-    pattern?: string | undefined;
-    align?: string | undefined;
-    name?: string | undefined;
-    disabled?: boolean | undefined;
-    formAction?: string | undefined;
-    formEnctype?: string | undefined;
-    formMethod?: string | undefined;
-    formNoValidate?: boolean | undefined;
-    formTarget?: string | undefined;
-    popoverTargetAction?: string | undefined;
-    accept?: string | undefined;
-    alt?: string | undefined;
-    autocomplete?: AutoFill | undefined;
-    capture?: string | undefined;
-    checked?: boolean | undefined;
-    defaultChecked?: boolean | undefined;
-    defaultValue?: string | undefined;
-    dirName?: string | undefined;
-    indeterminate?: boolean | undefined;
-    multiple?: boolean | undefined;
-    placeholder?: string | undefined;
-    readOnly?: boolean | undefined;
-    required?: boolean | undefined;
-    selectionDirection?: "none" | "forward" | "backward" | null | undefined;
-    selectionEnd?: number | null | undefined;
-    selectionStart?: number | null | undefined;
-    size?: number | undefined;
-    src?: string | undefined;
-    useMap?: string | undefined;
-    valueAsNumber?: number | undefined;
-    webkitdirectory?: boolean | undefined;
-    autoComplete?: HTMLInputAutocompleteAttribute | Omit<HTMLInputAutocompleteAttribute, string> | undefined;
-    'bind:checked'?: Signal<boolean | undefined> | undefined;
-    'bind:value'?: Signal<string | number | undefined> | undefined;
-    enterKeyHint?: "search" | "enter" | "done" | "go" | "next" | "previous" | "send" | undefined;
-    height?: Size | undefined;
-    max?: string | number | undefined;
-    maxLength?: number | undefined;
-    min?: string | number | undefined;
-    minLength?: number | undefined;
-    step?: string | number | undefined;
-    type?: HTMLInputTypeAttribute | undefined;
-    value?: number | readonly string[] | FormDataEntryValue | null | undefined;
-    width?: Size | undefined;
-    children?: undefined;
-    popovertarget?: string | undefined;
-    popovertargetaction?: ("toggle" | "hide" | "show") | undefined;
-}
-
 export const useLogin = globalAction$(async (data, requestEvent) => {
     const {env, cookie} = requestEvent;
-    const API_BASE_URL = env.get('VITE_API_BASE_URL') || 'http://backend:3000/api';
+    const API_BASE_URL = env.get('VITE_API_BASE_URL') || 'http://localhost:3001';
     
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -191,7 +140,7 @@ export default  component$<LoginFormProps>((props) => {
                     <Field name="email">
                         { (
                             field: { value: FormDataEntryValue | null | undefined; error: string },
-                            props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
+                            props
                           ) => (
                             <div>
                                 {/* Email Field */}
@@ -218,7 +167,7 @@ export default  component$<LoginFormProps>((props) => {
                     <Field name="password">
                         {(
                             field: { value: FormDataEntryValue | null | undefined; error: string },
-                            props: QwikJSX.IntrinsicAttributes & FormFieldProps & HTMLAttributes<HTMLInputElement>
+                            props
                         ) => (
                             <div>
                                 <label for="password" class="block text-sm font-medium text-white mb-2">

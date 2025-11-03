@@ -1,4 +1,4 @@
-import {QwikIntrinsicElements} from "@builder.io/qwik";
+import { QwikIntrinsicElements } from "@builder.io/qwik";
 
 export function LucideBolt(props: QwikIntrinsicElements['svg'], key: string) {
     return (
